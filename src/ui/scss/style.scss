@@ -6,6 +6,7 @@
 @use 'menu.scss';
 @use 'scene-panel.scss';
 @use 'settings-panel.scss';
+@use 'panel-section.scss';
 @use 'color-panel.scss';
 @use 'splat-list.scss';
 @use 'transform.scss';
@@ -104,6 +105,11 @@ body {
     bottom: 20px;
     color: $text-primary;
     text-shadow: 1px 1px 4px black;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
 
     span {
         color: $clr-hilight;
@@ -172,6 +178,22 @@ body {
         white-space: pre;
         overflow: visible;
     }
+}
+
+#overdraw-legend {
+    position: absolute;
+    left: 12px;
+    bottom: 66px;
+    pointer-events: none;
+
+    canvas {
+        display: block;
+    }
+}
+
+// both diagnostics up: the legend stacks above the frame timings
+#perf-overlay:not(.pcui-hidden) ~ #overdraw-legend {
+    bottom: 176px;
 }
 
 #camera-info-overlay {

@@ -1,0 +1,18 @@
+{
+    // emits the sources as plain ES modules under test/.build so the Node
+    // harness can import them. node's own type stripping can't handle the
+    // `export { SomeInterface }` lists the sources use, so a real tsc pass it is;
+    // it doubles as the type check.
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "outDir": ".build",
+        "rootDir": "..",
+        "sourceMap": false,
+        "inlineSources": false
+    },
+    "include": [
+        "../src/**/*.ts",
+        "../global.d.ts"
+    ]
+}

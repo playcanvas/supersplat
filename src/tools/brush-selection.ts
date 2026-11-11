@@ -1,11 +1,15 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 class BrushSelection {
     activate: () => void;
     deactivate: () => void;
 
-    constructor(events: Events, parent: HTMLElement, mask: { canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, busy: boolean }) {
+    constructor(
+        events: Events,
+        parent: HTMLElement,
+        mask: { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; busy: boolean }
+    ) {
         // create svg
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.classList.add('tool-svg', 'hidden');
@@ -29,10 +33,14 @@ class BrushSelection {
         // hidden then), so activation places the cursor at the mouse rather than
         // wherever the previous stroke ended
         const pointer = { x: 0, y: 0 };
-        window.addEventListener('pointermove', (e: PointerEvent) => {
-            pointer.x = e.clientX;
-            pointer.y = e.clientY;
-        }, { capture: true, passive: true });
+        window.addEventListener(
+            'pointermove',
+            (e: PointerEvent) => {
+                pointer.x = e.clientX;
+                pointer.y = e.clientY;
+            },
+            { capture: true, passive: true }
+        );
 
         const update = (e: PointerEvent) => {
             const x = e.offsetX;
@@ -84,6 +92,14 @@ class BrushSelection {
                 prev.x = e.offsetX;
                 prev.y = e.offsetY;
 
+                // a click has no pointermove, and the zero-length stroke that
+                // update() draws for it leaves no mark in safari, so paint the
+                // starting dot explicitly
+                context.beginPath();
+                context.fillStyle = '#f60';
+                context.arc(prev.x, prev.y, radius, 0, Math.PI * 2);
+                context.fill();
+
                 update(e);
             }
         };
@@ -98,7 +114,11 @@ class BrushSelection {
         };
 
         const dragEnd = () => {
-            parent.releasePointerCapture(dragId);
+            // a touch that has lifted, or was cancelled, no longer holds the
+            // capture and releasing it throws
+            if (parent.hasPointerCapture(dragId)) {
+                parent.releasePointerCapture(dragId);
+            }
             dragId = undefined;
             canvas.style.display = 'none';
         };
@@ -110,26 +130,35 @@ class BrushSelection {
 
                 dragEnd();
 
-                // block new strokes until the async selection has consumed the
-                // shared mask canvas
+                // the selection snapshots the canvas synchronously when
+                // invoked, so busy is UX policy rather than correctness: it
+                // keeps strokes from piling up invisibly behind a slow
+                // selection (pointerdown swallows them)
                 mask.busy = true;
                 try {
-                    await events.invoke(
-                        'select.byMask',
-                        opFromModifiers(e),
-                        canvas,
-                        context
-                    );
+                    await events.invoke('select.byMask', opFromModifiers(e), canvas, context);
                 } finally {
                     mask.busy = false;
                 }
             }
         };
 
+        // a cancelled touch gets no pointerup, and a drag left open blocks
+        // every later one
+        const pointercancel = (e: PointerEvent) => {
+            if (e.pointerId === dragId) {
+                dragEnd();
+            }
+        };
+
         const wheel = (e: WheelEvent) => {
             if (e.altKey || e.metaKey) {
                 const { deltaX, deltaY } = e;
-                events.fire((Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0 ? 'tool.brushSelection.smaller' : 'tool.brushSelection.bigger');
+                events.fire(
+                    (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) > 0
+                        ? 'tool.brushSelection.smaller'
+                        : 'tool.brushSelection.bigger'
+                );
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -144,6 +173,7 @@ class BrushSelection {
             parent.addEventListener('pointerdown', pointerdown);
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
+            parent.addEventListener('pointercancel', pointercancel);
             parent.addEventListener('wheel', wheel);
         };
 
@@ -157,6 +187,7 @@ class BrushSelection {
             parent.removeEventListener('pointerdown', pointerdown);
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
+            parent.removeEventListener('pointercancel', pointercancel);
             parent.removeEventListener('wheel', wheel);
         };
 

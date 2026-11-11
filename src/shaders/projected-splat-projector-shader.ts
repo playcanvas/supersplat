@@ -1,5 +1,7 @@
 import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
+import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
+import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
 const shCode = (bands: number) => {
     if (bands === 0) {
@@ -45,7 +47,9 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
     coefficients[14] = unpack111011s(fourth.w);`;
     }
 
-    const band2 = bands > 1 ? `
+    const band2 =
+        bands > 1
+            ? `
     let xx = direction.x * direction.x;
     let yy = direction.y * direction.y;
     let zz = direction.z * direction.z;
@@ -56,16 +60,20 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
         + coefficients[4] * (-1.0925484305920792 * yz)
         + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
         + coefficients[6] * (-1.0925484305920792 * xz)
-        + coefficients[7] * (0.5462742152960396 * (xx - yy));` : '';
+        + coefficients[7] * (0.5462742152960396 * (xx - yy));`
+            : '';
 
-    const band3 = bands > 2 ? `
+    const band3 =
+        bands > 2
+            ? `
     result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
         + coefficients[9] * (2.890611442640554 * xy * direction.z)
         + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
         + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
         + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
         + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
-        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));` : '';
+        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));`
+            : '';
 
     return `
 fn unpack111011s(bits: u32) -> vec3f {
@@ -85,7 +93,7 @@ fn evaluateSH(sourceUv: vec2i, direction: vec3f) -> vec3f {
 }`;
 };
 
-const projectedSplatProjector = (bands: number) => /* wgsl */`
+const projectedSplatProjector = (bands: number) => /* wgsl */ `
 struct ProjectorUniforms {
     numSplats: u32,
     entryBase: u32,
@@ -115,16 +123,73 @@ struct ProjectorUniforms {
     selectionEnabled: u32,
     pickOp: i32,
     minPixelSize: f32,
-    // camera clip planes, used to linearly normalize view depth for the sort key
+    // the layer was trained with antialiasing (Mip-Splatting style): draw it
+    // with its training filter and opacity compensation, see AA_FILTER
+    antiAlias: u32,
+    // the orthographic sort key's linear range: the camera clip planes
     near: f32,
-    far: f32
+    far: f32,
+    radialSort: u32,
+    // the perspective sort key's log range (logSortKey): the bit pattern of the
+    // nearest distance it spans, and keys per unit of bit pattern
+    sortKeyMinBits: i32,
+    sortKeyScale: f32,
+    // total cache entries: the culled tail of the compact list grows down from
+    // here (compactTailSlot)
+    capacity: u32,
+    // keep culled splats projected, for the centres overlay, instead of
+    // dropping them
+    keepCulled: u32,
+    // minimum alpha mass of a projected gaussian, in pixels; 0 = off
+    minContribution: f32,
+    // splats exempt from the contribution and occlusion culls because their
+    // ring would draw: 0 none, 1 the selected ones, 2 the whole layer
+    // (overlayEligible decides)
+    keepRings: u32,
+    // the previous stochastic frame, for the occlusion cull: its view and
+    // view-projection, its clip-z mapping (a, b, isOrtho - the render shader's
+    // clipZParams, with warp strength in w), viewport and focal length, and
+    // the block grid of its max-depth map. occlusionEnabled is 0 when no
+    // usable previous frame exists
+    prevViewProj: mat4x4f,
+    prevView: mat4x4f,
+    prevClipZ: vec4f,
+    prevViewport: vec2f,
+    prevFocal: vec2f,
+    occlusionBlocksX: u32,
+    occlusionBlocksY: u32,
+    occlusionBlock: f32,
+    occlusionEnabled: u32,
+    // analysis views for render_view: 0 off, 1 colour by property (viewProp
+    // uses the histogram's property modes, mapped over viewRange), 2 selection
+    // highlight, 3 flat layer colour (viewColor), 4 shaded by splat normal
+    viewMode: u32,
+    viewProp: u32,
+    viewRange: vec2f,
+    viewColor: vec4f
+}
+
+// Turbo colour map (polynomial fit): blue at 0, red at 1
+fn turbo(x: f32) -> vec3f {
+    let t = clamp(x, 0.0, 1.0);
+    let v4 = vec4f(1.0, t, t * t, t * t * t);
+    let v2 = v4.zw * v4.z;
+    return clamp(vec3f(
+        dot(v4, vec4f(0.13572138, 4.61539260, -42.66032258, 132.13108234)) + dot(v2, vec2f(-152.94239396, 59.28637943)),
+        dot(v4, vec4f(0.09140261, 2.19418839, 4.84296658, -14.18503333)) + dot(v2, vec2f(4.27729857, 2.82956604)),
+        dot(v4, vec4f(0.10667330, 12.64194608, -60.58204836, 110.36276771)) + dot(v2, vec2f(-89.90310912, 27.34824973))
+    ), vec3f(0.0), vec3f(1.0));
 }
 
 // compaction output: surviving splats are appended to a dense list, so the sort
 // and the draw cover the visible count instead of the whole capacity. sortKeys
 // and compactEntries are indexed by compact slot, not by entry; the cache stays
 // indexed by entry, and the entry index rides along as the sort payload so
-// gaussian ids keep their meaning downstream (picking, rings, stochastic dither)
+// gaussian ids keep their meaning downstream (picking, rings, stochastic dither).
+// With the centres overlay up, splats that fail the size, contribution or
+// occlusion cull are appended to a tail growing down from the end of
+// compactEntries (counted in splatCounter[1], placed by compactTailSlot); only
+// the centres draw reads it
 @group(0) @binding(0) var<storage, read_write> sortKeys: array<u32>;
 @group(0) @binding(1) var<storage, read_write> compactEntries: array<u32>;
 @group(0) @binding(2) var<storage, read_write> splatCounter: array<atomic<u32>>;
@@ -133,15 +198,17 @@ struct ProjectorUniforms {
 @group(0) @binding(5) var<storage, read> instanceSource: array<u32>;
 @group(0) @binding(6) var<storage, read> instanceFlags: array<u32>;
 @group(0) @binding(7) var<storage, read> instancePalette: array<u32>;
-@group(0) @binding(8) var transformA: texture_2d<u32>;
-@group(0) @binding(9) var transformB: texture_2d<f32>;
-@group(0) @binding(10) var splatColor: texture_2d<f32>;
-@group(0) @binding(11) var transformPalette: texture_2d<f32>;
-@group(0) @binding(12) var colorPalette: texture_2d<f32>;
-${bands > 0 ? '@group(0) @binding(13) var splatSH_1to3: texture_2d<u32>;' : ''}
-${bands > 1 ? '@group(0) @binding(14) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(15) var splatSH_8to11: texture_2d<u32>;' : ''}
-${bands > 2 ? '@group(0) @binding(16) var splatSH_12to15: texture_2d<u32>;' : ''}
-@group(0) @binding(${13 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
+// max depth per block of the previous stochastic frame (projected-splat-depth-reduce-shader)
+@group(0) @binding(8) var<storage, read> prevDepthMax: array<f32>;
+@group(0) @binding(9) var transformA: texture_2d<u32>;
+@group(0) @binding(10) var transformB: texture_2d<f32>;
+@group(0) @binding(11) var splatColor: texture_2d<f32>;
+@group(0) @binding(12) var transformPalette: texture_2d<f32>;
+@group(0) @binding(13) var colorPalette: texture_2d<f32>;
+${bands > 0 ? '@group(0) @binding(14) var splatSH_1to3: texture_2d<u32>;' : ''}
+${bands > 1 ? '@group(0) @binding(15) var splatSH_4to7: texture_2d<u32>;\n@group(0) @binding(16) var splatSH_8to11: texture_2d<u32>;' : ''}
+${bands > 2 ? '@group(0) @binding(17) var splatSH_12to15: texture_2d<u32>;' : ''}
+@group(0) @binding(${14 + (bands > 0 ? 1 : 0) + (bands > 1 ? 2 : 0) + (bands > 2 ? 1 : 0)}) var<uniform> uniforms: ProjectorUniforms;
 
 ${shCode(bands)}
 ${indexToUvWGSL('sourceCoord', 'uniforms.sourceWidth')}
@@ -149,6 +216,9 @@ ${indexToUvWGSL('cacheCoord', 'uniforms.cacheWidth')}
 ${paletteMatrixWGSL}
 ${applyColorGradeWGSL}
 ${paletteGradeWGSL}
+${overlayEligibleWGSL}
+${compactTailWGSL}
+${stochasticWarpWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
     let q = normalize(qIn);
@@ -161,6 +231,27 @@ fn rotationMatrix(qIn: vec4f) -> mat3x3f {
         vec3f(2.0 * (x * y - w * z), 1.0 - 2.0 * (x * x + z * z), 2.0 * (y * z + w * x)),
         vec3f(2.0 * (x * z + w * y), 2.0 * (y * z - w * x), 1.0 - 2.0 * (x * x + y * y))
     );
+}
+
+const MAX_SORT_KEY = (1u << 20u) - 1u;
+
+// screen-space filters added to the projected covariance, in pixels squared:
+// the standard 3DGS dilation, and the smaller filter splats trained with
+// antialiasing were trained with - 0.1 for most trainers, including
+// Mip-Splatting and Brush's mip mode, as the engine's antiAliasFilterSize
+const LOWPASS = 0.3;
+const AA_FILTER = 0.1;
+
+// sort key spaced by log distance, as in the engine's projector. A positive
+// float's bit pattern grows with its value almost exactly as its log2, so keys
+// taken from the bits give every doubling of distance the same number of keys,
+// and stray far splats cost no precision near the camera. The bits are
+// measured from those of a distance ten doublings inside the near clip, and
+// inverted so far splats sort first
+fn logSortKey(value: f32) -> u32 {
+    let bits = bitcast<i32>(value) - uniforms.sortKeyMinBits;
+    let keyFromNear = clamp(f32(bits) * uniforms.sortKeyScale, 0.0, f32(MAX_SORT_KEY));
+    return MAX_SORT_KEY - u32(keyFromNear);
 }
 
 // per-instance editor state, packed 4 bytes to a word
@@ -259,29 +350,35 @@ fn main(
         cov11 = u11 * jy1 + u12 * jy2;
     }
 
-    cov00 += 0.3;
-    cov11 += 0.3;
+    // splats trained with antialiasing are drawn with their training filter, and
+    // their opacity scaled by the ratio of the footprint's determinant before
+    // and after it (aaFactor, the engine's GSPLAT_AA compensation); without it
+    // small and distant splats draw too bright
+    let lowpass = select(LOWPASS, AA_FILTER, uniforms.antiAlias != 0u);
+    let rawDeterminant = cov00 * cov11 - cov01 * cov01;
+    cov00 += lowpass;
+    cov11 += lowpass;
     let determinant = cov00 * cov11 - cov01 * cov01;
     if (determinant <= 0.0) {
         return;
     }
-
-    let maxRadius = min(1024.0, min(viewport.x, viewport.y));
-    let radiusXUncapped = sqrt(2.0 * cov00);
-    let radiusYUncapped = sqrt(2.0 * cov11);
-    let capScale = max(1.0, max(radiusXUncapped, radiusYUncapped) / maxRadius);
-    let invCapScale2 = 1.0 / (capScale * capScale);
-    cov00 *= invCapScale2;
-    cov01 *= invCapScale2;
-    cov11 *= invCapScale2;
+    let aaFactor = select(1.0, sqrt(max(rawDeterminant / determinant, 0.0)), uniforms.antiAlias != 0u);
+    // the culls measure the standard footprint whatever the filter, so an
+    // antialiased layer culls the splats a standard one would. Adding the
+    // shift to the covariance adds it to both eigenvalues
+    let cullShift = LOWPASS - lowpass;
+    let cullDeterminant = determinant + cullShift * (cov00 + cov11) + cullShift * cullShift;
 
     let mid = 0.5 * (cov00 + cov11);
     let radius = length(vec2f(0.5 * (cov00 - cov11), cov01));
     let lambda1 = mid + radius;
     let lambda2 = max(mid - radius, 0.1);
 
-    // skip splats whose projected size falls below the cull threshold
-    if (2.0 * sqrt(2.0 * lambda1) < uniforms.minPixelSize) {
+    // skip splats whose projected size falls below the cull threshold. With the
+    // centres overlay up they are projected anyway - their centre still draws -
+    // but land in the tail list below instead of among the survivors
+    let sizeCulled = 2.0 * sqrt(2.0 * (lambda1 + cullShift)) < uniforms.minPixelSize;
+    if (sizeCulled && uniforms.keepCulled == 0u) {
         return;
     }
 
@@ -295,8 +392,13 @@ fn main(
     let eigenVec = vec2f(cov01, lambda1 - cov00);
     let eigenLen = length(eigenVec);
     let direction = select(vec2f(1.0, 0.0), eigenVec / eigenLen, eigenLen > 1e-9);
-    let axis1 = 2.0 * min(sqrt(2.0 * lambda1), maxRadius) * direction;
-    let len2 = 2.0 * min(sqrt(2.0 * lambda2), maxRadius);
+    // Cap the longest radius in screen pixels and scale both axes equally
+    // to preserve the ellipse's aspect ratio.
+    let maxRadius = min(1024.0, min(viewport.x, viewport.y));
+    let len1 = 2.0 * sqrt(2.0 * lambda1);
+    let radiusScale = min(1.0, maxRadius / len1);
+    let axis1 = len1 * radiusScale * direction;
+    let len2 = 2.0 * sqrt(2.0 * lambda2) * radiusScale;
     let axis2 = len2 * vec2f(direction.y, -direction.x);
 
     let ndc = clip.xy / clip.w;
@@ -307,23 +409,163 @@ fn main(
         return;
     }
 
+    // splats whose ring would draw are exempt from the motion culls below:
+    // rings draw from the survivor list
+    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
+
+    // occlusion cull on stochastic frames. The previous stochastic frame's
+    // depth buffer samples the visibility function: each pixel kept the
+    // nearest fragment that passed its coverage test, so the chance a pixel's
+    // depth lies beyond d is the transmittance to d, and the farthest depth
+    // over the blocks around a splat bounds what could still have shown
+    // behind it there. A splat whose front lies beyond that bound was
+    // invisible last frame, up to sampling - a splat with transmittance T
+    // escapes a block of N samples with probability (1 - T)^N - and is routed
+    // like a size-culled one. Static splats reproject exactly through the
+    // previous view, so only true disocclusions arrive a frame late. The
+    // gather widens with the footprint - g blocks around the centre covers at
+    // least g blocks from it in every direction - and splats wider than two
+    // blocks skip the test. The blocks are the previous frame's, so the
+    // footprint the splat had there bounds the gather as well: footprints
+    // scale with focal length over depth (focal length alone in ortho)
+    var occluded = false;
+    if (uniforms.occlusionEnabled != 0u && !ringKept) {
+        let prevClip = uniforms.prevViewProj * worldCenter;
+        let prevDepth = -(uniforms.prevView * worldCenter).z;
+        let prevOrtho = uniforms.prevClipZ.z != 0.0;
+        let prevLen1 = len1 * (uniforms.prevFocal.x / focal.x)
+            * select(depth / max(prevDepth, 0.001), 1.0, prevOrtho);
+        let prevNdc = prevClip.xy / max(prevClip.w, 1e-6);
+        // The depth map stays in the coordinates it was rasterized in. Match
+        // the vertex shader's affine warp, bounding its footprint by the
+        // largest axis scale of the local Jacobian (also handles warp toggles).
+        var warpedNdc = prevNdc;
+        var radius = max(len1, prevLen1);
+        if (uniforms.prevClipZ.w > 0.0) {
+            let warpScale = warpOffset(prevNdc, vec2f(1.0), uniforms.prevClipZ.w);
+            radius *= max(warpScale.x, warpScale.y);
+            warpedNdc = warpPosition(prevNdc, uniforms.prevClipZ.w);
+        }
+        let gather = max(i32(ceil(radius / uniforms.occlusionBlock)), 1);
+        if (gather <= 2 && prevClip.w > 0.0 && (prevOrtho || prevDepth > 0.0)) {
+            // texture rows run top-down
+            let prevPixel = vec2f(warpedNdc.x * 0.5 + 0.5, 0.5 - warpedNdc.y * 0.5) * uniforms.prevViewport;
+            let block = vec2i(floor(prevPixel / uniforms.occlusionBlock));
+            let blocks = vec2i(i32(uniforms.occlusionBlocksX), i32(uniforms.occlusionBlocksY));
+            if (block.x >= gather && block.y >= gather && block.x < blocks.x - gather && block.y < blocks.y - gather) {
+                var farthest = 0.0;
+                for (var dy = -gather; dy <= gather; dy++) {
+                    for (var dx = -gather; dx <= gather; dx++) {
+                        farthest = max(farthest, prevDepthMax[u32((block.y + dy) * blocks.x + block.x + dx)]);
+                    }
+                }
+                // the splat's front along the previous view ray, at the same
+                // cut-off as the quad's edge, mapped to the depth buffer's
+                // clip z the way the render shader maps the centre
+                let front = prevDepth - 2.8284 * sqrt(c22);
+                let w = select(front, 1.0, prevOrtho);
+                if (w > 0.0) {
+                    let frontZ = clamp(uniforms.prevClipZ.x * front + uniforms.prevClipZ.y, 0.0, w) / w;
+                    occluded = frontZ > farthest;
+                }
+            }
+        }
+    }
+    if (occluded && uniforms.keepCulled == 0u) {
+        return;
+    }
+
     var color = textureLoad(splatColor, uv, 0);
+    // the gaussian's committed grade, then the panel's pending one if this
+    // gaussian is part of what an Apply would affect. The alpha factors are
+    // resolved first, because the contribution cull below needs the opacity
+    // the splat will actually draw with; the colour rows wait until after SH
+    let grade = paletteGrade(paletteWord >> 16u);
+    let previewed = (state & 2u) == 0u &&
+        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u));
+    var gradedAlpha = color.a * grade.alpha;
+    if (previewed) {
+        gradedAlpha *= uniforms.colorAlpha;
+    }
+    gradedAlpha = clamp(gradedAlpha, 0.0, 1.0);
+    // stochastic frames also cull by contribution - the gaussian's alpha mass in
+    // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
+    // minContribution rule - on top of the size cull. It runs ahead of the SH
+    // and colour grade work, so a culled splat costs little more than a
+    // size-culled one. A splat whose ring would show is exempt; otherwise it
+    // is routed like a size-culled one - dropped, or kept for its centre
+    let contributionCulled = !ringKept
+        && gradedAlpha * 6.283185 * sqrt(cullDeterminant) < uniforms.minContribution;
+    if (contributionCulled && uniforms.keepCulled == 0u) {
+        return;
+    }
     if (${bands}u > 0u) {
         let worldDirection = normalize(worldCenter.xyz - uniforms.cameraPosition);
         let localDirection = normalize(transpose(mat3x3f(model[0].xyz, model[1].xyz, model[2].xyz)) * worldDirection);
         color = vec4f(color.rgb + evaluateSH(uv, localDirection), color.a);
     }
-    // the gaussian's committed grade, then the panel's pending one if this
-    // gaussian is part of what an Apply would affect
-    let grade = paletteGrade(paletteWord >> 16u);
     var graded = applyColorGrade(color.rgb, grade.row0, grade.row1, grade.row2);
-    var gradedAlpha = color.a * grade.alpha;
-    if ((state & 2u) == 0u &&
-        (uniforms.previewMode == 2u || (uniforms.previewMode == 1u && (state & 1u) != 0u))) {
+    if (previewed) {
         graded = applyColorGrade(graded, uniforms.colorRow0, uniforms.colorRow1, uniforms.colorRow2);
-        gradedAlpha *= uniforms.colorAlpha;
     }
-    color = vec4f(graded, clamp(gradedAlpha, 0.0, 1.0));
+    color = vec4f(graded, gradedAlpha * aaFactor);
+
+    // analysis views keep a little of the splat's own brightness so form still
+    // reads; property values mirror the histogram shader's property modes
+    if (uniforms.viewMode != 0u) {
+        let luma = dot(clamp(color.rgb, vec3f(0.0), vec3f(1.0)), vec3f(0.299, 0.587, 0.114));
+        if (uniforms.viewMode == 1u) {
+            let p = uniforms.viewProp;
+            var value = 0.0;
+            if (p <= 2u) {
+                value = worldCenter[p];
+            } else if (p == 3u) {
+                value = length(worldCenter.xyz);
+            } else if (p == 4u) {
+                value = depth;
+            } else if (p <= 7u) {
+                value = color[p - 5u];
+            } else if (p == 8u) {
+                value = gradedAlpha;
+            } else if (p <= 11u) {
+                value = b[p - 9u];
+            } else if (p == 12u) {
+                value = b.x * b.y * b.z;
+            } else {
+                value = dot(b.xyz, b.xyz);
+            }
+            let t = (value - uniforms.viewRange.x) / max(uniforms.viewRange.y - uniforms.viewRange.x, 1e-20);
+            if (t < 0.0 || t > 1.0) {
+                // outside the range: dim grey, so in-range splats stand out
+                color = vec4f(vec3f(0.12 + 0.2 * luma), color.a);
+            } else {
+                // faint splats get enough opacity to be seen
+                color = vec4f(turbo(t), max(color.a, 0.5));
+            }
+        } else if (uniforms.viewMode == 2u) {
+            if ((state & 1u) != 0u) {
+                color = vec4f(uniforms.viewColor.rgb * (0.6 + 0.4 * luma), max(color.a, 0.5));
+            } else {
+                color = vec4f(vec3f(0.12 + 0.3 * luma), color.a);
+            }
+        } else if (uniforms.viewMode == 3u) {
+            color = vec4f(uniforms.viewColor.rgb * (0.55 + 0.45 * luma), color.a);
+        } else {
+            // clay: a flat splat's normal is its shortest axis; light it two-sided
+            // from above left with a little colour kept, so curvature, creases
+            // and bumps show regardless of paint
+            let axes = linear * rotationMatrix(rotation);
+            var normal = axes[2];
+            if (b.x <= b.y && b.x <= b.z) {
+                normal = axes[0];
+            } else if (b.y <= b.z) {
+                normal = axes[1];
+            }
+            let lambert = abs(dot(normalize(normal), normalize(vec3f(-0.6, 0.65, 0.45))));
+            let clay = mix(vec3f(0.78, 0.76, 0.72), clamp(color.rgb, vec3f(0.0), vec3f(1.0)), 0.25);
+            color = vec4f(clay * (0.12 + 0.88 * lambert * lambert), color.a);
+        }
+    }
 
     let selected = (state & 1u) != 0u && uniforms.selectionEnabled != 0u;
     let locked = (state & 2u) != 0u;
@@ -352,9 +594,9 @@ fn main(
     let rgb = vec3u(clamp(color.rgb / f32(1u << exponent), vec3f(0.0), vec3f(1.0)) * 1023.0 + 0.5);
 
     // center: ndc as snorm16. The offscreen cull above bounds visible centers to
-    // |ndc| <= 1 + 2 * extentMax / viewport with extentMax = 4 * maxRadius; the
+    // |ndc| <= 1 + 2 * extentMax / viewport with extentMax = 2 * maxRadius; the
     // render shader derives the same range from its viewport uniform
-    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / viewport;
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / viewport;
 
     let cacheUv = cacheCoord(entry);
     textureStore(cacheA, cacheUv, vec4u(
@@ -369,17 +611,29 @@ fn main(
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));
+    if (sizeCulled || contributionCulled || occluded) {
+        let tail = atomicAdd(&splatCounter[1], 1u);
+        compactEntries[compactTailSlot(tail, uniforms.capacity)] = entry;
+        return;
+    }
     // survivor: claim a slot in the compact list. Only surviving threads contend,
     // which is 0.1-10% of the dispatch in practice
     let slot = atomicAdd(&splatCounter[0], 1u);
-    // depth sort key, back-to-front: linearly normalize view depth to [0,1] over
-    // the clip range and invert so the farthest splat gets the smallest key and
-    // composites first. Linear in both projections (ortho's clip.z is this same
-    // ratio; perspective's clip.z would be hyperbolic, so we normalize the raw
-    // view depth instead). near may be negative in ortho (the camera sits inside
-    // the bound); the subtraction handles that with no sign special-case.
-    let normDepth = (depth - uniforms.near) / (uniforms.far - uniforms.near);
-    sortKeys[slot] = u32(saturate(1.0 - normDepth) * f32((1u << 20u) - 1u));
+    // sort key, back-to-front: the farthest splat gets the smallest key and
+    // composites first. Perspective keys are log-spaced (logSortKey) on the
+    // view depth, or on the squared distance to the camera when sorting
+    // radially, so the order does not change as the camera turns in place; the
+    // squared distance's bits follow log2 as well. Orthographic keys linearly
+    // normalize view depth over the clip range: near may be negative there (the
+    // camera sits inside the bound), and the subtraction handles that with no
+    // sign special-case
+    if (uniforms.isOrtho != 0u) {
+        let normDepth = saturate((depth - uniforms.near) / (uniforms.far - uniforms.near));
+        sortKeys[slot] = u32((1.0 - normDepth) * f32(MAX_SORT_KEY));
+    } else {
+        let sortValue = select(depth, dot(viewCenter.xyz, viewCenter.xyz), uniforms.radialSort != 0u);
+        sortKeys[slot] = logSortKey(sortValue);
+    }
     compactEntries[slot] = entry;
 }
 `;

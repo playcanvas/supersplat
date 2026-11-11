@@ -11,7 +11,8 @@
         position: absolute;
         left: 50%;
         top: 50%;
-        min-width: 320px;
+        width: 340px;
+        max-width: calc(100vw - 32px);
         transform: translate(-50%, -50%);
 
         display: flex;
@@ -31,7 +32,7 @@
         height: 32px;
         line-height: 32px;
         margin: 0;
-        padding: 0 8px;
+        padding: 0 12px;
 
         font-weight: bold;
         color: $text-primary;
@@ -42,9 +43,15 @@
     #about-content {
         display: flex;
         flex-direction: column;
+        padding: 24px 20px;
+        gap: 24px;
+    }
+
+    #about-brand {
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        padding: 20px;
-        gap: 12px;
+        gap: 14px;
     }
 
     #about-logo {
@@ -57,6 +64,8 @@
 
         svg {
             display: block;
+            width: 64px;
+            height: 64px;
         }
     }
 
@@ -64,7 +73,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 6px;
         cursor: pointer;
         transition: opacity 0.15s ease;
 
@@ -77,6 +86,7 @@
         margin: 0;
         font-family: 'Proxima Nova Bold', 'Helvetica Neue', Arial, Helvetica, sans-serif;
         font-size: 18px;
+        line-height: 24px;
         font-weight: 700;
         color: $text-primary;
     }
@@ -85,39 +95,63 @@
         margin: 0;
         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
         font-size: 12px;
+        line-height: 18px;
         font-weight: 500;
         color: $clr-hilight;
     }
 
-    #about-deps {
+    #about-details {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 20px;
         width: 100%;
-        margin-top: 16px;
+    }
+
+    #about-deps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    #about-gpu {
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.2);
+        text-align: center;
+        line-height: 18px;
+    }
+
+    #about-gpu-name {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        user-select: text;
     }
 
     .about-dep-row {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: center;
-        padding: 6px 10px;
-        border-radius: 4px;
-        background-color: rgba(0, 0, 0, 0.2);
+        gap: 6px;
+        min-width: 0;
+        padding: 6px 0;
+        text-align: center;
+        line-height: 16px;
         cursor: pointer;
-        transition: background-color 0.15s ease;
 
         &:hover {
-            background-color: rgba(246, 102, 44, 0.15);
-
-            .about-dep-name {
+            .about-dep-name,
+            .about-dep-version {
                 color: $clr-hilight;
             }
         }
     }
 
     .about-dep-name {
-        min-width: 80px;
         margin: 0;
         font-size: 11px;
         font-weight: 500;
@@ -131,14 +165,7 @@
         font-size: 11px;
         font-weight: 500;
         color: $text-primary;
+        transition: color 0.15s ease;
     }
 
-    .about-dep-revision {
-        margin: 0 0 0 6px;
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
-        font-size: 10px;
-        font-weight: 400;
-        color: $text-secondary;
-        opacity: 0.7;
-    }
 }

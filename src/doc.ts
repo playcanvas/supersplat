@@ -3,11 +3,12 @@ import type { Asset, Quat } from 'playcanvas';
 
 import { decodeInstances, encodeInstances, restorePalettes } from './doc-instances';
 import type { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
+import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import { GaussianInstances } from './gaussian-instances';
-import { BrowserFileSystem, BlobReadSource } from './io';
+import { BrowserFileSystem, BlobReadSource, loadSplatSource, sourcesOf } from './io';
 import { recentFiles } from './recent-files';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { Splat } from './splat';
 import { writeResourceFile } from './splat-serialize';
 import { Transform } from './transform';
@@ -16,12 +17,14 @@ import { i18n } from './ui/localization';
 // ts compiler and vscode find this type, but eslint does not
 type FilePickerAcceptType = unknown;
 
-const SuperFileType: FilePickerAcceptType[] = [{
-    description: 'SuperSplat document',
-    accept: {
-        'application/x-supersplat': ['.ssproj']
+const SuperFileType: FilePickerAcceptType[] = [
+    {
+        description: 'SuperSplat document',
+        accept: {
+            'application/x-supersplat': ['.ssproj']
+        }
     }
-}];
+];
 
 type FileSelectorCallback = (fileList: File) => void;
 
@@ -70,6 +73,14 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // opened document fail with 'Source has been closed'.
     let documentFs: ZipReadFileSystem = null;
 
+    // the file the archive reads from, and the resources reading from it. The
+    // browser invalidates a File once its file changes, so saving over that file
+    // has to move them all onto the new archive afterwards (see rebindDocument)
+    let documentSource: BlobReadSource = null;
+    let documentResources = new Set<EditorSplatResource>();
+
+    events.function('doc.fileSources', () => (documentSource ? [documentSource] : []));
+
     // show the user a reset confirmation popup
     const getResetConfirmation = async () => {
         const result = await events.invoke('showPopup', {
@@ -95,14 +106,17 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         documentFileHandle = null;
         documentFs?.close();
         documentFs = null;
+        documentSource = null;
+        documentResources = new Set();
     };
 
-    // load the document from the given file
-    const loadDocument = async (file: File) => {
+    // load the document from the given file. `handle` is the file's handle when
+    // known, so a later save over the same file can be recognised
+    const loadDocument = async (file: File, handle?: FileSystemFileHandle) => {
         events.fire('startSpinner');
 
         // Create streaming ZIP reader from the file
-        const blobSource = new BlobReadSource(file);
+        const blobSource = new BlobReadSource(file, handle ?? null);
         const zipFs = new ZipReadFileSystem(blobSource);
 
         try {
@@ -124,6 +138,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
             // adopt this one only afterwards
             resetScene();
             documentFs = zipFs;
+            documentSource = blobSource;
 
             // read document.json via streaming (only reads what's needed)
             const docSource = await zipFs.createSource('document.json');
@@ -136,9 +151,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 // brings its own instance list and palettes. Layers sharing a
                 // resource share it here too, so a duplicated layer costs nothing
                 // beyond its list.
-                const assets: { asset: Asset, rotation: Quat }[] = [];
+                const assets: { asset: Asset; rotation: Quat }[] = [];
                 for (const resource of document.resources) {
-                    assets.push(await scene.assetLoader.loadAsset(resource.filename, zipFs, false, true));
+                    const loaded = await scene.assetLoader.loadAsset(resource.filename, zipFs, false, true);
+                    documentResources.add(loaded.asset.resource as EditorSplatResource);
+                    assets.push(loaded);
                 }
 
                 for (const splatSettings of document.splats) {
@@ -151,7 +168,11 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     const records = decodeInstances(blob);
 
                     const instances = GaussianInstances.fromRecords(
-                        scene.app.graphicsDevice, numRows, records.sourceRow, records.flags, records.palette
+                        scene.app.graphicsDevice,
+                        numRows,
+                        records.sourceRow,
+                        records.flags,
+                        records.palette
                     );
                     const splat = new Splat(asset, rotation, instances);
                     restorePalettes(records, splat.transformPalette, splat.colorPalette);
@@ -168,6 +189,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                     // load splat directly from the zip filesystem (streams on-demand)
                     // skipReorder=true because ssproj PLY files are already in morton order
                     const splat = await scene.assetLoader.load(filename, zipFs, false, true);
+                    documentResources.add(splat.resource);
 
                     await scene.add(splat);
 
@@ -220,8 +242,13 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // optimisation: if one layer deleted rows another still references, dropping
     // them would corrupt that other layer. Rows nothing references are dropped, so
     // deletions become permanent at save - as they already were.
-    const groupByResource = (splats: Splat[]) => {
-        const groups: { resource: EditorSplatResource, layers: Splat[] }[] = [];
+    //
+    // `compact` false keeps every row instead, so the written resource is an
+    // identical view of the live one. Used when saving over the file the document
+    // is open from, where the resources are then re-read from what was written
+    // (see rebindDocument) and an undo must still find its rows.
+    const groupByResource = (splats: Splat[], compact: boolean) => {
+        const groups: { resource: EditorSplatResource; layers: Splat[] }[] = [];
         const index = new Map<EditorSplatResource, number>();
         for (const splat of splats) {
             let at = index.get(splat.resource);
@@ -235,6 +262,7 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
         return groups.map(({ resource, layers }) => {
             const referenced = new Uint8Array(resource.numRows);
+            if (!compact) referenced.fill(1);
             for (const layer of layers) {
                 const { sourceRow, count } = layer.instances;
                 for (let i = 0; i < count; ++i) {
@@ -263,15 +291,21 @@ const registerDocEvents = (scene: Scene, events: Events) => {
         });
     };
 
-    const saveDocument = async (options: { stream?: FileSystemWritableFileStream, filename?: string }) => {
+    // returns the resource groups written, in resource file order, or null if
+    // the save failed
+    const saveDocument = async (options: {
+        stream?: FileSystemWritableFileStream;
+        filename?: string;
+        compact?: boolean;
+    }) => {
         events.fire('startSpinner');
 
         try {
             const splats = events.invoke('scene.allSplats') as Splat[];
-            const groups = groupByResource(splats);
+            const groups = groupByResource(splats, options.compact ?? true);
 
             // layer -> the resource file it reads from, and its remapped records
-            const layerInfo = new Map<Splat, { resource: number, records: ArrayBuffer }>();
+            const layerInfo = new Map<Splat, { resource: number; records: ArrayBuffer }>();
             groups.forEach((group, resourceIndex) => {
                 for (const layer of group.layers) {
                     // remap into the compacted row numbering on a copy: the live
@@ -322,20 +356,62 @@ const registerDocEvents = (scene: Scene, events: Events) => {
 
             // Close zip (also closes underlying browser writer)
             await zipFs.close();
+
+            return groups;
         } catch (error) {
+            await options.stream?.abort().catch(() => {
+                /* the writer may already have aborted */
+            });
             await events.invoke('showPopup', {
                 type: 'error',
                 header: i18n.t('doc.save-failed'),
                 message: `'${error.message ?? error}'`
             });
+            return null;
         } finally {
             events.fire('stopSpinner');
         }
     };
 
+    // The document was just written over the file it is open from. The browser
+    // invalidates a File once its file changes, so the archive and every resource
+    // reading from it are moved onto the freshly written file. The rows were
+    // written verbatim (see writeDocument), so each resource's new entry is an
+    // identical view of its rows: nothing is copied or re-uploaded.
+    const rebindDocument = async (handle: FileSystemFileHandle, groups: { resource: EditorSplatResource }[]) => {
+        const blobSource = new BlobReadSource(await handle.getFile(), handle);
+        const zipFs = new ZipReadFileSystem(blobSource);
+        const rebound = new Set<EditorSplatResource>();
+        for (let i = 0; i < groups.length; ++i) {
+            const { resource } = groups[i];
+            if (!documentResources.has(resource)) continue;
+            const loaded = await loadSplatSource(`resource_${i}.ply`, zipFs, true);
+            await resource.rebind(loaded.source);
+            rebound.add(resource);
+        }
+        documentFs?.close();
+        documentFs = zipFs;
+        documentSource = blobSource;
+        documentResources = rebound;
+    };
+
+    // write the document to `handle`, which may be the file it is open from.
+    // returns false if nothing was written
+    const writeDocument = async (handle: FileSystemFileHandle) => {
+        const inPlace = documentSource && (await sourcesOf([documentSource], handle)).length > 0;
+        const groups = await saveDocument({ stream: await handle.createWritable(), compact: !inPlace });
+        if (!groups) {
+            return false;
+        }
+        if (inPlace) {
+            await rebindDocument(handle, groups);
+        }
+        return true;
+    };
+
     // handle user requesting a new document
     events.function('doc.new', async () => {
-        if (!await getResetConfirmation()) {
+        if (!(await getResetConfirmation())) {
             return false;
         }
         resetScene();
@@ -350,22 +426,51 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     // (which would result in more seamless user experience), but this is not yet supported in
     // other browsers.
     events.function('doc.load', async (file: File, handle?: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
-        await loadDocument(file);
+        await loadDocument(file, handle);
 
         events.fire('doc.setName', file.name);
 
         if (handle) {
             documentFileHandle = handle;
-            recentFiles.add(handle);
+            recentFiles.add({ handle, name: handle.name });
         }
     });
 
+    // read a document through its handle; if the browser blocks the read, offer
+    // it again through a plain file input, which yields a file without a handle
+    const readDocument = async (fileHandle: FileSystemFileHandle) => {
+        try {
+            return { file: await readHandle(fileHandle), handle: fileHandle };
+        } catch (error) {
+            if (!(error instanceof FileReadBlockedError)) throw error;
+            const [file] = await repickBlocked(events, error.filename, '.ssproj');
+            return file ? { file, handle: null as FileSystemFileHandle | null } : null;
+        }
+    };
+
+    // load a document read by readDocument; only one read through its handle
+    // keeps that handle for saves and recent files. Without one it keeps its
+    // name, so a save suggests it, but saving asks where to write
+    const openDocument = async (doc: { file: File; handle: FileSystemFileHandle | null }) => {
+        if (!doc.handle) {
+            await loadDocument(doc.file);
+            events.fire('doc.setName', doc.file.name);
+            return;
+        }
+        await loadDocument(doc.file, doc.handle);
+
+        // store file handle for subsequent saves
+        documentFileHandle = doc.handle;
+        events.fire('doc.setName', doc.handle.name);
+        recentFiles.add({ handle: doc.handle, name: doc.handle.name });
+    };
+
     events.function('doc.open', async () => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
@@ -384,15 +489,8 @@ const registerDocEvents = (scene: Scene, events: Events) => {
                 });
 
                 if (fileHandles?.length === 1) {
-                    const fileHandle = fileHandles[0];
-
-                    // null file handle incase loadDocument fails
-                    await loadDocument(await fileHandle.getFile());
-
-                    // store file handle for subsequent saves
-                    documentFileHandle = fileHandle;
-                    events.fire('doc.setName', fileHandle.name);
-                    recentFiles.add(fileHandle);
+                    const doc = await readDocument(fileHandles[0]);
+                    if (doc) await openDocument(doc);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -403,23 +501,19 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.openRecent', async (fileHandle: FileSystemFileHandle) => {
-        if (!events.invoke('scene.empty') && !await getResetConfirmation()) {
+        if (!events.invoke('scene.empty') && !(await getResetConfirmation())) {
             return false;
         }
 
         try {
-            if (await fileHandle.queryPermission({ mode: 'read' }) !== 'granted') {
-                if (await fileHandle.requestPermission({ mode: 'read' }) !== 'granted') {
+            if ((await fileHandle.queryPermission({ mode: 'read' })) !== 'granted') {
+                if ((await fileHandle.requestPermission({ mode: 'read' })) !== 'granted') {
                     return false;
                 }
             }
 
-            await loadDocument(await fileHandle.getFile());
-
-            // store file handle for subsequent saves
-            documentFileHandle = fileHandle;
-            events.fire('doc.setName', fileHandle.name);
-            recentFiles.add(fileHandle);
+            const doc = await readDocument(fileHandle);
+            if (doc) await openDocument(doc);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error(error);
@@ -435,10 +529,9 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     events.function('doc.save', async () => {
         if (documentFileHandle) {
             try {
-                await saveDocument({
-                    stream: await documentFileHandle.createWritable()
-                });
-                events.fire('doc.saved');
+                if (await writeDocument(documentFileHandle)) {
+                    events.fire('doc.saved');
+                }
             } catch (error) {
                 if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
                     console.error(error);
@@ -450,28 +543,47 @@ const registerDocEvents = (scene: Scene, events: Events) => {
     });
 
     events.function('doc.saveAs', async () => {
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    id: 'SuperSplatDocumentSave',
-                    types: SuperFileType,
-                    suggestedName: 'scene.ssproj'
-                });
-                await saveDocument({ stream: await handle.createWritable() });
+        try {
+            const hasFilePicker = !!window.showDirectoryPicker;
+            const directory = hasFilePicker ? await events.invoke('scene.getExportDirectory') : undefined;
+
+            const options = await events.invoke(
+                'show.savePopup',
+                events.invoke('doc.name') || 'scene.ssproj',
+                directory,
+                documentSource
+            );
+            if (!options) return false;
+
+            if (hasFilePicker) {
+                const target = options.fileTarget;
+                const handle = target.handle;
+                let written = false;
+                try {
+                    written = await writeDocument(handle);
+                    if (!written) return false;
+                } finally {
+                    if (!written) await target.discard?.();
+                }
                 documentFileHandle = handle;
                 events.fire('doc.setName', handle.name);
-                events.fire('doc.saved');
-                recentFiles.add(handle);
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
+                recentFiles.add({ handle, name: handle.name });
+            } else {
+                if (!(await saveDocument({ filename: options.filename }))) {
+                    return false;
                 }
+                events.fire('doc.setName', options.filename);
             }
-        } else {
-            await saveDocument({
-                filename: 'scene.ssproj'
-            });
             events.fire('doc.saved');
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error(error);
+                await events.invoke('showPopup', {
+                    type: 'error',
+                    header: i18n.t('doc.save-failed'),
+                    message: `${error.message ?? error}`
+                });
+            }
         }
     });
 

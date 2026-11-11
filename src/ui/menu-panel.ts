@@ -1,4 +1,5 @@
-import { Container, Element, Label } from '@playcanvas/pcui';
+import type { Element } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
 
@@ -6,6 +7,7 @@ type Direction = 'left' | 'right' | 'top' | 'bottom';
 
 type MenuItem = {
     // a resolver (() => string) makes the row re-localize on language change
+    // and re-evaluate each time the panel is shown
     text?: string | (() => string);
     icon?: string | Element;
     extra?: string | Element;
@@ -13,15 +15,15 @@ type MenuItem = {
 
     isEnabled?: () => boolean | Promise<boolean>;
     isVisible?: () => boolean | Promise<boolean>;
-    onSelect?: () => any;
+    onSelect?: () => unknown;
 };
 
-const offsetParent = (elem: HTMLElement) : HTMLElement => {
+const offsetParent = (elem: HTMLElement): HTMLElement => {
     const parent = elem.parentNode as HTMLElement;
 
-    return (parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static') ?
-        parent :
-        offsetParent(parent);
+    return parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static'
+        ? parent
+        : offsetParent(parent);
 };
 
 const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction, padding: number) => {
@@ -48,14 +50,14 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
-const isString = (value: any) => {
+const isString = (value: unknown): value is string | undefined => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 
 const createIcon = (icon: string | Element) => {
-    return isString(icon) ?
-        new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) }) :
-        icon;
+    return isString(icon)
+        ? new Label({ class: 'menu-row-icon', text: icon && String.fromCodePoint(parseInt(icon as string, 16)) })
+        : icon;
 };
 
 // create the row text label; if `text` is a resolver, bind it so the row
@@ -72,6 +74,8 @@ const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 class MenuPanel extends Container {
     parentPanel: MenuPanel | null = null;
     menuItems: MenuItem[] = [];
+    // row text labels, so resolver text can be refreshed when the panel is shown
+    private textLabels = new Map<MenuItem, Label>();
 
     constructor(menuItems: MenuItem[], args = {}) {
         args = {
@@ -93,6 +97,9 @@ class MenuPanel extends Container {
         this.on('show', async () => {
             for (let i = 0; i < this.menuItems.length; i++) {
                 const menuItem = this.menuItems[i];
+                if (typeof menuItem.text === 'function') {
+                    this.textLabels.get(menuItem).text = menuItem.text();
+                }
                 if (menuItem.isEnabled) {
                     this.dom.children.item(i).ui.enabled = await menuItem.isEnabled();
                 }
@@ -107,6 +114,7 @@ class MenuPanel extends Container {
 
     setItems(menuItems: MenuItem[]) {
         this.menuItems = menuItems;
+        this.textLabels.clear();
         this.clear();
 
         for (const menuItem of menuItems) {
@@ -114,13 +122,15 @@ class MenuPanel extends Container {
 
             let row: Container | null = null;
             let activate: () => void | null = null;
-            let deactivate: () => void | null = null;
             switch (type) {
                 case 'button': {
                     row = new Container({ class: 'menu-row' });
                     const icon = createIcon(menuItem.icon);
                     const text = createTextLabel(menuItem.text);
-                    const postscript = isString(menuItem.extra) ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string }) : menuItem.extra;
+                    this.textLabels.set(menuItem, text);
+                    const postscript = isString(menuItem.extra)
+                        ? new Label({ class: 'menu-row-postscript', text: menuItem.extra as string })
+                        : menuItem.extra;
                     row.append(icon);
                     row.append(text);
                     row.append(postscript);
@@ -132,6 +142,7 @@ class MenuPanel extends Container {
                     row = new Container({ class: 'menu-row' });
                     const icon = createIcon(menuItem.icon);
                     const text = createTextLabel(menuItem.text);
+                    this.textLabels.set(menuItem, text);
                     const postscript = new Label({ class: 'menu-row-postscript', text: '\u232A' });
                     row.append(icon);
                     row.append(text);
@@ -147,10 +158,6 @@ class MenuPanel extends Container {
                                 childPanel.position(row.dom, 'right', 2);
                                 childPanel.hidden = !childPanel.hidden;
                             }
-
-                            deactivate = () => {
-                                childPanel.hidden = true;
-                            };
                         };
                     }
 
@@ -169,9 +176,8 @@ class MenuPanel extends Container {
                 if (!isTouchDevice) {
                     row.dom.addEventListener('pointerenter', () => {
                         timer = window.setTimeout(() => {
-                            if (deactivate) {
-                                deactivate();
-                            }
+                            // only the hovered row's submenu stays open
+                            this.hideSubMenus(menuItem.subMenu);
                             if (activate) {
                                 activate();
                             }
@@ -200,9 +206,7 @@ class MenuPanel extends Container {
                                 // On touch devices: tap to open/close submenu
                                 if (menuItem.subMenu.hidden) {
                                     // Close other submenus in this panel first
-                                    if (deactivate) {
-                                        deactivate();
-                                    }
+                                    this.hideSubMenus(menuItem.subMenu);
                                     if (activate) {
                                         activate();
                                     }
@@ -221,6 +225,15 @@ class MenuPanel extends Container {
                 });
 
                 this.append(row);
+            }
+        }
+    }
+
+    // hide this panel's submenus, except the one to keep open
+    hideSubMenus(keep?: MenuPanel) {
+        for (const menuItem of this.menuItems) {
+            if (menuItem.subMenu && menuItem.subMenu !== keep) {
+                menuItem.subMenu.hidden = true;
             }
         }
     }

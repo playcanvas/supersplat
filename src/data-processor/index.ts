@@ -1,26 +1,30 @@
+import type { GraphicsDevice, RenderTarget, ScopeSpace, Shader } from 'playcanvas';
 import {
+    BUFFERUSAGE_COPY_DST,
     SEMANTIC_POSITION,
     drawQuadWithShader,
     BoundingBox,
-    GraphicsDevice,
-    RenderTarget,
-    ScopeSpace,
-    Shader,
     ShaderUtils,
-    BlendState
+    BlendState,
+    StorageBuffer
 } from 'playcanvas';
+
+import type { CameraFrame } from '../camera';
+import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
+import type { Splat } from '../splat';
 
 import { BufferPool } from './buffer-pool';
 import { CalcBound } from './calc-bound';
-import { CalcHistogram, CalcHistogramOptions } from './calc-histogram';
+import type { CalcHistogramOptions } from './calc-histogram';
+import { CalcHistogram } from './calc-histogram';
 import { ColorMatch } from './color-match';
-import { Intersect, IntersectOptions } from './intersect';
-import { SelectByRange, SelectByRangeOptions } from './select-by-range';
-import { SplatValueOptions } from './splat-value-compute';
-import { fragmentShader as blitFragmentShader, vertexShader as blitVertexShader } from '../shaders/blit-shader';
-import { Splat } from '../splat';
+import type { IntersectOptions } from './intersect';
+import { Intersect } from './intersect';
+import type { SelectByRangeOptions } from './select-by-range';
+import { SelectByRange } from './select-by-range';
+import type { SplatValueOptions } from './splat-value-compute';
 
-const resolve = (scope: ScopeSpace, values: any) => {
+const resolve = (scope: ScopeSpace, values: Record<string, unknown>) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);
     }
@@ -65,10 +69,11 @@ class DataProcessor {
         this.selectByRangeImpl = new SelectByRange(device);
     }
 
-    // calculate the intersection of a mask canvas with splat centers.
+    // calculate the intersection of a mask canvas with splat centers. frame is
+    // the gesture-time camera for the screen-space modes (see Intersect.run).
     // returns an owned mask buffer the caller must release via releaseMask().
-    intersect(options: IntersectOptions, splat: Splat) {
-        return this.intersectImpl.run(options, splat, this.bufferPool);
+    intersect(options: IntersectOptions, splat: Splat, frame?: CameraFrame) {
+        return this.intersectImpl.run(options, splat, this.bufferPool, frame);
     }
 
     // use gpu to calculate both selected and visible bounds in a single pass
@@ -76,9 +81,27 @@ class DataProcessor {
         return this.calcBoundImpl.run(splat, selectionBound, localBound);
     }
 
+    // Bounds for a query mask without changing selection or history. The
+    // caller owns a command slot, just as for calcBound and intersect.
+    async calcMaskBound(splat: Splat, mask: Uint8Array): Promise<BoundingBox> {
+        const flags = new Uint8Array(Math.max(4, Math.ceil(mask.length / 4) * 4));
+        for (let i = 0; i < splat.instances.count; i++) flags[i] = mask[i] === 255 ? 1 : 0;
+        const buffer = new StorageBuffer(this.device, flags.byteLength, BUFFERUSAGE_COPY_DST);
+        try {
+            buffer.write(0, flags, 0, flags.byteLength);
+            const bound = new BoundingBox();
+            await this.calcBoundImpl.run(splat, bound, new BoundingBox(), buffer);
+            const world = new BoundingBox();
+            world.setFromTransformedAabb(bound, splat.worldTransform);
+            return world;
+        } finally {
+            buffer.destroy();
+        }
+    }
+
     // calculate histogram (bin counts + min/max) entirely on GPU
-    calcHistogram(splat: Splat, mode: number, options?: CalcHistogramOptions) {
-        return this.calcHistogramImpl.run(splat, mode, options);
+    calcHistogram(splat: Splat, mode: number, options?: CalcHistogramOptions, range?: [number, number]) {
+        return this.calcHistogramImpl.run(splat, mode, options, range);
     }
 
     // compute a per-splat byte mask (255 = in range and visible, 0 = not) for
@@ -101,14 +124,17 @@ class DataProcessor {
         this.bufferPool.release(mask);
     }
 
-    copyRt(source: RenderTarget, dest: RenderTarget) {
+    // overdraw: the source holds an overdraw frame's fragment counts, so resolve
+    // them through the heat ramp as the final blit would have (captures run
+    // with the final blit disabled)
+    copyRt(source: RenderTarget, dest: RenderTarget, overdraw = false) {
         const { device } = this;
 
         resolve(device.scope, {
             srcTexture: source.colorBuffer,
-            // straight 1:1 copy, no upscale or stochastic quad resolve
+            // straight 1:1 copy, no upscale
             blitScale: [1, 1],
-            quadResolve: 0
+            overdraw: overdraw ? 1 : 0
         });
 
         device.setBlendState(BlendState.NOBLEND);

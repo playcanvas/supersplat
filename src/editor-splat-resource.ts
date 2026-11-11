@@ -1,19 +1,20 @@
-import {
+import type {
     ChunkData,
     ChunkDataPool,
     ChunkField,
     ChunkLayer,
     ChunkSource,
     SHBands,
-    createChunkDataPool
+    SplatModel
 } from '@playcanvas/splat-transform';
+import { createChunkDataPool, sortMortonInterleaved } from '@playcanvas/splat-transform';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     PIXELFORMAT_R32U,
     PIXELFORMAT_RGBA16F,
     PIXELFORMAT_RGBA32U,
     BoundingBox,
     FloatPacking,
-    GraphicsDevice,
     GSplatContainer,
     GSplatFormat,
     Quat,
@@ -21,8 +22,21 @@ import {
 } from 'playcanvas';
 
 import { PermutedChunkSource } from './io';
+import type { BlobReadSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
+
+// Stages of EditorSplatResource.upload after the read sweep. Both block the
+// main thread, so the UI is given a frame to paint the announcement first.
+type UploadPhase = 'sort' | 'upload';
+
+// Yield to the event loop so pending DOM changes can be painted before a long
+// synchronous stage. A macrotask, not requestAnimationFrame: rAF never fires
+// in a hidden tab, which would stall the load until the tab is shown again.
+const yieldToPaint = () =>
+    new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+    });
 
 // One SH texture filled by the upload sweep: which packed coefficient words it
 // stores and its per-row component count.
@@ -41,10 +55,29 @@ const acquire = (pool: ChunkDataPool, source: ChunkSource, layer: ChunkLayer, co
     return pool.acquire(layer, source.meta.layouts[layer], count);
 };
 
+// the view.antiAlias setting: 'auto' follows each layer's trained-model tag,
+// 'on' and 'off' override it for files whose tag is missing or wrong
+type AntiAliasMode = 'auto' | 'on' | 'off';
+
+// the model a layer renders and exports as under the view.antiAlias setting.
+// 'off' only clears the antialiased tag, so other models are kept
+const effectiveModel = (model: SplatModel, antiAlias: AntiAliasMode): SplatModel => {
+    if (antiAlias === 'on') return 'antialiased';
+    if (antiAlias === 'off' && model === 'antialiased') return 'default';
+    return model;
+};
+
 class EditorSplatResource extends GSplatContainer {
-    readonly source: ChunkSource;
+    // the lazily-read static data. replaced only by rebind()
+    source: ChunkSource;
+    // the local files `source` lazily reads through, when it was loaded from
+    // any. These must not be overwritten while in use (see scene.sourcesOf).
+    fileSources: BlobReadSource[] = [];
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;
+    // how the gaussians were trained, from the file's tag: the renderer draws
+    // 'antialiased' ones with their training filter, and exports keep the tag
+    readonly model: SplatModel;
     // the state column as loaded from file. read-only after upload: the live
     // editor state belongs to the instance list, not to the static resource
     readonly initialState: Uint8Array;
@@ -63,7 +96,7 @@ class EditorSplatResource extends GSplatContainer {
 
     private constructor(device: GraphicsDevice, source: ChunkSource) {
         const { shBands } = source.meta;
-        const streams: { name: string, format: number }[] = [
+        const streams: { name: string; format: number }[] = [
             { name: 'splatColor', format: PIXELFORMAT_RGBA16F },
             { name: 'transformA', format: PIXELFORMAT_RGBA32U },
             { name: 'transformB', format: PIXELFORMAT_RGBA16F }
@@ -85,24 +118,38 @@ class EditorSplatResource extends GSplatContainer {
         super(device, source.meta.numGaussians, format);
 
         this.source = source;
-        const pooledBytes = Object.values(source.meta.layouts).reduce((sum, layout) => sum + layout.stride * source.meta.chunkSize, 0);
+        const pooledBytes = Object.values(source.meta.layouts).reduce(
+            (sum, layout) => sum + layout.stride * source.meta.chunkSize,
+            0
+        );
         this.sourcePool = createChunkDataPool({
             chunkSize: source.meta.chunkSize,
             maxPooledBytes: pooledBytes
         });
         this.shBands = shBands;
+        this.model = source.meta.model;
         this.initialState = new Uint8Array(source.meta.numGaussians);
 
         const properties = new Set([
-            'x', 'y', 'z',
-            'scale_0', 'scale_1', 'scale_2',
-            'rot_0', 'rot_1', 'rot_2', 'rot_3',
-            'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
+            'x',
+            'y',
+            'z',
+            'scale_0',
+            'scale_1',
+            'scale_2',
+            'rot_0',
+            'rot_1',
+            'rot_2',
+            'rot_3',
+            'f_dc_0',
+            'f_dc_1',
+            'f_dc_2',
+            'opacity'
         ]);
         for (let i = 0; i < SH_REST_COUNTS[shBands]; ++i) {
             properties.add(`f_rest_${i}`);
         }
-        source.meta.extraColumns.forEach(column => properties.add(column.name));
+        source.meta.extraColumns.forEach((column) => properties.add(column.name));
         properties.add('state');
         properties.add('transform');
         this.propertyNames = properties;
@@ -114,10 +161,19 @@ class EditorSplatResource extends GSplatContainer {
         return this.numSplats;
     }
 
-    static async create(device: GraphicsDevice, source: ChunkSource) {
+    // `reorder` Morton-orders the gaussians during upload (see loadSplatSource's
+    // `reorder`); the resource then reads through a PermutedChunkSource over
+    // `source` so rows and texels agree. `onPhase` is told when the read sweep
+    // is over and the remaining (synchronous) stages begin, for progress UI.
+    static async create(
+        device: GraphicsDevice,
+        source: ChunkSource,
+        reorder = false,
+        onPhase?: (phase: UploadPhase) => void
+    ) {
         const resource = new EditorSplatResource(device, source);
         try {
-            await resource.upload();
+            await resource.upload(reorder, onPhase);
             return resource;
         } catch (err) {
             await resource.close();
@@ -142,16 +198,22 @@ class EditorSplatResource extends GSplatContainer {
                 await source.read({ chunkIndex, ...chunks });
                 callback(chunkIndex * source.meta.chunkSize, count, chunks);
             } finally {
-                Object.values(chunks).forEach(chunk => chunk.release());
+                Object.values(chunks).forEach((chunk) => chunk.release());
             }
         }
     }
 
-    private fillTransformA(packed: Uint32Array, position: Float32Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+    private fillTransformA(
+        packed: Uint32Array,
+        position: Float32Array,
+        geometric: Float32Array,
+        base: number,
+        count: number
+    ) {
         const floats = new Float32Array(packed.buffer);
         const quat = new Quat();
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const pos = i * 3;
             const geo = i * 8;
             quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
@@ -163,10 +225,10 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillTransformB(packed: Uint16Array, geometric: Float32Array, base: number, count: number, remap: Uint32Array | null) {
+    private fillTransformB(packed: Uint16Array, geometric: Float32Array, base: number, count: number) {
         const quat = new Quat();
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const geo = i * 8;
             quat.set(geometric[geo + 1], geometric[geo + 2], geometric[geo + 3], geometric[geo]).normalize();
             if (quat.w < 0) quat.mulScalar(-1);
@@ -177,10 +239,17 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillColor(packed: Uint16Array, geometric: Float32Array, color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+    private fillColor(
+        packed: Uint16Array,
+        geometric: Float32Array,
+        color: Float32Array,
+        colorStride: number,
+        base: number,
+        count: number
+    ) {
         const SH_C0 = 0.28209479177387814;
         for (let i = 0; i < count; ++i) {
-            const dst = (remap ? remap[base + i] : base + i) * 4;
+            const dst = (base + i) * 4;
             const col = i * colorStride;
             packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
             packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
@@ -192,7 +261,7 @@ class EditorSplatResource extends GSplatContainer {
     // Quantize each row's SH coefficients once (11/10/11-bit triples against
     // the row's max, whose float bits are stored as coefficient word 0) and
     // write all SH textures from the shared result.
-    private fillSH(targets: SHTarget[], color: Float32Array, colorStride: number, base: number, count: number, remap: Uint32Array | null) {
+    private fillSH(targets: SHTarget[], color: Float32Array, colorStride: number, base: number, count: number) {
         const numCoeffs = SH_REST_COUNTS[this.shBands] / 3;
         const t11 = (1 << 11) - 1;
         const t10 = (1 << 10) - 1;
@@ -211,12 +280,12 @@ class EditorSplatResource extends GSplatContainer {
             for (let j = 1; j < coeffs.length; ++j) max = Math.max(max, Math.abs(coeffs[j]));
             if (max === 0) continue;
             for (let j = 0; j < coeffs.length; j += 3) {
-                coeffs[j] = Math.max(0, Math.min(t11, Math.floor((coeffs[j] / max * 0.5 + 0.5) * t11 + 0.5)));
-                coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor((coeffs[j + 1] / max * 0.5 + 0.5) * t10 + 0.5)));
-                coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor((coeffs[j + 2] / max * 0.5 + 0.5) * t11 + 0.5)));
+                coeffs[j] = Math.max(0, Math.min(t11, Math.floor(((coeffs[j] / max) * 0.5 + 0.5) * t11 + 0.5)));
+                coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor(((coeffs[j + 1] / max) * 0.5 + 0.5) * t10 + 0.5)));
+                coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor(((coeffs[j + 2] / max) * 0.5 + 0.5) * t11 + 0.5)));
             }
             value[0] = max;
-            const row = remap ? remap[base + i] : base + i;
+            const row = base + i;
             for (const target of targets) {
                 const dst = row * target.components;
                 for (let c = 0; c < target.coeffCount; ++c) {
@@ -225,64 +294,85 @@ class EditorSplatResource extends GSplatContainer {
                         target.packed[dst] = bits[0];
                     } else {
                         const o = (coeff - 1) * 3;
-                        target.packed[dst + c] = coeffs[o] << 21 | coeffs[o + 1] << 11 | coeffs[o + 2];
+                        target.packed[dst + c] = (coeffs[o] << 21) | (coeffs[o + 1] << 11) | coeffs[o + 2];
                     }
                 }
             }
         }
     }
 
-    private fillState(stateField: ChunkField, other: ChunkData, base: number, count: number, remap: Uint32Array | null) {
+    private fillState(stateField: ChunkField, other: ChunkData, base: number, count: number) {
         const data = new DataView(other.data);
         const stride = other.stride;
         for (let i = 0; i < count; ++i) {
             const offset = i * stride + stateField.byteOffset;
             const value = stateField.type === 'uint32' ? data.getUint32(offset, true) : data.getFloat32(offset, true);
-            this.initialState[remap ? remap[base + i] : base + i] = value;
+            this.initialState[base + i] = value;
         }
     }
 
-    private async upload() {
-        const { source, shBands } = this;
-
-        // The loader Morton-permutes lazily-read sources (PermutedChunkSource);
-        // reading that wrapper sequentially degenerates into full-file random
-        // gathers on the underlying file. Sweep the parent in its native file
-        // order instead — fast sequential reads — and scatter each row to its
-        // permuted destination through the inverse permutation.
-        let sweepSource: ChunkSource = source;
-        let remap: Uint32Array | null = null;
-        if (source instanceof PermutedChunkSource) {
-            const { order } = source;
-            sweepSource = source.parent;
-            remap = new Uint32Array(order.length);
-            for (let i = 0; i < order.length; ++i) {
-                remap[order[i]] = i;
+    // Reorder rows of `components` elements each: the row at `i` before the
+    // call moves to row `inverse[i]`. Written as a scatter (sequential read,
+    // random write) rather than a gather: random writes retire through the
+    // store buffer while random reads stall, and at ~23M rows the gather form
+    // measured ~1 s against a fraction of that for the scatter. `slice()` is a
+    // sequential copy, so peak extra memory is one texture at a time.
+    private static permuteRows(data: Uint8Array | Uint16Array | Uint32Array, components: number, inverse: Uint32Array) {
+        const src = data.slice();
+        const n = inverse.length;
+        if (components === 4) {
+            for (let i = 0; i < n; ++i) {
+                const s = i * 4;
+                const d = inverse[i] * 4;
+                data[d] = src[s];
+                data[d + 1] = src[s + 1];
+                data[d + 2] = src[s + 2];
+                data[d + 3] = src[s + 3];
+            }
+        } else {
+            for (let i = 0; i < n; ++i) {
+                const s = i * components;
+                const d = inverse[i] * components;
+                for (let c = 0; c < components; ++c) {
+                    data[d + c] = src[s + c];
+                }
             }
         }
+    }
 
-        const shDefs: { name: string, firstCoeff: number, coeffCount: number, components: number }[] = [];
+    private async upload(reorder: boolean, onPhase?: (phase: UploadPhase) => void) {
+        const { source, shBands } = this;
+        const numRows = source.meta.numGaussians;
+
+        const shDefs: { name: string; firstCoeff: number; coeffCount: number; components: number }[] = [];
         if (shBands > 0) {
             shDefs.push({ name: 'splatSH_1to3', firstCoeff: 0, coeffCount: 4, components: 4 });
             if (shBands > 1) {
                 shDefs.push({ name: 'splatSH_4to7', firstCoeff: 4, coeffCount: 4, components: 4 });
                 const wide = shBands > 2;
-                shDefs.push({ name: 'splatSH_8to11', firstCoeff: 8, coeffCount: wide ? 4 : 1, components: wide ? 4 : 1 });
+                shDefs.push({
+                    name: 'splatSH_8to11',
+                    firstCoeff: 8,
+                    coeffCount: wide ? 4 : 1,
+                    components: wide ? 4 : 1
+                });
                 if (wide) {
                     shDefs.push({ name: 'splatSH_12to15', firstCoeff: 12, coeffCount: 4, components: 4 });
                 }
             }
         }
 
-        const textureNames = ['transformA', 'transformB', 'splatColor', ...shDefs.map(sh => sh.name)];
-        const textures = textureNames.map(name => this.getTexture(name));
-        const targets = textures.map((texture) => {
-            texture.releaseSourceAfterUpload = true;
-            return texture.lock() as Uint16Array | Uint32Array;
-        });
+        const textureNames = ['transformA', 'transformB', 'splatColor', ...shDefs.map((sh) => sh.name)];
+        const textures = textureNames.map((name) => this.getTexture(name));
+        // no releaseSourceAfterUpload: the fill below is async, and a frame
+        // rendering meanwhile uploads the locked levels - with the flag set the
+        // engine would release them there, discarding the rows filled after it
+        const targets = textures.map((texture) => texture.lock() as Uint16Array | Uint32Array);
         const shTargets: SHTarget[] = shDefs.map((sh, i) => ({ ...sh, packed: targets[3 + i] as Uint32Array }));
 
-        const stateField = source.meta.availableLayers.has('other') ? source.meta.layouts.other?.fields.state : undefined;
+        const stateField = source.meta.availableLayers.has('other')
+            ? source.meta.layouts.other?.fields.state
+            : undefined;
         const layers: ChunkLayer[] = ['position', 'geometric', 'color'];
         if (stateField) layers.push('other');
 
@@ -291,21 +381,21 @@ class EditorSplatResource extends GSplatContainer {
         const max = new Vec3(-Infinity, -Infinity, -Infinity);
 
         try {
-            // Single sequential sweep: read each chunk once and fill all
-            // textures, the state array and the source AABB from it.
-            await this.forEachChunk(sweepSource, layers, (base, count, chunks) => {
+            // Single sequential sweep in file order: read each chunk once and
+            // fill all textures, the state array and the source AABB from it.
+            await this.forEachChunk(source, layers, (base, count, chunks) => {
                 const position = new Float32Array(chunks.position.data, 0, count * 3);
                 const geometric = new Float32Array(chunks.geometric.data, 0, count * 8);
                 const color = new Float32Array(chunks.color.data, 0, count * colorStride);
 
-                this.fillTransformA(targets[0] as Uint32Array, position, geometric, base, count, remap);
-                this.fillTransformB(targets[1] as Uint16Array, geometric, base, count, remap);
-                this.fillColor(targets[2] as Uint16Array, geometric, color, colorStride, base, count, remap);
+                this.fillTransformA(targets[0] as Uint32Array, position, geometric, base, count);
+                this.fillTransformB(targets[1] as Uint16Array, geometric, base, count);
+                this.fillColor(targets[2] as Uint16Array, geometric, color, colorStride, base, count);
                 if (shTargets.length > 0) {
-                    this.fillSH(shTargets, color, colorStride, base, count, remap);
+                    this.fillSH(shTargets, color, colorStride, base, count);
                 }
                 if (stateField) {
-                    this.fillState(stateField, chunks.other, base, count, remap);
+                    this.fillState(stateField, chunks.other, base, count);
                 }
                 for (let i = 0; i < count; ++i) {
                     const o = i * 3;
@@ -317,19 +407,52 @@ class EditorSplatResource extends GSplatContainer {
                     max.z = Math.max(max.z, position[o + 2]);
                 }
             });
+
+            if (reorder) {
+                if (onPhase) {
+                    onPhase('sort');
+                    await yieldToPaint();
+                }
+
+                // Morton ordering needs every position before any row can be
+                // placed, so rather than a separate positions pass over the
+                // file, sort from the positions the sweep has already written:
+                // transformA rows are [x, y, z, packed quat] as 32-bit words,
+                // so a float view at stride 4 is the sort's input as-is (the
+                // fourth word is never read). Then permute the filled textures.
+                // order[i] is the file row that lands at texel/row i
+                const transformA = targets[0];
+                const positions = new Float32Array(transformA.buffer, transformA.byteOffset, numRows * 4);
+                const order = new Uint32Array(numRows);
+                for (let i = 0; i < numRows; ++i) order[i] = i;
+                sortMortonInterleaved(positions, order, 4);
+
+                // inverse[fileRow] is the texel/row it moves to
+                const inverse = new Uint32Array(numRows);
+                for (let i = 0; i < numRows; ++i) inverse[order[i]] = i;
+
+                const components = [4, 4, 4, ...shDefs.map((sh) => sh.components)];
+                targets.forEach((target, i) => EditorSplatResource.permuteRows(target, components[i], inverse));
+                EditorSplatResource.permuteRows(this.initialState, 1, inverse);
+                this.source = new PermutedChunkSource(source, order);
+            }
         } catch (err) {
-            textures.forEach(texture => texture.unlock());
+            textures.forEach((texture) => texture.unlock());
             throw err;
         }
 
+        if (onPhase) {
+            onPhase('upload');
+            await yieldToPaint();
+        }
+
         textures.forEach((texture) => {
+            // unlocking a write lock uploads the level
             texture.unlock();
-            texture.upload();
-            // Texture.releaseSourceAfterUpload currently only releases ImageBitmap
-            // sources. These immutable typed-array levels can be discarded after
-            // the synchronous WebGPU upload; the retained ChunkSource is the
+            // These immutable typed-array levels can be discarded after the
+            // synchronous WebGPU upload; the retained ChunkSource is the
             // authoritative CPU-side copy.
-            const levels = (texture as any)._levels;
+            const levels = texture['_levels'];
             if (levels) levels[0] = null;
         });
 
@@ -337,7 +460,7 @@ class EditorSplatResource extends GSplatContainer {
         this.aabb.setMinMax(min, max);
 
         this.sourcePool.trim(0);
-        this.update(source.meta.numGaussians, false);
+        this.update(numRows, false);
     }
 
     // register a layer's interest in this static data
@@ -350,6 +473,19 @@ class EditorSplatResource extends GSplatContainer {
     release() {
         this.layerRefs--;
         return this.layerRefs <= 0;
+    }
+
+    // Read from `source` instead: an identical view of the same rows, in the
+    // same order, from elsewhere. Used after the document is saved over the file
+    // this resource was loaded from, when the freshly written archive replaces
+    // the now-invalid original (see doc.ts). The GPU data is untouched.
+    async rebind(source: ChunkSource) {
+        if (source.meta.numGaussians !== this.numRows) {
+            throw new Error(`Cannot rebind resource: expected ${this.numRows} rows, got ${source.meta.numGaussians}`);
+        }
+        const previous = this.source;
+        this.source = source;
+        await previous.close();
     }
 
     async close() {
@@ -365,4 +501,5 @@ class EditorSplatResource extends GSplatContainer {
     }
 }
 
-export { EditorSplatResource };
+export { EditorSplatResource, effectiveModel };
+export type { AntiAliasMode };

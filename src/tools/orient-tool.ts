@@ -2,12 +2,13 @@ import { Button, Container, Label } from '@playcanvas/pcui';
 import { Entity, Mat4, Quat, TranslateGizmo, Vec3, math } from 'playcanvas';
 
 import { EntityTransformOp, MultiOp, PlacePivotOp, SetLocalFrameOp } from '../edit-ops';
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { Pivot } from '../pivot';
-import { Scene } from '../scene';
-import { Splat } from '../splat';
-import { ToolOverlay, OverlayWriter } from '../tool-overlay';
+import type { Pivot } from '../pivot';
+import type { Scene } from '../scene';
+import type { Splat } from '../splat';
+import type { OverlayWriter } from '../tool-overlay';
+import { ToolOverlay } from '../tool-overlay';
 import { Transform } from '../transform';
 import { DimensionLabels } from '../ui/dimension-labels';
 import { i18n } from '../ui/localization';
@@ -42,16 +43,27 @@ const t = new Transform();
 const cent = new Vec3();
 
 class OrientTransformHandler {
-    activate() {}
-    deactivate() {}
+    activate() {
+        // no-op
+    }
+
+    deactivate() {
+        // no-op
+    }
 }
 
 class OrientTool {
     activate: () => void;
     deactivate: () => void;
-    getFocus: () => { position: Vec3, radius: number } | null;
+    getFocus: () => { position: Vec3; radius: number } | null;
 
-    constructor(events: Events, scene: Scene, parent: HTMLElement, canvasContainer: Container, annotationParent: HTMLElement) {
+    constructor(
+        events: Events,
+        scene: Scene,
+        parent: HTMLElement,
+        canvasContainer: Container,
+        annotationParent: HTMLElement
+    ) {
         // the edge length labels (shown when 'show dimensions' is enabled);
         // the points, edges and plane fill render in the scene via the shared
         // tool overlay
@@ -162,7 +174,27 @@ class OrientTool {
             }
 
             n.normalize();
-            c.add2(p0, p1).add(p2).mulScalar(1 / 3);
+            c.add2(p0, p1)
+                .add(p2)
+                .mulScalar(1 / 3);
+
+            return true;
+        };
+
+        // calculate the world space up direction (first point to second) and
+        // midpoint of the two points. returns false if the points coincide.
+        const calcLine = () => {
+            getPoint(0, p0);
+            getPoint(1, p1);
+
+            n.sub2(p1, p0);
+
+            if (n.length() === 0) {
+                return false;
+            }
+
+            n.normalize();
+            c.add2(p0, p1).mulScalar(0.5);
 
             return true;
         };
@@ -181,8 +213,8 @@ class OrientTool {
         };
 
         const updateButtons = () => {
-            const planeReady = !!splat && splat.orientPoints.length === 3 && calcPlane();
-            alignButton.enabled = planeReady;
+            const count = splat ? splat.orientPoints.length : 0;
+            alignButton.enabled = count === 3 ? calcPlane() : count === 2 && calcLine();
             clearButton.enabled = !!splat && splat.orientPoints.length > 0;
         };
 
@@ -218,7 +250,9 @@ class OrientTool {
         });
 
         gizmo.on('transform:move', () => {
-            events.invoke('pivot').moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
+            events
+                .invoke('pivot')
+                .moveTRS(entity.getLocalPosition(), entity.getLocalRotation(), entity.getLocalScale());
         });
 
         gizmo.on('transform:end', () => {
@@ -258,14 +292,18 @@ class OrientTool {
             }
         });
 
-        // rotate and translate the splat so the picked plane lands on the grid plane
+        // rotate and translate the splat so the picked plane lands on the grid
+        // plane, or rotate it so the picked line (first point to second) points
+        // along the grid's positive axis
         const alignToGrid = () => {
-            if (!splat || splat.orientPoints.length !== 3 || !calcPlane()) {
+            const count = splat ? splat.orientPoints.length : 0;
+            const isPlane = count === 3;
+            if (isPlane ? !calcPlane() : count !== 2 || !calcLine()) {
                 return;
             }
 
             // the side of the plane facing the camera becomes the grid's positive side
-            if (n.dot(v.sub2(scene.camera.position, c)) < 0) {
+            if (isPlane && n.dot(v.sub2(scene.camera.position, c)) < 0) {
                 n.mulScalar(-1);
             }
 
@@ -275,9 +313,15 @@ class OrientTool {
             let snap = false;
             for (let i = 0; i < 3; i++) {
                 switch (i) {
-                    case 0: worldTransform.getX(axis); break;
-                    case 1: worldTransform.getY(axis); break;
-                    case 2: worldTransform.getZ(axis); break;
+                    case 0:
+                        worldTransform.getX(axis);
+                        break;
+                    case 1:
+                        worldTransform.getY(axis);
+                        break;
+                    case 2:
+                        worldTransform.getZ(axis);
+                        break;
                 }
                 axis.normalize();
                 const d = n.dot(axis);
@@ -293,7 +337,7 @@ class OrientTool {
 
             // the positive axis of the first enabled grid plane (xz when none is)
             const gridPlane: GridPlane = (events.invoke('grid.planes') as GridPlane[])[0] ?? 'xz';
-            const a = gridPlane === 'xy' ? Vec3.BACK : (gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP);
+            const a = gridPlane === 'xy' ? Vec3.BACK : gridPlane === 'yz' ? Vec3.RIGHT : Vec3.UP;
 
             // shortest arc rotation from the plane normal to the grid axis
             q.setFromDirections(n, a);
@@ -304,12 +348,15 @@ class OrientTool {
                 splat.entity.getLocalScale()
             );
 
-            // rotate the entity about the plane centroid so the picked points
-            // don't move laterally, then settle the plane onto the grid
+            // rotate the entity about the plane centroid (or line midpoint) so
+            // the picked points don't move laterally, then settle the plane
+            // onto the grid
             newPos.sub2(oldt.position, c);
             q.transformVector(newPos, newPos);
             newPos.add(c);
-            newPos.sub(v.copy(a).mulScalar(c.dot(a)));
+            if (isPlane) {
+                newPos.sub(v.copy(a).mulScalar(c.dot(a)));
+            }
 
             newRot.mul2(q, oldt.rotation);
 
@@ -356,15 +403,17 @@ class OrientTool {
             // picked plane, origin at the first picked point
             newRot.copy(splat.entity.getLocalRotation()).invert().mul(q);
 
-            events.fire('edit.add', new SetLocalFrameOp({
-                splat,
-                oldOrigin: splat.localFrameOrigin.clone(),
-                oldFrame: splat.localFrame.clone(),
-                newOrigin: splat.orientPoints[0].clone(),
-                newFrame: newRot.clone()
-            }));
+            events.fire(
+                'edit.add',
+                new SetLocalFrameOp({
+                    splat,
+                    oldOrigin: splat.localFrameOrigin.clone(),
+                    oldFrame: splat.localFrame.clone(),
+                    newOrigin: splat.orientPoints[0].clone(),
+                    newFrame: newRot.clone()
+                })
+            );
         });
-
 
         clearButton.on('click', () => {
             if (splat) {
@@ -380,10 +429,15 @@ class OrientTool {
         // layer in front must not supply the surface
         const placePoint = async (offsetX: number, offsetY: number) => {
             const target = splat;
-            const [result] = await scene.camera.intersectMany([{
-                x: offsetX / canvasContainer.dom.clientWidth,
-                y: offsetY / canvasContainer.dom.clientHeight
-            }], [target]);
+            const [result] = await scene.camera.intersectMany(
+                [
+                    {
+                        x: offsetX / canvasContainer.dom.clientWidth,
+                        y: offsetY / canvasContainer.dom.clientHeight
+                    }
+                ],
+                [target]
+            );
             // another click may have landed a point while the pick was in flight
             if (!result || !active || splat !== target || splat.orientPoints.length >= 3) {
                 return false;
@@ -450,7 +504,7 @@ class OrientTool {
                 }
 
                 // place at the pointer-down position: that is where the user aimed
-                if (splat.orientPoints.length < 3 && await placePoint(clickX, clickY)) {
+                if (splat.orientPoints.length < 3 && (await placePoint(clickX, clickY))) {
                     updateVisuals();
                     scene.forceRender = true;
                 }

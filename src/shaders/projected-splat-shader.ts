@@ -1,14 +1,16 @@
-const vertexShader = /* wgsl */`
+import { overlayEligibleWGSL } from './projected-splat-chunk';
+import { stochasticWarpWGSL } from './stochastic-warp-chunk';
+
+const vertexShader = /* wgsl */ `
 #include "gsplatOutputVS"
 
 attribute vertex_position: vec3f;
 
-#ifndef STOCHASTIC
+// the frame's draw order over the projector's survivors: sorted back to front
+// for blending, or the compact list itself on stochastic frames, whose depth
+// test needs no order (see ProjectedSplatRenderer.render). The draw is indirect
+// over the survivor count, so the cpu never knows it
 var<storage, read> sortedIndices: array<u32>;
-#endif
-// dense list of surviving entries and their count, both written by the projector.
-// The draw is indirect over the count, so the cpu never knows it
-var<storage, read> compactEntries: array<u32>;
 var<storage, read> splatCount: array<u32>;
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
@@ -31,14 +33,25 @@ uniform ringsCount: u32;
 uniform outlineMode: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
+uniform warpStrength: f32;
 
 varying gaussianUV: vec2f;
-varying gaussianColor: vec4f;
-varying ringColor: vec4f;
-varying selectedRingColor: vec4f;
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying gaussianDepth: f32;
+// the two resolved colours - gaussian fill and ring band - travel as six halves
+// in three flat words: (fill.r, fill.g), (fill.b, ring.r), (ring.g, ring.b).
+// The vertex stage is bound by writing its outputs, not by arithmetic, and the
+// three float colours were more than half of them. Every flat varying here is
+// the same at all four corners of the quad, so 'either' lets the backend take
+// its native provoking vertex instead of emulating WebGPU's first-vertex rule
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
+// bits 0-1 selected/locked, bits 8-15 the opacity byte
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
+
+${overlayEligibleWGSL}
+${stochasticWarpWGSL}
 
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
@@ -53,14 +66,9 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         return output;
     }
 
-    // both paths resolve to a cache entry index: stochastic reads the compact
-    // list directly (it needs no ordering), the sorted path reads it through the
-    // sort, which carries the same entry indices as its payload
-    #ifdef STOCHASTIC
-        let entry = compactEntries[order];
-    #else
-        let entry = sortedIndices[order];
-    #endif
+    // the ordered list carries cache entry indices, so gaussian ids mean the
+    // same on both paths
+    let entry = sortedIndices[order];
     #ifdef PICK_PASS
         if (entry < uniform.pickBase || entry >= uniform.pickBase + uniform.pickCount) {
             output.position = discardPosition;
@@ -71,16 +79,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let a = textureLoad(cacheA, uv, 0);
     let b = textureLoad(cacheB, uv, 0).x;
 
-    let alpha = f32((b >> 16u) & 0xffu) / 255.0;
+    let alphaByte = (b >> 16u) & 0xffu;
+    let alpha = f32(alphaByte) / 255.0;
     let flags = (b >> 24u) & 3u;
     // a zero-alpha splat is invisible to the gaussian pass but is still a real,
     // editable splat: keep its quad wherever rings mode would draw its ring band
     // (mirroring the fragment shader's eligibility test) so it renders and picks
     // there. Everywhere else skip it as before, so an invisible splat can't
     // steal frontmost picks or burn fill
-    let ringEligible = uniform.ringSize > 0.0 && (flags & 2u) == 0u
+    let ringEligible = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && (uniform.ringSelectionOnly == 0u || (flags & 1u) != 0u);
+        && overlayEligible(flags, uniform.ringSelectionOnly != 0u);
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
@@ -108,7 +117,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // reconstruct clip position: ndc from snorm16 over the projector's range,
     // w = view depth (1 for ortho), z affine in view depth via clipZParams.xy
     let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
-    let ndcRange = vec2f(1.0) + vec2f(8.0 * maxRadius) / uniform.viewportSize.xy;
+    let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniform.viewportSize.xy;
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     let depth = bitcast<f32>(a.y);
     let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
@@ -147,11 +156,22 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let pixelOffset = corner.x * axis1 + corner.y * axis2;
     let clipOffset = pixelOffset * clip.w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
+    #ifdef STOCHASTIC
+        #ifndef PICK_PASS
+            if (uniform.warpStrength > 0.0) {
+                let warpedCenter = warpPosition(ndc, uniform.warpStrength);
+                let warpedOffset = warpOffset(ndc, pixelOffset * uniform.viewportSize.zw, uniform.warpStrength);
+                output.position = vec4f((warpedCenter + warpedOffset) * w, clip.z, w);
+            }
+        #endif
+    #endif
     output.gaussianUV = corner;
-    output.gaussianColor = vec4f(prepareOutputFromGamma(gaussianRgb, clip.w), alpha);
-    output.ringColor = vec4f(prepareOutputFromGamma(ringRgb, clip.w), 1.0);
-    output.selectedRingColor = vec4f(prepareOutputFromGamma(selectedRingRgb, clip.w), 1.0);
-    output.gaussianFlags = flags;
+    let fill = prepareOutputFromGamma(gaussianRgb, clip.w);
+    let ring = prepareOutputFromGamma(select(ringRgb, selectedRingRgb, (flags & 1u) != 0u), clip.w);
+    output.packedColor0 = pack2x16float(fill.rg);
+    output.packedColor1 = pack2x16float(vec2f(fill.b, ring.r));
+    output.packedColor2 = pack2x16float(ring.gb);
+    output.gaussianFlags = flags | (alphaByte << 8u);
     output.gaussianId = entry - uniform.pickBase;
     // linear view depth for the depth pick (fragment normalizes it by near/far).
     // clip.w carries this for perspective but is a constant 1 in ortho, which
@@ -162,16 +182,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 varying gaussianUV: vec2f;
-varying gaussianColor: vec4f;
-varying ringColor: vec4f;
-varying selectedRingColor: vec4f;
-varying @interpolate(flat) gaussianFlags: u32;
-varying @interpolate(flat) gaussianId: u32;
-varying gaussianDepth: f32;
+varying @interpolate(flat, either) packedColor0: u32;
+varying @interpolate(flat, either) packedColor1: u32;
+varying @interpolate(flat, either) packedColor2: u32;
+varying @interpolate(flat, either) gaussianFlags: u32;
+varying @interpolate(flat, either) gaussianId: u32;
+varying @interpolate(flat, either) gaussianDepth: f32;
 
 uniform outlineMode: u32;
+// whether the Underlay pass will add the selection's work-buffer share back
+// this frame; when it will not, selected gaussians draw in full like the rest
+uniform selectionUnderlay: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
@@ -180,6 +203,8 @@ uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
+
+${overlayEligibleWGSL}
 
 const EXP4 = exp(-4.0);
 const INV_EXP4 = 1.0 / (1.0 - EXP4);
@@ -208,38 +233,47 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         discard;
     }
 
+    let opacity = f32((gaussianFlags >> 8u) & 0xffu) / 255.0;
+
     #ifdef PICK_PASS
         if (uniform.pickMode == 1) {
             let depth = (gaussianDepth - uniform.cameraParams.z) / (uniform.cameraParams.y - uniform.cameraParams.z);
-            let contribution = normExp(radius) * gaussianColor.a;
+            let contribution = normExp(radius) * opacity;
             if (contribution < 1.0 / 255.0) {
                 discard;
             }
-            let alpha = gaussianColor.a;
-            output.color = vec4f(depth * alpha, 0.0, 0.0, alpha);
+            output.color = vec4f(depth * opacity, 0.0, 0.0, opacity);
         } else {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #else
+      #ifdef OVERDRAW
+        // overdraw view: every fragment past the ellipse discard is one unit of
+        // fill, whatever its alpha. Red 1 with alpha 0 turns the premultiplied
+        // blend into plain addition, so the RGBA16F target accumulates the
+        // per-pixel fragment count for the final blit's heat ramp
+        output.color = vec4f(1.0, 0.0, 0.0, 0.0);
+        output.color1 = vec4f(0.0);
+      #else
         let selected = (gaussianFlags & 1u) != 0u;
-        let locked = (gaussianFlags & 2u) != 0u;
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
-        var alpha = select(0.0, norm * gaussianColor.a, showGaussian);
-        var color = gaussianColor.rgb;
+        var alpha = select(0.0, norm * opacity, showGaussian);
+        let packedMid = unpack2x16float(packedColor1);
+        var color = vec3f(unpack2x16float(packedColor0), packedMid.x);
         // Rings apply only to the selected splat's gaussians (gaussianId is the
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (!locked && rings && uniform.ringSize > 0.0 && (uniform.ringSelectionOnly == 0u || selected)) {
+        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringSelectionOnly != 0u)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;
-                // ring colours arrive fully resolved from the vertex stage,
-                // blended from the splat's own colour so they stay independent
-                // of the gaussian tints
-                color = select(ringColor.rgb, selectedRingColor.rgb, selected);
+                // the ring colour arrives fully resolved from the vertex stage:
+                // blended from the splat's own colour so it stays independent
+                // of the gaussian tints, and already the selected variant
+                color = vec3f(packedMid.y, unpack2x16float(packedColor2));
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its
                 // fill but never drops below a faint floor, so even invisible
@@ -257,7 +291,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // across each screen-space 2x2 quad — the quad's four pixels take the
         // four strata of [0,1) in a per-(quad, splat) scrambled order with a
         // shared jitter — so a splat with alpha a covers 4a±1 of the quad. The
-        // final blit averages each quad and bilinearly interpolates between quad
+        // resolve averages each quad and bilinearly interpolates between quad
         // centres, replacing most of the sampling noise with quantization error.
         // Hashing quad +
         // splat id keeps overlapping splats decorrelated and each pixel's
@@ -272,24 +306,27 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         if (rnd >= alpha) {
             discard;
         }
-        // alpha 2 tags this pixel as a stochastic sample for the resolve. The
-        // target is RGBA16F so it survives unclamped, and nothing else drawn into
-        // it can exceed 1, which lets the blit composite splats against the rest
-        // of the frame instead of blurring all of it. Never exported: captures set
-        // lockedRenderMode, which forces the sorted path.
-        output.color = vec4f(color, 2.0);
+        // Opaque coverage in the dedicated RGBA8 splat target; empty pixels
+        // remain transparent for the resolve to composite over the world pass.
+        output.color = vec4f(color, 1.0);
         output.color1 = vec4f(0.0);
       #else
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));
-        } else if (selected) {
+        } else if (selected && uniform.selectionUnderlay != 0u) {
+            // 80% composited in place, 20% into the work buffer for the
+            // Underlay pass to add back unoccluded after the splat pass, so a
+            // selected gaussian shows through whatever is in front of it. Only
+            // while that pass runs: the transform handler disables it for a
+            // drag, and splitting then would leave the selection 20% dark
             output.color = vec4f(color * alpha * 0.8, alpha);
             output.color1 = vec4f(color * alpha * 0.2, alpha);
         } else {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0);
         }
+      #endif
       #endif
     #endif
     return output;

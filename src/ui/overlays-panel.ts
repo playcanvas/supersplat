@@ -1,12 +1,13 @@
 import { BooleanInput, Button, Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
-import { ShortcutManager } from '../shortcut-manager';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import overlaysSvg from './svg/overlays.svg';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -256,12 +257,33 @@ class OverlaysPanel extends Container {
         perfOverlayRow.append(perfOverlayLabel);
         perfOverlayRow.append(perfOverlayToggle);
 
+        // overdraw heat map
+
+        const overdrawRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const overdrawLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(overdrawLabel, 'panel.overlays.overdraw');
+
+        const overdrawToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'settings-panel-row-toggle',
+            value: false
+        });
+
+        overdrawRow.append(overdrawLabel);
+        overdrawRow.append(overdrawToggle);
+
         rowToggles(showGridRow, showGridToggle);
         rowToggles(showBoundRow, showBoundToggle);
         rowToggles(showBoundDimensionsRow, showBoundDimensionsToggle);
         rowToggles(showCameraPosesRow, showCameraPosesToggle);
         rowToggles(showCameraInfoRow, showCameraInfoToggle);
         rowToggles(perfOverlayRow, perfOverlayToggle);
+        rowToggles(overdrawRow, overdrawToggle);
 
         this.append(header);
         this.append(sectionHeader('panel.overlays.section-helpers'));
@@ -273,6 +295,7 @@ class OverlaysPanel extends Container {
         this.append(showCameraInfoRow);
         this.append(sectionHeader('panel.overlays.section-diagnostics'));
         this.append(perfOverlayRow);
+        this.append(overdrawRow);
 
         // the panel is constructed before the editor registers its state, and
         // the notify events only fire on change - so a value initialized from
@@ -292,6 +315,7 @@ class OverlaysPanel extends Container {
             showCameraPosesToggle.value = events.invoke('camera.showPoses');
             showCameraInfoToggle.value = events.invoke('camera.showInfo');
             perfOverlayToggle.value = events.invoke('view.perfOverlay');
+            overdrawToggle.value = events.invoke('view.overdraw');
         };
 
         // handle panel visibility
@@ -400,12 +424,30 @@ class OverlaysPanel extends Container {
             events.fire('view.setPerfOverlay', value);
         });
 
+        // overdraw heat map
+
+        events.on('view.overdraw', (value: boolean) => {
+            overdrawToggle.value = value;
+        });
+
+        overdrawToggle.on('change', (value: boolean) => {
+            events.fire('view.setOverdraw', value);
+        });
+
         // tooltips
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
         const shortcut = shortcutManager.formatShortcut('grid.toggleVisible');
-        tooltips.register(showGridLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut), 'left');
+        tooltips.register(
+            showGridLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.grid'), shortcut),
+            'left'
+        );
         const cameraInfoShortcut = shortcutManager.formatShortcut('camera.toggleShowInfo');
-        tooltips.register(showCameraInfoLabel, () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut), 'left');
+        tooltips.register(
+            showCameraInfoLabel,
+            () => i18n.formatTooltipWithShortcut(i18n.t('panel.overlays.camera-info'), cameraInfoShortcut),
+            'left'
+        );
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
     }
 }

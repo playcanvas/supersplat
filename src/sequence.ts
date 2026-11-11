@@ -1,9 +1,9 @@
-import { Asset, Quat } from 'playcanvas';
+import type { Asset, Quat } from 'playcanvas';
 
 import { EditorSplatResource } from './editor-splat-resource';
-import { Events } from './events';
+import type { Events } from './events';
 import { loadSplatSource, MappedReadFileSystem } from './io';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { Splat } from './splat';
 
 type FrameData = {
@@ -27,13 +27,12 @@ class PlyFrameSource implements FrameSource {
     constructor(files: File[], scene: Scene) {
         this.scene = scene;
 
-        // eslint-disable-next-line regexp/no-super-linear-backtracking
         const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
         const key = (f: File) => f.name?.toLowerCase().match(regex)?.[2];
         this.files = files.slice().sort((a, b) => {
             const av = key(a);
             const bv = key(b);
-            return (av && bv) ? parseInt(av, 10) - parseInt(bv, 10) : 0;
+            return av && bv ? parseInt(av, 10) - parseInt(bv, 10) : 0;
         });
     }
 
@@ -53,7 +52,9 @@ class PlyFrameSource implements FrameSource {
         return { asset, rotation: transform.rotation };
     }
 
-    destroy() {}
+    destroy() {
+        // nothing to release
+    }
 }
 
 /**
@@ -71,6 +72,15 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
     let loading = false;
     let nextFrame = -1;
     let loadingPromise: Promise<void> | null = null;
+    let idleWaiters: (() => void)[] = [];
+
+    // resolve waiters once no frame is loading or queued behind the current load
+    const notifyIdle = () => {
+        if (!loading) {
+            idleWaiters.forEach((resolve) => resolve());
+            idleWaiters = [];
+        }
+    };
 
     // apply a frame's data to the persistent splat, creating it on the first frame
     const applyFrame = async (data: FrameData) => {
@@ -147,6 +157,9 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             nextFrame = -1;
             setFrame(frameToLoad);
         }
+
+        // a follow-up load above sets loading synchronously and notifies when it ends
+        notifyIdle();
     };
 
     events.on('sequence.setPlyFrames', (files: File[]) => {
@@ -202,11 +215,18 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             } finally {
                 loading = false;
                 loadingPromise = null;
+                notifyIdle();
             }
         })();
 
         await loadingPromise;
         return splat;
+    });
+
+    // resolves once the frame for the current playhead has been swapped in, so
+    // callers that move the playhead can wait for its data (no-op without a sequence)
+    events.function('sequence.idle', (): Promise<void> => {
+        return loading ? new Promise((resolve) => idleWaiters.push(resolve)) : Promise.resolve();
     });
 };
 

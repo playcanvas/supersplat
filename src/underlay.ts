@@ -1,10 +1,5 @@
-import {
-    BLENDEQUATION_ADD,
-    BLENDMODE_ONE,
-    BLENDMODE_ZERO,
-    BlendState,
-    Layer
-} from 'playcanvas';
+import type { Layer } from 'playcanvas';
+import { BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ZERO, BlendState } from 'playcanvas';
 
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
@@ -24,9 +19,14 @@ class Underlay extends Element {
 
         this.shaderQuad = new ShaderQuad(device, vertexShader, fragmentShader, 'apply-underlay');
         this.renderPass = new SimpleRenderPass(device, this.shaderQuad, {
-            blendState: new BlendState(true,
-                BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE,
-                BLENDEQUATION_ADD, BLENDMODE_ZERO, BLENDMODE_ONE
+            blendState: new BlendState(
+                true,
+                BLENDEQUATION_ADD,
+                BLENDMODE_ONE,
+                BLENDMODE_ONE,
+                BLENDEQUATION_ADD,
+                BLENDMODE_ZERO,
+                BLENDMODE_ONE
             )
         });
 
@@ -46,10 +46,9 @@ class Underlay extends Element {
 
             this.renderPass.execute({
                 srcTexture: camera.workTarget.colorBuffer,
-                // 1:1 copy - source and destination are both targetSize, and the
-                // underlay must not be quad-averaged like a stochastic frame
+                // 1:1 copy - source and destination are both targetSize
                 blitScale: [1, 1],
-                quadResolve: 0
+                overdraw: 0
             });
         });
     }

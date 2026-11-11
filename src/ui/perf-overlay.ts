@@ -1,6 +1,6 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 // text refresh interval. The graph redraws every frame, but the numbers are
 // unreadable if they change 60 times a second.
@@ -39,7 +39,7 @@ const fmtScale = (ms: number) => (Number.isInteger(ms) ? `${ms}` : ms.toFixed(1)
 //   readback, a data-processor dispatch, a shader compile) is landing inside
 //   the measured span.
 const summarise = (values: number[]) => {
-    const sorted = values.filter(v => v > 0).sort((a, b) => a - b);
+    const sorted = values.filter((v) => v > 0).sort((a, b) => a - b);
     if (sorted.length === 0) {
         return null;
     }
@@ -95,14 +95,14 @@ class PerfOverlay extends Container {
             ctx.fillStyle = GRAPH_BAR;
             const n = values.length;
             for (let i = 0; i < n; ++i) {
-                const x0 = Math.round(i * GRAPH_WIDTH / n);
-                const x1 = Math.round((i + 1) * GRAPH_WIDTH / n);
-                const h = Math.min(GRAPH_HEIGHT, Math.round(values[i] / scale * GRAPH_HEIGHT));
+                const x0 = Math.round((i * GRAPH_WIDTH) / n);
+                const x1 = Math.round(((i + 1) * GRAPH_WIDTH) / n);
+                const h = Math.min(GRAPH_HEIGHT, Math.round((values[i] / scale) * GRAPH_HEIGHT));
                 ctx.fillRect(x0, GRAPH_HEIGHT - h, Math.max(1, x1 - x0), h);
             }
 
             ctx.fillStyle = GRAPH_MEDIAN;
-            const y = GRAPH_HEIGHT - Math.round(median / scale * GRAPH_HEIGHT);
+            const y = GRAPH_HEIGHT - Math.round((median / scale) * GRAPH_HEIGHT);
             ctx.fillRect(0, y, GRAPH_WIDTH, 1);
         };
 
@@ -123,7 +123,7 @@ class PerfOverlay extends Container {
                 // the scale has to cover everything plotted, not just the frames
                 // the numbers average over, or older spikes would be flat-topped
                 const plotMax = timings.gpu.reduce((a: number, b: number) => Math.max(a, b), 0);
-                const scale = SCALES.find(s => plotMax <= s) ?? plotMax;
+                const scale = SCALES.find((s) => plotMax <= s) ?? plotMax;
                 draw(timings.gpu, gpu.median, scale);
 
                 const now = performance.now();

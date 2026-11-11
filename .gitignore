@@ -6,3 +6,4 @@
 .vscode
 dist
 node_modules
+test/.build

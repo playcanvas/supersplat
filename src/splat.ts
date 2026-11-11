@@ -1,40 +1,48 @@
-import {
-    Asset,
-    BoundingBox,
-    Color,
-    Entity,
-    Mat4,
-    Quat,
-    Vec3
-} from 'playcanvas';
+import type { Asset } from 'playcanvas';
+import { BoundingBox, Color, Entity, Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { ColorGrade, createGradeTerms, gradeTerms } from './color-grade';
 import { ColorPalette } from './color-palette';
-import { EditorSplatResource } from './editor-splat-resource';
+import type { EditorSplatResource } from './editor-splat-resource';
 import { Element, ElementType } from './element';
 import { GaussianInstances } from './gaussian-instances';
-import { IndexRanges } from './index-ranges';
-import { Serializer } from './serializer';
-import { Transform } from './transform';
+import type { IndexRanges } from './index-ranges';
+import type { Serializer } from './serializer';
+import type { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
+
+// per-layer colour grade written by documents up to v0
+type LegacyGrade = {
+    tintClr?: number[];
+    temperature?: number;
+    saturation?: number;
+    brightness?: number;
+    blackPoint?: number;
+    whitePoint?: number;
+    transparency?: number;
+};
 
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
 const quat = new Quat();
 
-const boundingPoints =
-    [-1, 1].map((x) => {
+const boundingPoints = [-1, 1]
+    .map((x) => {
         return [-1, 1].map((y) => {
             return [-1, 1].map((z) => {
                 return [
-                    new Vec3(x, y, z), new Vec3(x * 0.75, y, z),
-                    new Vec3(x, y, z), new Vec3(x, y * 0.75, z),
-                    new Vec3(x, y, z), new Vec3(x, y, z * 0.75)
+                    new Vec3(x, y, z),
+                    new Vec3(x * 0.75, y, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y * 0.75, z),
+                    new Vec3(x, y, z),
+                    new Vec3(x, y, z * 0.75)
                 ];
             });
         });
-    }).flat(3);
+    })
+    .flat(3);
 
 class Splat extends Element {
     asset: Asset;
@@ -118,15 +126,14 @@ class Splat extends Element {
         // name and orientation are set on the initial bind only; a frame swap
         // (replaceData, no rotation) keeps the element's name and transform
         if (rotation) {
-            this._name = (asset.file as any).filename;
+            this._name = (asset.file as { filename: string }).filename;
             this.entity.setLocalRotation(rotation);
         }
 
         // a shared-data layer arrives with its instances already built; otherwise
         // build the identity list over this frame's rows, seeded with the state
         // column the file carried (if any)
-        this.instances = instances ??
-            new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
+        this.instances = instances ?? new GaussianInstances(device, splatResource.numRows, splatResource.initialState);
 
         this.localBoundStorage = splatResource.aabb.clone();
         this.worldBoundStorage = new BoundingBox();
@@ -140,7 +147,7 @@ class Splat extends Element {
         return new Promise((resolve) => {
             // single finish() removes the listener and clears the timeout, so the
             // common case (postrender fires first) doesn't leave a pending timer.
-            const handles: { off?: { off: () => void }, timer?: ReturnType<typeof setTimeout> } = {};
+            const handles: { off?: { off: () => void }; timer?: ReturnType<typeof setTimeout> } = {};
             let settled = false;
             const finish = () => {
                 if (settled) return;
@@ -255,7 +262,7 @@ class Splat extends Element {
     }
 
     get filename() {
-        return (this.asset.file as any).filename;
+        return (this.asset.file as { filename: string }).filename;
     }
 
     async add() {
@@ -458,7 +465,7 @@ class Splat extends Element {
         };
     }
 
-    docDeserialize(doc: any) {
+    docDeserialize(doc: ReturnType<Splat['docSerialize']> & LegacyGrade) {
         const { name, position, rotation, scale, visible } = doc;
 
         this.name = name;
@@ -475,9 +482,8 @@ class Splat extends Element {
     // every instance references: exactly equivalent, costs one entry, and it
     // becomes editable and resettable through the colour panel like any other.
     // v1 documents don't write these fields, so this is a no-op for them.
-    private migrateLayerGrade(doc: any) {
-        const tintClr = doc.tintClr ?
-            new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
+    private migrateLayerGrade(doc: LegacyGrade) {
+        const tintClr = doc.tintClr ? new Color(doc.tintClr[0], doc.tintClr[1], doc.tintClr[2]) : Color.WHITE;
         const params = {
             tintClr,
             temperature: doc.temperature ?? 0,

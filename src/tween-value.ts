@@ -7,43 +7,43 @@ const Interp = {
     vertebrae: (n: number) => -Math.pow((Math.cos(n * Math.PI) + 1) / 2, 2) + 1
 };
 
-class Ops {
-    keys: string[];
+class Ops<K extends PropertyKey> {
+    keys: K[];
 
-    constructor(value: any) {
-        this.keys = Object.keys(value);
+    constructor(value: Record<K, number>) {
+        this.keys = Object.keys(value) as K[];
     }
 
-    clone(obj: any) {
-        const result: any = {};
-        this.keys.forEach((key: string) => {
+    clone(obj: Record<K, number>) {
+        const result = {} as Record<K, number>;
+        this.keys.forEach((key) => {
             result[key] = obj[key];
         });
         return result;
     }
 
-    copy(target: any, source: any) {
-        this.keys.forEach((key: string) => {
+    copy(target: Record<K, number>, source: Record<K, number>) {
+        this.keys.forEach((key) => {
             target[key] = source[key];
         });
     }
 
-    lerp(target: any, a: any, b: any, t: number) {
-        this.keys.forEach((key: string) => {
+    lerp(target: Record<K, number>, a: Record<K, number>, b: Record<K, number>, t: number) {
+        this.keys.forEach((key) => {
             target[key] = a[key] + t * (b[key] - a[key]);
         });
     }
 }
 
-class TweenValue {
-    ops: Ops;
-    value: any;
-    source: any;
-    target: any;
+class TweenValue<K extends string = string> {
+    ops: Ops<K>;
+    value: Record<K, number>;
+    source: Record<K, number>;
+    target: Record<K, number>;
     timer: number;
     transitionTime: number;
 
-    constructor(value: any) {
+    constructor(value: Record<K, number>) {
         this.ops = new Ops(value);
         this.value = value;
         this.source = this.ops.clone(value);
@@ -52,7 +52,7 @@ class TweenValue {
         this.transitionTime = 0;
     }
 
-    goto(target: any, transitionTime = 0.25) {
+    goto(target: Record<K, number>, transitionTime = 0.25) {
         if (transitionTime === 0) {
             this.ops.copy(this.value, target);
         }

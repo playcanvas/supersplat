@@ -42,7 +42,7 @@
             background-color: $bcg-darker;
             text-transform: uppercase;
 
-            #icon {
+            #icon, #save-icon {
                 vertical-align: middle;
                 color: $clr-icon-hilight;
             }
@@ -67,20 +67,86 @@
                     width: 180px;
                 }
 
-                .select, .color-picker, .slider, .text-entry {
+                .select, .color-picker, .slider, .text-entry, .location, .filename-field {
                     margin: 0px;
                     width: 100%;
+                }
+
+                .filename-field {
+                    position: relative;
+                    min-width: 0;
+
+                    &:not(:focus-within):not(:hover) #export-filename-message {
+                        visibility: hidden;
+                    }
                 }
 
                 .text-input {
                     margin: 0px;
                     width: 100%;
+
+                    > input {
+                        display: block;
+                    }
                 }
 
                 .boolean {
                     margin: 5px 0 0 auto;
                     flex-grow: 0;
                 }
+
+                .location {
+                    display: flex;
+                    min-width: 0;
+
+                    .location-name {
+                        flex: 1;
+                        min-width: 0;
+                        margin: 0;
+                        padding: 0 8px;
+                        border-radius: 2px;
+                        background-color: $bcg-dark;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    .change-location {
+                        flex-shrink: 0;
+                        margin: 0 0 0 8px;
+                        height: 24px;
+                        line-height: 22px;
+                    }
+
+                    .location-name.pcui-hidden + .change-location {
+                        flex-grow: 1;
+                        margin-left: 0;
+                        text-align: left;
+                    }
+                }
+            }
+        }
+
+        #export-filename-message {
+            position: absolute;
+            z-index: 10;
+            top: 50%;
+            left: calc(100% + 24px);
+            transform: translateY(-50%);
+            width: 280px;
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: 4px;
+            background-color: $bcg-darker;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+            color: $clr-icon-hilight;
+            line-height: 18px;
+            white-space: normal;
+            pointer-events: none;
+            overflow-wrap: anywhere;
+            text-overflow: clip;
+
+            &.error {
+                color: $error;
             }
         }
 

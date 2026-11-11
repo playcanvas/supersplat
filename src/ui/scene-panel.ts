@@ -1,13 +1,15 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
+
+import type { ClipboardMenu } from './clipboard-menu';
 import { ColorPanel } from './color-panel';
 import { i18n } from './localization';
 import { SplatList } from './splat-list';
 import sceneImportSvg from './svg/import.svg';
 import sceneNewSvg from './svg/new.svg';
 import soloSvg from './svg/solo.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 import { Transform } from './transform';
 
 const createSvg = (svgString: string) => {
@@ -16,7 +18,7 @@ const createSvg = (svgString: string) => {
 };
 
 class ScenePanel extends Container {
-    constructor(events: Events, tooltips: Tooltips, args = {}) {
+    constructor(events: Events, tooltips: Tooltips, clipboardMenu: ClipboardMenu, args = {}) {
         args = {
             ...args,
             id: 'scene-panel',
@@ -96,28 +98,10 @@ class ScenePanel extends Container {
         });
         splatListContainer.append(splatList);
 
-        const transformHeader = new Container({
-            class: 'panel-header'
-        });
-
-        const transformIcon = new Label({
-            text: '\uE111',
-            class: 'panel-header-icon'
-        });
-
-        const transformLabel = new Label({
-            class: 'panel-header-label'
-        });
-        i18n.bindText(transformLabel, 'panel.scene.transform');
-
-        transformHeader.append(transformIcon);
-        transformHeader.append(transformLabel);
-
         this.append(sceneHeader);
         this.append(splatListContainer);
-        this.append(transformHeader);
-        this.append(new Transform(events));
-        this.append(new ColorPanel(events));
+        this.append(new Transform(events, clipboardMenu));
+        this.append(new ColorPanel(events, clipboardMenu));
     }
 }
 

@@ -22,21 +22,32 @@ const computeSplatValueWGSL = (bands: number, firstBinding = 1) => {
     declarations.push(`@group(0) @binding(${binding}) var<uniform> uniforms: SplatValueUniforms;`);
 
     const coefficientCount = bands === 1 ? 3 : bands === 2 ? 8 : 15;
-    const shFunctions = bands === 0 ? '' : /* wgsl */`
+    const shFunctions =
+        bands === 0
+            ? ''
+            : /* wgsl */ `
 fn unpackSHTriplet(coeffIdx: i32, uv: vec2i) -> vec3f {
     let first = textureLoad(splatSH_1to3, uv, 0);
     var packed = 0u;
     if (coeffIdx < 3) {
         packed = first[coeffIdx + 1];
     }
-    ${bands > 1 ? `else if (coeffIdx < 7) {
+    ${
+        bands > 1
+            ? `else if (coeffIdx < 7) {
         packed = textureLoad(splatSH_4to7, uv, 0)[coeffIdx - 3];
     } else if (coeffIdx < 11) {
         packed = textureLoad(splatSH_8to11, uv, 0)[coeffIdx - 7];
-    }` : ''}
-    ${bands > 2 ? `else if (coeffIdx < 15) {
+    }`
+            : ''
+    }
+    ${
+        bands > 2
+            ? `else if (coeffIdx < 15) {
         packed = textureLoad(splatSH_12to15, uv, 0)[coeffIdx - 11];
-    }` : ''}
+    }`
+            : ''
+    }
     let encoded = (vec3u(packed) >> vec3u(21u, 11u, 0u)) & vec3u(0x7ffu, 0x3ffu, 0x7ffu);
     let normalized = vec3f(encoded) / vec3f(2047.0, 1023.0, 2047.0) * 2.0 - 1.0;
     return normalized * bitcast<f32>(first.x);
@@ -61,7 +72,9 @@ fn evaluateSH(s: SplatValue) -> vec3f {
         + coefficients[1] * direction.z
         - coefficients[2] * direction.x
     );
-    ${bands > 1 ? `let xx = direction.x * direction.x;
+    ${
+        bands > 1
+            ? `let xx = direction.x * direction.x;
     let yy = direction.y * direction.y;
     let zz = direction.z * direction.z;
     let xy = direction.x * direction.y;
@@ -71,24 +84,33 @@ fn evaluateSH(s: SplatValue) -> vec3f {
         + coefficients[4] * (-1.0925484305920792 * yz)
         + coefficients[5] * (0.31539156525252005 * (2.0 * zz - xx - yy))
         + coefficients[6] * (-1.0925484305920792 * xz)
-        + coefficients[7] * (0.5462742152960396 * (xx - yy));` : ''}
-    ${bands > 2 ? `result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
+        + coefficients[7] * (0.5462742152960396 * (xx - yy));`
+            : ''
+    }
+    ${
+        bands > 2
+            ? `result += coefficients[8] * (-0.5900435899266435 * direction.y * (3.0 * xx - yy))
         + coefficients[9] * (2.890611442640554 * xy * direction.z)
         + coefficients[10] * (-0.4570457994644658 * direction.y * (4.0 * zz - xx - yy))
         + coefficients[11] * (0.3731763325901154 * direction.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
         + coefficients[12] * (-0.4570457994644658 * direction.x * (4.0 * zz - xx - yy))
         + coefficients[13] * (1.445305721320277 * direction.z * (xx - yy))
-        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));` : ''}
+        + coefficients[14] * (-0.5900435899266435 * direction.x * (xx - 3.0 * yy));`
+            : ''
+    }
     return result;
 }`;
 
-    const shDispatch = bands === 0 ? '' : `else if (uniforms.propMode >= 21 && uniforms.propMode <= 65) {
+    const shDispatch =
+        bands === 0
+            ? ''
+            : `else if (uniforms.propMode >= 21 && uniforms.propMode <= 65) {
         value = readSHCoeff(s, uniforms.propMode - 21);
     }`;
 
     return {
         uniformBinding: binding,
-        code: /* wgsl */`
+        code: /* wgsl */ `
 struct SplatValueUniforms {
     sourceWidth: u32,
     numSplats: u32,

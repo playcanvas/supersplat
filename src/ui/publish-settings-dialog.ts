@@ -1,11 +1,81 @@
-import { BooleanInput, Button, ColorPicker, Container, Element, Label, SelectInput, SliderInput, TextAreaInput, TextInput } from '@playcanvas/pcui';
+import {
+    BooleanInput,
+    Button,
+    ColorPicker,
+    Container,
+    Element,
+    Label,
+    SelectInput,
+    SliderInput,
+    TextAreaInput,
+    TextInput
+} from '@playcanvas/pcui';
 
-import { Pose } from '../camera-poses';
-import { Events } from '../events';
+import type { Pose } from '../camera-poses';
+import type { Events } from '../events';
+import type { PublishLimits, PublishSettings, UserStatus } from '../publish';
+import type { AnimTrack, ExperienceSettings } from '../splat-serialize';
+import { defaultPostEffectSettings } from '../splat-serialize';
+
 import { i18n } from './localization';
-import { PublishSettings, UserStatus } from '../publish';
-import { AnimTrack, ExperienceSettings, defaultPostEffectSettings } from '../splat-serialize';
 import sceneExport from './svg/export.svg';
+
+// Largest scene that can be published without LODs: it is written as a
+// single-file SOG, and splat-transform's WASM WebP encoder runs out of memory
+// between 45M and 50M splats. Keep in sync with the publish server's limit.
+const MAX_SINGLE_FILE_SPLATS = 40_000_000;
+
+// locale-aware unit formatting, e.g. "10 GB" / "10,5 GB", "45 min" / "45 Min."
+const formatUnit = (value: number, unit: string, maximumFractionDigits = 0) => {
+    return new Intl.NumberFormat(i18n.locale, {
+        style: 'unit',
+        unit,
+        unitDisplay: 'short',
+        maximumFractionDigits
+    }).format(value);
+};
+
+const formatGigabytes = (bytes: number) => formatUnit(bytes / (1024 * 1024 * 1024), 'gigabyte', 1);
+
+// e.g. "6 hr 12 min" / "6 Std., 12 Min."
+const formatTimeUntil = (time: string) => {
+    const minutes = Math.max(1, Math.ceil((Date.parse(time) - Date.now()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    const parts = [
+        ...(hours > 0 ? [formatUnit(hours, 'hour')] : []),
+        ...(hours === 0 || remainder > 0 ? [formatUnit(hours === 0 ? minutes : remainder, 'minute')] : [])
+    ];
+    return new Intl.ListFormat(i18n.locale, { type: 'unit', style: 'narrow' }).format(parts);
+};
+
+// which limit, if any, the server would refuse a new upload for right now
+const getPublishBlock = (limits: PublishLimits | null) => {
+    const allowance = limits?.publishAllowance;
+    if (allowance && allowance.usedBytes >= allowance.limitBytes) {
+        return { allowance };
+    }
+    const processing = limits?.processing;
+    if (processing && processing.count >= processing.limit) {
+        return { processing };
+    }
+    return null;
+};
+
+// the reason, in the current language; built when shown so the time is current
+const getPublishBlockedMessage = (limits: PublishLimits | null) => {
+    const block = getPublishBlock(limits);
+    if (block?.allowance) {
+        return i18n.t('popup.publish.allowance-used', {
+            limit: formatGigabytes(block.allowance.limitBytes),
+            time: formatTimeUntil(block.allowance.resetsAt)
+        });
+    }
+    if (block?.processing) {
+        return i18n.t('popup.publish.too-many-processing', { scenes: i18n.formatInteger(block.processing.count) });
+    }
+    return '';
+};
 
 const createSvg = (svgString: string, args = {}) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -139,6 +209,17 @@ class PublishSettingsDialog extends Container {
         generateLodsRow.append(generateLodsLabel);
         generateLodsRow.append(generateLodsToggle);
 
+        const generateLodsRequiredMessage = new Label({ class: 'lods-required-message', hidden: true });
+        i18n.bindText(generateLodsRequiredMessage, 'popup.publish.generate-lods-required');
+
+        // shown when the server would refuse a new upload (daily allowance used, too many processing)
+        const publishBlockedMessage = new Label({ class: 'publish-blocked-message', hidden: true });
+        let publishLimits: PublishLimits | null = null;
+        const updatePublishBlockedMessage = () => {
+            publishBlockedMessage.text = getPublishBlockedMessage(publishLimits);
+        };
+        i18n.onChange(updatePublishBlockedMessage, publishBlockedMessage);
+
         // fov
 
         const fovLabel = new Label({ class: 'label' });
@@ -154,6 +235,21 @@ class PublishSettingsDialog extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
+        // spherical harmonic bands
+
+        const bandsLabel = new Label({ class: 'label' });
+        i18n.bindText(bandsLabel, 'popup.export.sh-bands');
+        const bandsSlider = new SliderInput({
+            class: 'slider',
+            min: 0,
+            max: 3,
+            precision: 0,
+            value: 3
+        });
+        const bandsRow = new Container({ class: 'row' });
+        bandsRow.append(bandsLabel);
+        bandsRow.append(bandsSlider);
+
         // content
 
         const content = new Container({ id: 'content' });
@@ -166,7 +262,10 @@ class PublishSettingsDialog extends Container {
         content.append(fovRow);
         content.append(animationRow);
         content.append(loopRow);
+        content.append(bandsRow);
         content.append(generateLodsRow);
+        content.append(generateLodsRequiredMessage);
+        content.append(publishBlockedMessage);
 
         // footer
 
@@ -214,6 +313,7 @@ class PublishSettingsDialog extends Container {
         };
 
         let hasPosesState = false;
+        let lodsRequired = false;
 
         const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
@@ -228,8 +328,12 @@ class PublishSettingsDialog extends Container {
             animationRow.hidden = !isNew;
             overrideModelRow.hidden = isNew;
             overrideAnimationRow.hidden = isNew;
-            // generateLods only matters when a model is uploaded — hide when republishing animation-only
+            // bands and generateLods only matter when a model is uploaded — hide when republishing animation-only
+            bandsRow.hidden = !isNew && !modelOn;
             generateLodsRow.hidden = !isNew && !modelOn;
+            // too many splats for a single-file publish: LODs are forced on
+            generateLodsToggle.enabled = !lodsRequired;
+            generateLodsRequiredMessage.hidden = generateLodsRow.hidden || !lodsRequired;
 
             if (isNew) {
                 animationToggle.enabled = hasPosesState;
@@ -241,8 +345,13 @@ class PublishSettingsDialog extends Container {
                 loopSelect.enabled = animOn && hasPosesState;
             }
 
-            // disable publish when existing scene with no overrides selected
-            okButton.disabled = !isNew && !modelOn && !animOn;
+            // uploading a model is what the limits apply to; an animation-only update is always allowed
+            const uploadsModel = isNew || modelOn;
+            const publishBlocked = !!getPublishBlock(publishLimits);
+            publishBlockedMessage.hidden = !uploadsModel || !publishBlocked;
+
+            // disable publish when existing scene with no overrides selected, or the upload would be refused
+            okButton.disabled = (!isNew && !modelOn && !animOn) || (uploadsModel && publishBlocked);
         };
 
         overwriteSelect.on('change', updateLayout);
@@ -258,7 +367,9 @@ class PublishSettingsDialog extends Container {
             const filename = splats[0].filename;
             const dot = splats[0].filename.lastIndexOf('.');
             const bgClr = events.invoke('bgClr');
-            const totalSplats = splats.reduce((sum: number, s: any) => sum + (s.numSplats ?? 0), 0);
+            const totalSplats = splats.reduce((sum: number, s) => sum + (s.numSplats ?? 0), 0);
+            // numSplats is the live count (deleted splats are already excluded)
+            lodsRequired = totalSplats > MAX_SINGLE_FILE_SPLATS;
 
             // union scene bounds to decide LOD default for large scenes
             const sceneMin = [Infinity, Infinity, Infinity];
@@ -274,12 +385,15 @@ class PublishSettingsDialog extends Container {
                     sceneMax[i] = Math.max(sceneMax[i], c[i] + h[i]);
                 }
             }
-            const largeAxes = [0, 1, 2].filter(i => sceneMax[i] - sceneMin[i] > 16).length;
+            const largeAxes = [0, 1, 2].filter((i) => sceneMax[i] - sceneMin[i] > 16).length;
             const isLargeScene = largeAxes >= 2;
 
-            overwriteSelect.options = [{
-                v: '0', t: i18n.t('popup.publish.new-scene')
-            }].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
+            overwriteSelect.options = [
+                {
+                    v: '0',
+                    t: i18n.t('popup.publish.new-scene')
+                }
+            ].concat(overwriteList.map((s, i) => ({ v: (i + 1).toString(), t: s })));
 
             overwriteSelect.value = '0';
             titleInput.value = filename.slice(0, dot > 0 ? dot : undefined);
@@ -290,7 +404,12 @@ class PublishSettingsDialog extends Container {
             loopSelect.value = events.invoke('timeline.loop') ? 'repeat' : 'none';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
-            generateLodsToggle.value = totalSplats >= 1_000_000 && isLargeScene;
+            // default to the scene's band count, capped by the viewport setting
+            bandsSlider.value = Math.min(
+                events.invoke('view.bands'),
+                Math.max(0, ...splats.map((s) => s.resource.shBands))
+            );
+            generateLodsToggle.value = lodsRequired || (totalSplats >= 1_000_000 && isLargeScene);
 
             updateLayout();
         };
@@ -304,14 +423,17 @@ class PublishSettingsDialog extends Container {
 
             // get poses
             const orderedPoses = (events.invoke('camera.poses') as Pose[])
-            .slice()
-            .filter(p => p.frame >= 0 && p.frame < frames)
-            .sort((a, b) => a.frame - b.frame);
+                .slice()
+                .filter((p) => p.frame >= 0 && p.frame < frames)
+                .sort((a, b) => a.frame - b.frame);
 
             // overwrite options
             const overwriteList = userStatus.scenes.map((s) => {
                 return `${s.hash} - ${s.title}`;
             });
+
+            publishLimits = userStatus.limits;
+            updatePublishBlockedMessage();
 
             // reset UI
             reset(orderedPoses.length > 0, overwriteList);
@@ -327,7 +449,9 @@ class PublishSettingsDialog extends Container {
 
                 onOK = () => {
                     const isNew = overwriteSelect.value === '0';
-                    const selectedScene = !isNew ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1] : null;
+                    const selectedScene = !isNew
+                        ? userStatus.scenes[parseInt(overwriteSelect.value as string, 10) - 1]
+                        : null;
 
                     // extract camera animation
                     const includeAnimation = isNew ? animationToggle.value : overrideAnimationToggle.value;
@@ -367,13 +491,18 @@ class PublishSettingsDialog extends Container {
                     const pose = events.invoke('camera.getPose');
                     const p = pose?.position;
                     const t = pose?.target;
-                    const cameras = (p && t) ? [{
-                        initial: {
-                            position: [p.x, p.y, p.z] as [number, number, number],
-                            target: [t.x, t.y, t.z] as [number, number, number],
-                            fov
-                        }
-                    }] : [];
+                    const cameras =
+                        p && t
+                            ? [
+                                  {
+                                      initial: {
+                                          position: [p.x, p.y, p.z] as [number, number, number],
+                                          target: [t.x, t.y, t.z] as [number, number, number],
+                                          fov
+                                      }
+                                  }
+                              ]
+                            : [];
 
                     const experienceSettings: ExperienceSettings = {
                         version: 2,
@@ -388,7 +517,7 @@ class PublishSettingsDialog extends Container {
                     };
 
                     const serializeSettings = {
-                        maxSHBands: 3,
+                        shBands: bandsSlider.value,
                         minOpacity: 1 / 255,
                         removeInvalid: true
                     };

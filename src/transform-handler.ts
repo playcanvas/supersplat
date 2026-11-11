@@ -1,7 +1,7 @@
 import { EntityTransformHandler } from './entity-transform-handler';
-import { Events } from './events';
+import type { Events } from './events';
 import { registerPivotEvents } from './pivot';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { SplatsTransformHandler } from './splats-transform-handler';
 
 interface TransformHandler {

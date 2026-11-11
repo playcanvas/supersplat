@@ -1,13 +1,13 @@
-// Single-thread pass that turns the projector's survivor count into gpu-driven
-// arguments: the indexed draw args for the splat quad draw, and the dispatch args
-// the radix sort reads. Nothing here comes back to the cpu, so a frame never
-// stalls on the count.
+// Single-thread pass that turns the projector's counts into gpu-driven arguments:
+// the indexed draw args for the splat quad draw and the centres draw, and the
+// dispatch args the radix sort reads. Nothing here comes back to the cpu, so a
+// frame never stalls on the count.
 //
 // The dispatch-slot layout and the meaning of sortIndirectInfo are the contract of
 // ComputeRadixSort#prepareIndirect(): [slotCount, g0, g1, g2] where each g is the
 // elements-per-workgroup granularity of one slot, and each slot occupies three
 // consecutive u32 (workgroup counts x, y, z).
-const projectedSplatIndirectArgs = (instanceSize: number) => /* wgsl */`
+const projectedSplatIndirectArgs = (instanceSize: number) => /* wgsl */ `
 struct DrawIndexedIndirectArgs {
     indexCount: u32,
     instanceCount: u32,
@@ -20,7 +20,7 @@ struct ArgsUniforms {
     drawSlot: u32,
     indexCount: u32,
     sortSlotBase: u32,
-    pad0: u32,
+    centersDrawSlot: u32,
     sortIndirectInfo: vec4u
 }
 
@@ -44,6 +44,17 @@ fn main() {
     indirectDrawArgs[uniforms.drawSlot] = DrawIndexedIndirectArgs(
         uniforms.indexCount,
         (count + ${instanceSize}u - 1u) / ${instanceSize}u,
+        0u,
+        0,
+        0u
+    );
+
+    // the centres overlay draws the survivors and the culled tail with the same
+    // quad mesh
+    let centerCount = count + splatCounter[1];
+    indirectDrawArgs[uniforms.centersDrawSlot] = DrawIndexedIndirectArgs(
+        uniforms.indexCount,
+        (centerCount + ${instanceSize}u - 1u) / ${instanceSize}u,
         0u,
         0,
         0u

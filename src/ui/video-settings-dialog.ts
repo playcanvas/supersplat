@@ -232,7 +232,7 @@ class VideoSettingsDialog extends Container {
 
         // Update codec options when format changes
         const syncFormat = () => {
-            const format = formatSelect.value;
+            const format = formatSelect.value as string;
             const options = codecOptions[format] || codecOptions.mp4;
             codecSelect.options = options;
 
@@ -435,8 +435,8 @@ class VideoSettingsDialog extends Container {
 
         const encodingSettingsFor = (resolution: string) => {
             const { width, height } = dimensionsFor(resolution);
-            const frameRate = frameRates[frameRateSelect.value];
-            const bppf = bppfs[bitrateSelect.value] * bppfFactors[resolution];
+            const frameRate = frameRates[frameRateSelect.value as string];
+            const bppf = bppfs[bitrateSelect.value as string] * bppfFactors[resolution];
 
             return {
                 codec: codecSelect.value as VideoCodecChoice,
@@ -474,16 +474,16 @@ class VideoSettingsDialog extends Container {
         const compatibilityDescription = () => {
             const codec = codecSelect.value as VideoCodecChoice;
             return {
-                resolution: formatResolution(resolutionSelect.value),
+                resolution: formatResolution(resolutionSelect.value as string),
                 codec: codecNames[codec],
-                frameRate: frameRates[frameRateSelect.value],
+                frameRate: frameRates[frameRateSelect.value as string],
                 bitrate: i18n.t(`popup.render-video.bitrate-value.${bitrateSelect.value}`)
             };
         };
 
         const updateCompatibilityUI = () => {
             const options = activeResolutionOptions();
-            const selected = resolutionSelect.value;
+            const selected = resolutionSelect.value as string;
             const disabledOptions: Record<string, string> = {};
 
             if (probeState === 'ready') {
@@ -703,7 +703,7 @@ class VideoSettingsDialog extends Container {
                     }
 
                     const is360 = projectionSelect.value === 'equirect';
-                    const encodingSettings = encodingSettingsFor(resolutionSelect.value);
+                    const encodingSettings = encodingSettingsFor(resolutionSelect.value as string);
                     const frameRange = frameRangeInput.value as number[];
 
                     const videoSettings: VideoSettings = {

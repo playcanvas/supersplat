@@ -449,7 +449,9 @@ class PublishSettingsDialog extends Container {
 
                 onOK = () => {
                     const isNew = overwriteSelect.value === '0';
-                    const selectedScene = !isNew ? userStatus.scenes[parseInt(overwriteSelect.value, 10) - 1] : null;
+                    const selectedScene = !isNew
+                        ? userStatus.scenes[parseInt(overwriteSelect.value as string, 10) - 1]
+                        : null;
 
                     // extract camera animation
                     const includeAnimation = isNew ? animationToggle.value : overrideAnimationToggle.value;

@@ -50,7 +50,7 @@ const arrange = (element: HTMLElement, target: HTMLElement, direction: Direction
     }
 };
 
-const isString = (value: unknown) => {
+const isString = (value: unknown): value is string | undefined => {
     return !value || typeof value === 'string' || value instanceof String;
 };
 

@@ -45,7 +45,7 @@ class ShapeTransformGizmo {
         if (options.uniformScale) {
             // disable everything except uniform scale
             ['x', 'y', 'z', 'yz', 'xz', 'xy'].forEach((axis) => {
-                scale.enableShape(axis as 'x' | 'y' | 'z' | 'yz' | 'xz' | 'xy', false);
+                scale.setShapeEnabled(axis as 'x' | 'y' | 'z' | 'yz' | 'xz' | 'xy', false);
             });
         }
         scale.lowerBoundScale.copy(options.lowerBoundScale);

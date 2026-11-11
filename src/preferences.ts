@@ -135,7 +135,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             key: 'view.minPixelSize',
             setCommand: 'view.setMinPixelSize',
             getDefault: () => 2,
-            validate: isNumber(0, 20),
+            validate: isNumber(0, 5),
             group: 'preferences'
         },
         {

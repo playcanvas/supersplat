@@ -221,10 +221,12 @@ class SettingsPanel extends Container {
         });
         i18n.bindText(minSplatSizeLabel, 'panel.settings.min-splat-size');
 
+        // the projector's 0.3px² low-pass floor keeps every splat at least
+        // ~1.55px across, so values up to there cull nothing
         const minSplatSizeSlider = new SliderInput({
             class: 'settings-panel-row-slider',
             min: 0,
-            max: 20,
+            max: 5,
             precision: 1,
             value: 2
         });
@@ -487,6 +489,7 @@ class SettingsPanel extends Container {
         tooltips.register(languageLabel, help('panel.settings.language.tooltip'), 'top');
         tooltips.register(tonemappingLabel, help('panel.settings.tone-mapping.tooltip'), 'top');
         tooltips.register(shBandsLabel, help('panel.settings.sh-bands.tooltip'), 'top');
+        tooltips.register(minSplatSizeLabel, help('panel.settings.min-splat-size.tooltip'), 'top');
         tooltips.register(antiAliasLabel, help('panel.settings.anti-alias.tooltip'), 'top');
         tooltips.register(sortModeLabel, help('panel.settings.sort-mode.tooltip'), 'top');
         tooltips.register(stochasticLabel, help('panel.settings.stochastic-alpha.tooltip'), 'top');

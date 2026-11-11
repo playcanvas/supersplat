@@ -1,5 +1,15 @@
 @use 'colors.scss' as *;
 
+@keyframes record-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.45;
+    }
+}
+
 #timeline-panel {
     flex-direction: column;
     border-top: none;
@@ -42,6 +52,30 @@
                     cursor: pointer;
                     box-shadow: none;
                     border-color: #ff990088;
+                }
+            }
+
+            > #record {
+                // record control: css-drawn dot that squares into a stop
+                // symbol while recording (the pc-icon font has no glyphs for these)
+                &::before {
+                    content: '';
+                    display: inline-block;
+                    width: 9px;
+                    height: 9px;
+                    border-radius: 50%;
+                    background-color: $error;
+                    vertical-align: middle;
+                    transition: border-radius 0.15s ease;
+                }
+
+                &:hover::before {
+                    background-color: #ff7d7d;
+                }
+
+                &.recording::before {
+                    border-radius: 1px;
+                    animation: record-pulse 1.2s ease-in-out infinite;
                 }
             }
         }
@@ -166,6 +200,14 @@
                     cursor: pointer;
                     pointer-events: auto;
 
+                    // samples captured by the running recorder: display-only,
+                    // not editable keys
+                    &.recorded {
+                        background-color: $error;
+                        cursor: default;
+                        pointer-events: none;
+                    }
+
                     // keys stranded beyond the timeline's end: pinned just past
                     // the strip, error-tinted and dimmed - present but not playing
                     &.out-of-range {
@@ -189,5 +231,10 @@
                 }
             }
         }
+    }
+
+    // while the recorder is running the cursor becomes a red time counter
+    &.recording > #ticks > #ticks-area > .time-label.cursor {
+        background-color: $error;
     }
 }

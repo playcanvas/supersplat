@@ -383,6 +383,8 @@
     "tooltip.timeline.next-frame": "下一帧",
     "tooltip.timeline.add-key": "添加关键帧",
     "tooltip.timeline.remove-key": "删除关键帧",
+    "tooltip.timeline.record": "录制相机轨迹",
+    "tooltip.timeline.sample-interval": "录制采样间隔（帧）",
     "tooltip.timeline.key": "拖动以移动。Shift+拖动复制。Ctrl+点击设为当前视图。",
     "tooltip.timeline.key-out-of-range": "关键帧 {{frame}} 超出时间轴末尾，不会播放。将其拖回时间轴或增加总帧数。",
     "tooltip.timeline.frame-rate": "帧率",

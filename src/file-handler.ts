@@ -12,7 +12,7 @@ import type { ExportSettings } from './export-settings';
 import { loadExportSettings, saveExportSettings } from './export-settings';
 import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import type { BlobReadSource, WriteTarget } from './io';
-import { BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
+import { BrowserFileSystem, GsafReader, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import type { RecentImport } from './recent-files';
 import { recentImports } from './recent-files';
 import type { Scene } from './scene';
@@ -84,6 +84,12 @@ const filePickerTypes: Record<string, FilePickerAcceptType> = {
             'application/x-gaussian-splat': ['.spz']
         }
     },
+    gsaf: {
+        description: 'GSAF Animated Splat',
+        accept: {
+            'application/x-gaussian-splat': ['.gsaf']
+        }
+    },
     indexTxt: {
         description: 'Colmap Poses (Images.txt)',
         accept: {
@@ -108,7 +114,7 @@ const allImportTypes = {
     description: 'Supported Files',
     accept: {
         'application/ply': ['.ply'],
-        'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
+        'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz', '.gsaf'],
         'image/webp': ['.webp'],
         'application/x-lcc': ['.lcc', '.lcc2', '.bin'],
         'text/plain': ['.txt']
@@ -116,7 +122,7 @@ const allImportTypes = {
 };
 
 // the same types for a plain file input
-const importAccept = '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz';
+const importAccept = '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz,.gsaf';
 
 // determine if all files share a common filename prefix followed by
 // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
@@ -381,6 +387,21 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     };
 
+    // import a GSAF animated splat file as a timeline sequence
+    const importGsaf = async (file: ImportFile, operation?: FileOperationOptions) => {
+        try {
+            const bytes = file.contents ?
+                await file.contents.arrayBuffer() :
+                await (await fetch(new URL(file.url, window.location.href).href)).arrayBuffer();
+            const reader = await GsafReader.open(new Uint8Array(bytes));
+            events.fire('sequence.setGsaf', reader, file.filename);
+            events.fire('timeline.frame', 0);
+        } catch (error) {
+            if (operation?.throwOnError) throw error;
+            await showLoadError(error.message ?? error, file.filename);
+        }
+    };
+
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false, operation?: FileOperationOptions) => {
         const filenames = files.map((f) => f.filename.toLowerCase());
@@ -402,7 +423,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
                 if (
-                    ['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(
+                    ['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz', '.gsaf'].every(
                         (ext) => !filename.endsWith(ext)
                     )
                 ) {
@@ -422,6 +443,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     const contents =
                         files[i].contents ?? new File([await (await fetch(files[i].url)).blob()], files[i].filename);
                     await events.invoke('doc.load', contents, files[i].handle);
+                } else if (filename.endsWith('.gsaf')) {
+                    // load gsaf animated sequence
+                    await importGsaf(files[i], operation);
                 } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some((ext) => filename.endsWith(ext))) {
                     // load gaussian splat model
                     const model = await importSplatModel([files[i]], animationFrame, operation);
@@ -595,6 +619,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                         filePickerTypes.lcc,
                         filePickerTypes.ksplat,
                         filePickerTypes.spz,
+                        filePickerTypes.gsaf,
                         filePickerTypes.indexTxt
                     ]
                 });

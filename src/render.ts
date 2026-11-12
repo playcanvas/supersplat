@@ -558,28 +558,28 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // helper to sort splats and wait for completion
                 const sortAndWait = (splats: Splat[]) => sortSplatsAndWait(scene, splats);
 
-                // prepare the frame for rendering, returns the newly loaded splat if any
-                const prepareFrame = async (frameTime: number, skipSort = false): Promise<Splat | null> => {
+                // prepare the frame for rendering, returns the sequence splats whose frame changed
+                const prepareFrame = async (frameTime: number, skipSort = false): Promise<Splat[]> => {
                     // Fire timeline.time for camera animation interpolation
                     events.fire('timeline.time', frameTime);
 
-                    // Wait for PLY sequence to load the frame if present
-                    const newSplat = (await events.invoke(
+                    // Wait for any sequences to load the frame
+                    const newSplats = (await events.invoke(
                         'plysequence.setFrameAsync',
                         Math.floor(frameTime)
-                    )) as Splat | null;
+                    )) as Splat[];
 
                     // manually update the camera so position and rotation are correct
                     scene.camera.onUpdate(0);
 
                     // 360 capture re-sorts per cube face, so skip sorting here
                     if (skipSort) {
-                        return newSplat;
+                        return newSplats;
                     }
 
-                    // If a new PLY was loaded, sort and wait for completion
-                    if (newSplat) {
-                        await sortAndWait([newSplat]);
+                    // If new frames were loaded, sort and wait for completion
+                    if (newSplats.length) {
+                        await sortAndWait(newSplats);
                     } else {
                         // No new PLY - sort existing splats if camera moved
                         const pos = scene.camera.position;
@@ -595,7 +595,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         }
                     }
 
-                    return newSplat;
+                    return newSplats;
                 };
 
                 // wrap and submit the pixels currently in the data buffer

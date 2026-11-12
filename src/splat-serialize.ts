@@ -27,7 +27,7 @@ import { defaultPostEffectSettings } from '@playcanvas/splat-transform/viewer-se
 import type { AnimTrack, Camera, ExperienceSettings } from '@playcanvas/splat-transform/viewer-settings';
 import { Mat3, Mat4, PIXELFORMAT_BGRA8, Quat, Texture, Vec3, WebgpuGraphicsDevice } from 'playcanvas';
 
-import { ColorGrade, createGradeTerms, dcDecode, dcEncode, sigmoid } from './color-grade';
+import { ColorGrade, createGradeTerms, dcDecode, dcEncode } from './color-grade';
 import { effectiveModel } from './editor-splat-resource';
 import type { AntiAliasMode, EditorSplatResource } from './editor-splat-resource';
 import type { Events } from './events';
@@ -290,7 +290,7 @@ const filteredIndices = async (splat: Splat, settings: SerializeSettings) => {
                     const instance = ordered[slot];
                     if (onlySelected && state[instance] !== State.selected) continue;
                     const i = splat.instances.sourceRow[instance] - base;
-                    if (minOpacity > 0 && sigmoid(opacity[i * 8 + 7]) < minOpacity) continue;
+                    if (minOpacity > 0 && opacity[i * 8 + 7] < minOpacity) continue;
                     if (
                         removeInvalid &&
                         (!validFloatLayer(position, i) ||

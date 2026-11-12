@@ -1,4 +1,4 @@
-import { overlayEligibleWGSL } from './projected-splat-chunk';
+import { overlayEligibleWGSL, splatAlphaWGSL } from './projected-splat-chunk';
 import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
 const vertexShader = /* wgsl */ `
@@ -51,6 +51,7 @@ varying @interpolate(flat, either) gaussianId: u32;
 varying @interpolate(flat, either) gaussianDepth: f32;
 
 ${overlayEligibleWGSL}
+${splatAlphaWGSL}
 ${stochasticWarpWGSL}
 
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
@@ -80,7 +81,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let b = textureLoad(cacheB, uv, 0).x;
 
     let alphaByte = (b >> 16u) & 0xffu;
-    let alpha = f32(alphaByte) / 255.0;
+    let alpha = decodeSplatAlpha(alphaByte);
     let flags = (b >> 24u) & 3u;
     // a zero-alpha splat is invisible to the gaussian pass but is still a real,
     // editable splat: keep its quad wherever rings mode would draw its ring band
@@ -205,6 +206,7 @@ uniform pickMode: i32;
 uniform cameraParams: vec4f;
 
 ${overlayEligibleWGSL}
+${splatAlphaWGSL}
 
 const EXP4 = exp(-4.0);
 const INV_EXP4 = 1.0 / (1.0 - EXP4);
@@ -233,16 +235,18 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         discard;
     }
 
-    let opacity = f32((gaussianFlags >> 8u) & 0xffu) / 255.0;
+    // true opacity, above 1 for merged gaussians (see splatAlphaWGSL)
+    let opacity = decodeSplatAlpha(gaussianFlags >> 8u);
 
     #ifdef PICK_PASS
         if (uniform.pickMode == 1) {
             let depth = (gaussianDepth - uniform.cameraParams.z) / (uniform.cameraParams.y - uniform.cameraParams.z);
-            let contribution = normExp(radius) * opacity;
+            let contribution = splatAlpha(radius, opacity);
             if (contribution < 1.0 / 255.0) {
                 discard;
             }
-            output.color = vec4f(depth * opacity, 0.0, 0.0, opacity);
+            let weight = min(opacity, 1.0);
+            output.color = vec4f(depth * weight, 0.0, 0.0, weight);
         } else {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
@@ -259,7 +263,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
         let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
-        var alpha = select(0.0, norm * opacity, showGaussian);
+        var alpha = select(0.0, splatAlpha(radius, opacity), showGaussian);
         let packedMid = unpack2x16float(packedColor1);
         var color = vec3f(unpack2x16float(packedColor0), packedMid.x);
         // Rings apply only to the selected splat's gaussians (gaussianId is the

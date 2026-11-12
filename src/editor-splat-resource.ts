@@ -254,7 +254,8 @@ class EditorSplatResource extends GSplatContainer {
             packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
             packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
             packed[dst + 2] = FloatPacking.float2Half(color[col + 2] * SH_C0 + 0.5);
-            packed[dst + 3] = FloatPacking.float2Half(1 / (1 + Math.exp(-geometric[i * 8 + 7])));
+            // true (linear) opacity, as splat-transform holds it: above 1 for merged gaussians
+            packed[dst + 3] = FloatPacking.float2Half(geometric[i * 8 + 7]);
         }
     }
 

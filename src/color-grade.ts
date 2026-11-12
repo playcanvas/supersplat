@@ -5,9 +5,6 @@ const SH_C0 = 0.28209479177387814;
 const dcDecode = (v: number) => v * SH_C0 + 0.5;
 const dcEncode = (v: number) => (v - 0.5) / SH_C0;
 
-const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
-const invSigmoid = (v: number) => (v <= 0 ? -400 : v >= 1 ? 400 : -Math.log(1 / v - 1));
-
 type GradeParams = {
     tintClr: Color;
     temperature: number;
@@ -116,7 +113,7 @@ const gradeFromRows = (rows: Float32Array, transparency: number, out: GradeTerms
 
 // `out` = `second` applied after `first`. Matrices multiply, the offset carries
 // through the second matrix, and transparency composes multiplicatively because
-// it is a factor on the sigmoid-domain alpha (see applyAlpha).
+// it is a factor on the linear alpha (see applyAlpha).
 const composeGrades = (first: GradeTerms, second: GradeTerms, out: GradeTerms): GradeTerms => {
     const a = second.m;
     const b = first.m;
@@ -192,12 +189,14 @@ class ColorGrade {
         this.apply(c, false);
     }
 
+    // `o` is true (linear) opacity, as splat-transform's chunk sources hold it:
+    // 0 to 1, above 1 for merged gaussians
     applyOpacity(o: number): number {
-        return invSigmoid(sigmoid(o) * this.transparency);
+        return o * this.transparency;
     }
 
     applyAlpha(o: number): number {
-        return sigmoid(o) * this.transparency;
+        return o * this.transparency;
     }
 }
 
@@ -210,8 +209,6 @@ export {
     gradeTerms,
     dcDecode,
     dcEncode,
-    sigmoid,
-    invSigmoid,
     SH_C0,
     LUMA
 };

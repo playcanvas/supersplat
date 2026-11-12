@@ -329,6 +329,24 @@ type ExportEntry = {
     grade: ColorGradeCache;
 };
 
+// Whether some exported gaussian's opacity may exceed 1: its layer's source holds
+// opacity above 1 (decimated scenes, SOG v3), or a colour grade raises it. The
+// PLY writer writes opacity_linear, rather than the opacity logit that cannot
+// carry it, only when the source says so
+const exportsOpacityAboveOne = (entries: ExportEntry[]) => {
+    const terms = createGradeTerms();
+    return entries.some((e) => {
+        if (e.end <= e.start) return false;
+        if (e.splat.resource.source.meta.opacityAboveOne) return true;
+        const { colorPalette, instances } = e.splat;
+        const raising = new Set<number>();
+        for (let c = 0; c < colorPalette.size; ++c) {
+            if (colorPalette.getEntry(c, terms).transparency > 1) raising.add(c);
+        }
+        return raising.size > 0 && e.indices.some((instance) => raising.has(instances.colorIndex(instance)));
+    });
+};
+
 /**
  * A lazy, chunked ChunkSource over a set of Splats, for feeding splat-transform's
  * streaming writers (writeSource) without materializing a whole-scene copy.
@@ -374,7 +392,8 @@ class SuperSplatChunkSource implements ChunkSource {
             extraColumns: [],
             transform: Transform.PLY,
             availableLayers: new Set<ChunkLayer>(['position', 'geometric', 'color']),
-            layouts: buildLayouts(this.numRest)
+            layouts: buildLayouts(this.numRest),
+            ...(exportsOpacityAboveOne(entries) ? { opacityAboveOne: true } : {})
         };
     }
 

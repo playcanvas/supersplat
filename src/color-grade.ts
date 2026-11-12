@@ -5,6 +5,9 @@ const SH_C0 = 0.28209479177387814;
 const dcDecode = (v: number) => v * SH_C0 + 0.5;
 const dcEncode = (v: number) => (v - 0.5) / SH_C0;
 
+// the largest opacity the renderer draws (SOG v3's largest), see splatAlphaWGSL
+const OPACITY_MAX = 1.5625;
+
 type GradeParams = {
     tintClr: Color;
     temperature: number;
@@ -190,9 +193,11 @@ class ColorGrade {
     }
 
     // `o` is true (linear) opacity, as splat-transform's chunk sources hold it:
-    // 0 to 1, above 1 for merged gaussians
+    // 0 to 1, above 1 for merged gaussians. The graded opacity is capped where the
+    // renderer caps it (SOG v3's largest, 1.5625), so an export keeps what the
+    // editor draws however far the grade raises it
     applyOpacity(o: number): number {
-        return o * this.transparency;
+        return Math.min(o * this.transparency, OPACITY_MAX);
     }
 
     applyAlpha(o: number): number {

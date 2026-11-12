@@ -1,6 +1,6 @@
 import { applyColorGradeWGSL, paletteGradeWGSL } from './color-grade-chunk';
 import { indexToUvWGSL, paletteMatrixWGSL } from './palette-chunk';
-import { compactTailWGSL, overlayEligibleWGSL } from './projected-splat-chunk';
+import { compactTailWGSL, overlayEligibleWGSL, splatAlphaWGSL } from './projected-splat-chunk';
 import { stochasticWarpWGSL } from './stochastic-warp-chunk';
 
 const shCode = (bands: number) => {
@@ -218,6 +218,7 @@ ${applyColorGradeWGSL}
 ${paletteGradeWGSL}
 ${overlayEligibleWGSL}
 ${compactTailWGSL}
+${splatAlphaWGSL}
 ${stochasticWarpWGSL}
 
 fn rotationMatrix(qIn: vec4f) -> mat3x3f {
@@ -487,7 +488,8 @@ fn main(
     if (previewed) {
         gradedAlpha *= uniforms.colorAlpha;
     }
-    gradedAlpha = clamp(gradedAlpha, 0.0, 1.0);
+    // true opacity: above 1 for merged gaussians, up to what the cache byte holds
+    gradedAlpha = clamp(gradedAlpha, 0.0, 1.5625);
     // stochastic frames also cull by contribution - the gaussian's alpha mass in
     // pixels, alpha * 2 pi * sqrt(det) of the dilated covariance, the engine's
     // minContribution rule - on top of the size cull. It runs ahead of the SH
@@ -607,7 +609,7 @@ fn main(
     ));
     textureStore(cacheB, cacheUv, vec4u(
         pack2x16float(vec2f(len2, 0.0))
-            | (u32(clamp(color.a, 0.0, 1.0) * 255.0 + 0.5) << 16u)
+            | (encodeSplatAlpha(color.a) << 16u)
             | select(0u, 0x01000000u, selected)
             | select(0u, 0x02000000u, locked)
     ));

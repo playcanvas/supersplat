@@ -1,6 +1,7 @@
 import { path } from 'playcanvas';
 
 import { FileReadBlockedError, readHandle } from './file-read';
+import { dropFormats } from './import-formats';
 import { i18n } from './ui/localization';
 import sceneImport from './ui/svg/import.svg';
 
@@ -132,9 +133,6 @@ const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = fal
 
     return files;
 };
-
-// the file types the drop overlay lists as accepted
-const dropFormats = ['.ply', '.splat', '.ksplat', '.spz', '.sog', '.lcc', '.ssproj'];
 
 // Full-window overlay shown while files are dragged over the editor, then while
 // the dropped files are read. If it doesn't appear while dragging, the editor is

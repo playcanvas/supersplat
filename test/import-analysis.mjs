@@ -1,7 +1,15 @@
 // Checks for sorting picked or dropped files into import groups.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { analyzeImport, needsReview } from './.build/src/import-analysis.js';
+import {
+    documentExtension,
+    dropFormats,
+    importExtensions,
+    isModelFile,
+    modelExtensions
+} from './.build/src/import-formats.js';
 
 const frames = (prefix, count, ext = '.ply') =>
     Array.from({ length: count }, (_, i) => `${prefix}${String(i + 1).padStart(4, '0')}${ext}`);
@@ -96,6 +104,24 @@ const importAnalysisChecks = {
         const [group] = analyzeImport(files);
         assert.equal(group.kind, 'sequence');
         assert.equal(group.name, 'Frame000[1-2].compressed.PLY');
+    },
+
+    // src/manifest.json can't import the formats module, so check it by hand
+    'the installed app opens every model format and projects'() {
+        const manifest = JSON.parse(readFileSync(new URL('../src/manifest.json', import.meta.url), 'utf8'));
+        const accepted = manifest.file_handlers.flatMap(handler => Object.values(handler.accept).flat());
+        for (const ext of [...modelExtensions, documentExtension]) {
+            assert.ok(accepted.includes(ext), `manifest.json file_handlers is missing ${ext}`);
+        }
+    },
+
+    'every model format is offered, listed, grouped and imported as a model'() {
+        for (const ext of modelExtensions) {
+            assert.ok(importExtensions.includes(ext), `pickers are missing ${ext}`);
+            assert.ok(dropFormats.includes(ext), `the drop overlay is missing ${ext}`);
+            assert.ok(isModelFile(`scan${ext.toUpperCase()}`), `${ext} is not imported as a model`);
+            assert.equal(analyzeImport([`scan${ext}`])[0].kind, 'model', `the import review misreads ${ext}`);
+        }
     }
 };
 

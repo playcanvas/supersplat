@@ -1,6 +1,17 @@
 // Sort a set of picked or dropped files into the things they make up (sequences,
 // multi-file models, single models, documents, poses, unsupported files), so a
-// mixed set can be reviewed before it is imported.
+// mixed set can be reviewed before it is imported. What counts as which kind of
+// file comes from import-formats, shared with the import itself.
+
+import {
+    documentExtension,
+    frameRegex,
+    isFlatBundleMain,
+    isFlatBundleMember,
+    isModelFile,
+    isPosesFile,
+    isTreeBundleMain
+} from './import-formats';
 
 type ImportGroupKind = 'document' | 'bundle' | 'sequence' | 'model' | 'poses' | 'unsupported';
 
@@ -13,11 +24,6 @@ type ImportGroup = {
     // bundle only: the folder holding the bundle, with trailing delimiter ('' at the root)
     dir?: string;
 };
-
-const modelExtensions = ['.ply', '.splat', '.sog', '.ksplat', '.spz'];
-
-// frameNNNN.ply or frameNNNN.compressed.ply: prefix, frame number, extension
-const frameRegex = /^(.*?)(\d+)((?:\.compressed)?\.ply)$/i;
 
 const splitPath = (filename: string) => {
     const i = filename.lastIndexOf('/');
@@ -51,9 +57,8 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
         return indices;
     };
 
-    // Multi-file models. Streamed SOG and LCC take their whole folder, since their
-    // chunks may sit in subfolders (streamed SOG chunks have their own meta.json).
-    // Unpacked SOG takes the json and webp files beside its meta.json.
+    // Multi-file models: those that take their whole folder first, since a streamed
+    // SOG's chunks have their own meta.json
     const bundleMains = (test: (base: string) => boolean) =>
         lower
             .map((f, i) => ({ i, ...splitPath(f) }))
@@ -76,14 +81,11 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
     };
 
     const inTree = (f: string, dir: string) => f.startsWith(dir);
-    addBundles((base) => base === 'lod-meta.json' || base.endsWith('.lcc') || base.endsWith('.lcc2'), inTree);
-    addBundles(
-        (base) => base === 'meta.json',
-        (f, dir) => {
-            const { dir: d, base } = splitPath(f);
-            return d === dir && (base.endsWith('.json') || base.endsWith('.webp'));
-        }
-    );
+    addBundles(isTreeBundleMain, inTree);
+    addBundles(isFlatBundleMain, (f, dir) => {
+        const { dir: d, base } = splitPath(f);
+        return d === dir && isFlatBundleMember(base);
+    });
 
     // PLY sequences: numbered frames sharing a folder and filename prefix
     const sequences = new Map<string, { i: number; frame: number }[]>();
@@ -111,11 +113,11 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
     lower.forEach((f, i) => {
         if (claimed[i]) return;
         const { base } = splitPath(f);
-        const kind: ImportGroupKind = f.endsWith('.ssproj')
+        const kind: ImportGroupKind = f.endsWith(documentExtension)
             ? 'document'
-            : modelExtensions.some((ext) => f.endsWith(ext))
+            : isModelFile(f)
               ? 'model'
-              : base === 'images.txt' || f.endsWith('.json')
+              : isPosesFile(base)
                 ? 'poses'
                 : 'unsupported';
         if (kind === 'unsupported') {

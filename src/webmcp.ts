@@ -6,6 +6,7 @@ import { checkCancelled, EditorError } from './editor-command';
 import type { CameraSettings } from './editor-session';
 import type { TimelineSettings } from './editor-timeline';
 import { GENERATOR_MAX_COUNT, GENERATOR_TIMEOUT_MS } from './generator-sandbox';
+import { modelFormatNames } from './import-formats';
 import { isFinalColorMode, propModeFor } from './splat-properties';
 import { i18n } from './ui/localization';
 
@@ -795,7 +796,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
     );
     add(
         'import_url',
-        'Import a model from a CORS-enabled HTTP(S) URL as a new layer. Existing layers are kept. Supports PLY, SPLAT, SOG, SPZ and KSPLAT. Optional LOD index; otherwise uses the loader recommended LOD. Import is undoable.',
+        `Import a model from a CORS-enabled HTTP(S) URL as a new layer. Existing layers are kept. Supports ${modelFormatNames}. Optional LOD index; otherwise uses the loader recommended LOD. Import is undoable.`,
         {
             url: string('Absolute HTTP(S) model URL.', 4096),
             filename: string('Filename with format extension; defaults to URL path.', 256),

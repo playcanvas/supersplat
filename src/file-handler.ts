@@ -12,6 +12,17 @@ import type { ExportSettings } from './export-settings';
 import { loadExportSettings, saveExportSettings } from './export-settings';
 import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
 import { analyzeImport, needsReview } from './import-analysis';
+import {
+    basename,
+    documentExtension,
+    frameRegex,
+    importExtensions,
+    isFlatBundleMain,
+    isModelFile,
+    isPosesFile,
+    isTreeBundleMain,
+    modelExtensions
+} from './import-formats';
 import type { BlobReadSource, WriteTarget } from './io';
 import { BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import type { RecentImport } from './recent-files';
@@ -110,7 +121,7 @@ const allImportTypes = {
     description: 'Supported Files',
     accept: {
         'application/ply': ['.ply'],
-        'application/x-gaussian-splat': ['.json', '.sog', '.splat', '.ksplat', '.spz'],
+        'application/x-gaussian-splat': ['.json', ...modelExtensions.filter((ext) => ext !== '.ply')],
         'image/webp': ['.webp'],
         'application/x-lcc': ['.lcc', '.lcc2', '.bin'],
         'text/plain': ['.txt']
@@ -118,7 +129,7 @@ const allImportTypes = {
 };
 
 // the same types for a plain file input
-const importAccept = '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.lcc,.lcc2,.bin,.txt,.ksplat,.spz';
+const importAccept = importExtensions.join(',');
 
 // determine if all files share a common filename prefix followed by
 // a frame number, e.g. "frame0001.ply", "frame0002.ply", etc.
@@ -127,14 +138,13 @@ const isPlySequence = (filenames: string[]) => {
         return false;
     }
 
-    const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
-    const baseMatch = filenames[0].match(regex);
+    const baseMatch = filenames[0].match(frameRegex);
     if (!baseMatch) {
         return false;
     }
 
     for (let i = 1; i < filenames.length; i++) {
-        const thisMatch = filenames[i].match(regex);
+        const thisMatch = filenames[i].match(frameRegex);
         if (!thisMatch || thisMatch[1] !== baseMatch[1]) {
             return false;
         }
@@ -143,26 +153,22 @@ const isPlySequence = (filenames: string[]) => {
     return true;
 };
 
-// SOG has a meta.json file; streamed SOG has a lod-meta.json file.
-const isSog = (filenames: string[]) => {
-    const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
-    return count('lod-meta.json') === 1 || count('meta.json') === 1;
+// A multi-file model (SOG, streamed SOG, LCC) has one main file naming it; see
+// import-formats for which files those are.
+const isBundle = (filenames: string[]) => {
+    const bases = filenames.map(basename);
+    return bases.filter(isTreeBundleMain).length === 1 || bases.filter(isFlatBundleMain).length === 1;
 };
 
-// The LCC file contains meta.lcc, index.bin, data.bin and shcoef.bin (optional).
-// LCC2 comprises a meta.lcc2 file and .sog/.spz chunk files.
-const isLcc = (filenames: string[]) => {
-    const count = (extension: string) => filenames.reduce((sum, f) => sum + (f.endsWith(extension) ? 1 : 0), 0);
-    return count('.lcc') === 1 || count('.lcc2') === 1;
-};
-
-// The file that names a model: SOG meta, LCC meta, else the first (single file case).
+// The file that names a model: the shallowest bundle main file, those that take
+// their whole folder first, else the first (single file case).
 const findMainIndex = (filenames: string[]) => {
-    const isMeta = (f: string) => f === 'meta.json' || f === 'lod-meta.json';
-    const isLccMeta = (f: string) => f.endsWith('.lcc') || f.endsWith('.lcc2');
-    if (filenames.some(isMeta)) return filenames.findIndex(isMeta);
-    if (filenames.some(isLccMeta)) return filenames.findIndex(isLccMeta);
-    return 0;
+    const shallowest = (test: (base: string) => boolean) =>
+        filenames
+            .map((f, i) => ({ i, depth: f.split('/').length }))
+            .filter(({ i }) => test(basename(filenames[i])))
+            .sort((a, b) => a.depth - b.depth)[0]?.i;
+    return shallowest(isTreeBundleMain) ?? shallowest(isFlatBundleMain) ?? 0;
 };
 
 type ImportFile = {
@@ -195,11 +201,11 @@ const recordImports = (files: ImportFile[]) => {
     }
 
     const filenames = files.map((f) => f.filename.toLowerCase());
-    if (roots.length > 1 && (isPlySequence(filenames) || isSog(filenames) || isLcc(filenames))) {
+    if (roots.length > 1 && (isPlySequence(filenames) || isBundle(filenames))) {
         addRecentImport({ name: files[findMainIndex(filenames)].filename, handles: roots });
     } else {
         roots
-            .filter((root) => !root.name.toLowerCase().endsWith('.ssproj'))
+            .filter((root) => !root.name.toLowerCase().endsWith(documentExtension))
             .forEach((root) => addRecentImport({ name: root.name, handles: [root] }));
     }
 };
@@ -396,18 +402,20 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 files.map((f) => f.contents)
             );
             events.fire('timeline.frame', 0);
-        } else if (isSog(filenames) || isLcc(filenames)) {
+        } else if (isBundle(filenames)) {
             const model = await importSplatModel(files, animationFrame, operation);
             if (model) result.push(model);
         } else {
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i].toLowerCase();
-                if (
-                    ['.ssproj', '.ply', '.splat', '.sog', '.webp', 'images.txt', '.json', '.ksplat', '.spz'].every(
-                        (ext) => !filename.endsWith(ext)
-                    )
-                ) {
+                // a loose SOG texture (.webp) is accepted but has nothing to load
+                const recognised =
+                    isModelFile(filename) ||
+                    filename.endsWith(documentExtension) ||
+                    isPosesFile(basename(filename)) ||
+                    filename.endsWith('.webp');
+                if (!recognised) {
                     if (operation?.throwOnError) throw new Error(`Unrecognized file type '${filename}'`);
                     await showLoadError('Unrecognized file type', filename);
                     return;
@@ -418,13 +426,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             for (let i = 0; i < files.length; i++) {
                 const filename = filenames[i].toLowerCase();
 
-                if (filename.endsWith('.ssproj')) {
+                if (filename.endsWith(documentExtension)) {
                     // load ssproj document. doc.load expects a File (the zip
                     // reader needs its size), so wrap url fetches in one
                     const contents =
                         files[i].contents ?? new File([await (await fetch(files[i].url)).blob()], files[i].filename);
                     await events.invoke('doc.load', contents, files[i].handle);
-                } else if (['.ply', '.splat', '.sog', '.ksplat', '.spz'].some((ext) => filename.endsWith(ext))) {
+                } else if (isModelFile(filename)) {
                     // load gaussian splat model
                     const model = await importSplatModel([files[i]], animationFrame, operation);
                     if (model) result.push(model);

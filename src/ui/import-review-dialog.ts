@@ -78,6 +78,25 @@ class ImportReviewDialog extends Container {
             table.class[table.dom.scrollHeight > table.dom.clientHeight ? 'add' : 'remove']('scrolling');
         };
 
+        // pcui opens a dropdown above its field only when the window has no room
+        // below; once the rows scroll, place it against the rows' visible area instead:
+        // above when only that fits, otherwise below with the rows scrolled to show it
+        const keepOptionsInList = (select: SelectInput) => {
+            const open = select.open.bind(select);
+            select.open = () => {
+                open();
+                if (!table.class.contains('scrolling')) return;
+                const rows = table.dom.getBoundingClientRect();
+                const field = select.dom.getBoundingClientRect();
+                const height = (select.dom.querySelector('.pcui-select-input-list') as HTMLElement).offsetHeight;
+                const above = field.bottom + height > rows.bottom && field.top - height >= rows.top;
+                select.class[above ? 'add' : 'remove']('pcui-select-input-fit-height');
+                if (!above && field.bottom + height > rows.bottom) {
+                    table.dom.scrollTop += field.bottom + height - rows.bottom;
+                }
+            };
+        };
+
         // footer
 
         const footer = new Container({ id: 'footer' });
@@ -139,6 +158,7 @@ class ImportReviewDialog extends Container {
                         { v: 'sequence', t: i18n.t('popup.import-review.as-sequence') },
                         { v: 'separate', t: i18n.t('popup.import-review.as-scenes', { count: group.files.length }) }
                     ]);
+                    keepOptionsInList(mode);
                     importAs = mode;
                 } else {
                     // the only way a single file imports, as plain text

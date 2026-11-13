@@ -176,24 +176,57 @@
 
 #import-review-dialog #dialog {
     width: 520px;
+    // a long list scrolls inside the dialog rather than pushing it off screen
+    max-height: calc(100vh - 48px);
+
+    // only the file list gives up height
+    #header,
+    #footer {
+        flex-shrink: 0;
+    }
 
     #content {
-        // files | import | as
+        display: flex;
+        flex-direction: column;
+        flex: 0 1 auto;
+        min-height: 0;
+        padding-bottom: 8px;
+
+        // files | import | as; fixed side columns keep the heads and rows aligned
         .file-table {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto 168px;
-            // every row as tall as one with a dropdown
-            grid-auto-rows: minmax(24px, auto);
-            align-items: center;
+            grid-template-columns: minmax(0, 1fr) 56px 168px;
             column-gap: 16px;
-            row-gap: 6px;
-            padding-bottom: 8px;
+            align-items: center;
+        }
+
+        .file-table-head {
+            flex-shrink: 0;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            // one line across the row, not one per column with gaps between
+            border-bottom: 1px solid $bcg-light;
 
             .column-head {
                 margin: 0;
-                padding-bottom: 6px;
-                border-bottom: 1px solid $bcg-light;
                 color: $text-secondary;
+            }
+
+            .column-import {
+                text-align: center;
+            }
+        }
+
+        .file-table-body {
+            flex: 0 1 auto;
+            min-height: 0;
+            // every row as tall as one with a dropdown
+            grid-auto-rows: minmax(24px, auto);
+            row-gap: 6px;
+
+            // only once the rows don't fit, since scrolling clips the dropdowns
+            &.scrolling {
+                overflow-y: auto;
             }
 
             .cell {

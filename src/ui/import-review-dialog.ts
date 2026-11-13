@@ -56,17 +56,27 @@ class ImportReviewDialog extends Container {
         header.append(headerIcon);
         header.append(headerText);
 
-        // content: a three column grid of files
+        // content: three column grids of files, the column heads apart from the
+        // rows so the rows can scroll beneath them
 
-        const table = new Container({ class: 'file-table' });
+        const tableHead = new Container({ class: ['file-table', 'file-table-head'] });
         ['files', 'import', 'as'].forEach((column) => {
             const head = new Label({ class: ['column-head', `column-${column}`] });
             i18n.bindText(head, `popup.import-review.column.${column}`);
-            table.append(head);
+            tableHead.append(head);
         });
+        const table = new Container({ class: ['file-table', 'file-table-body'] });
 
         const content = new Container({ id: 'content' });
+        content.append(tableHead);
         content.append(table);
+
+        // Scroll the rows only when they don't fit: a scrolling box clips the
+        // sequence dropdowns, which pcui positions against the window
+        const fitRows = () => {
+            table.class.remove('scrolling');
+            table.class[table.dom.scrollHeight > table.dom.clientHeight ? 'add' : 'remove']('scrolling');
+        };
 
         // footer
 
@@ -105,15 +115,21 @@ class ImportReviewDialog extends Container {
         let cells: Element[] = [];
 
         this.show = (groups: ImportGroup[]) => {
+            // The timeline plays one sequence at a time, so only one row may import
+            // as a sequence: the first, by default
+            let sequenceTicked = false;
+
             const rows = groups.map((group) => {
                 const supported = group.kind !== 'unsupported';
+                const ticked = supported && !(group.kind === 'sequence' && sequenceTicked);
+                if (group.kind === 'sequence' && ticked) sequenceTicked = true;
 
                 const name = new Label({ class: ['cell', 'file-name'], text: group.name });
                 name.dom.title = group.name;
                 name.class[supported ? 'remove' : 'add']('unsupported');
 
                 // unsupported files can't be imported
-                const include = new BooleanInput({ class: ['cell', 'include'], value: supported, enabled: supported });
+                const include = new BooleanInput({ class: ['cell', 'include'], value: ticked, enabled: supported });
 
                 let importAs: Element;
                 let mode: SelectInput;
@@ -131,15 +147,32 @@ class ImportReviewDialog extends Container {
                     importAs = label;
                 }
 
-                include.on('change', (value: boolean) => {
-                    name.class[value ? 'remove' : 'add']('skipped');
-                    if (mode) mode.enabled = value;
-                    update();
-                });
+                name.class[ticked ? 'remove' : 'add']('skipped');
+                if (mode) mode.enabled = ticked;
 
                 [name, include, importAs].forEach((cell) => table.append(cell));
                 cells.push(name, include, importAs);
-                return { group, include, mode };
+                return { group, name, include, mode };
+            });
+
+            const asSequence = (r: (typeof rows)[number]) => r.include.value && r.mode?.value === 'sequence';
+
+            rows.forEach((row) => {
+                const changed = () => {
+                    // ticking a second sequence unticks the one before it
+                    if (asSequence(row)) {
+                        rows.filter((r) => r !== row && asSequence(r)).forEach((r) => {
+                            r.include.value = false;
+                        });
+                    }
+                    update();
+                };
+                row.include.on('change', (value: boolean) => {
+                    row.name.class[value ? 'remove' : 'add']('skipped');
+                    if (row.mode) row.mode.enabled = value;
+                    changed();
+                });
+                row.mode?.on('change', changed);
             });
 
             const update = () => {
@@ -148,6 +181,8 @@ class ImportReviewDialog extends Container {
             update();
 
             this.hidden = false;
+            fitRows();
+            window.addEventListener('resize', fitRows);
             document.addEventListener('keydown', keydown);
             this.dom.focus();
 
@@ -162,6 +197,7 @@ class ImportReviewDialog extends Container {
                 };
             }).finally(() => {
                 document.removeEventListener('keydown', keydown);
+                window.removeEventListener('resize', fitRows);
                 this.hide();
                 cells.forEach((cell) => cell.destroy());
                 cells = [];

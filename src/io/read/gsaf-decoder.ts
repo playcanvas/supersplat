@@ -12,11 +12,20 @@ const SH_C0 = 0.28209479177387814;
 
 // the layout `gsaf decode` writes, with the same conversions back from its render-ready values
 const PLY_PROPERTIES = [
-    'x', 'y', 'z',
-    'f_dc_0', 'f_dc_1', 'f_dc_2',
+    'x',
+    'y',
+    'z',
+    'f_dc_0',
+    'f_dc_1',
+    'f_dc_2',
     'opacity',
-    'scale_0', 'scale_1', 'scale_2',
-    'rot_0', 'rot_1', 'rot_2', 'rot_3'
+    'scale_0',
+    'scale_1',
+    'scale_2',
+    'rot_0',
+    'rot_1',
+    'rot_2',
+    'rot_3'
 ];
 
 // the parts of the decoder's embind api used here

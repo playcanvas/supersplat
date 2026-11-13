@@ -3,6 +3,7 @@ import type { Asset, Quat } from 'playcanvas';
 import { EditorSplatResource } from './editor-splat-resource';
 import type { Element } from './element';
 import type { Events } from './events';
+import { frameRegex } from './import-formats';
 import type { GsafReader } from './io';
 import { loadSplatSource, MappedReadFileSystem } from './io';
 import type { Scene } from './scene';
@@ -41,8 +42,7 @@ class PlyFrameSource implements FrameSource {
     constructor(files: File[], scene: Scene) {
         this.scene = scene;
 
-        const regex = /(.*?)(\d+)(?:\.compressed)?\.ply$/;
-        const key = (f: File) => f.name?.toLowerCase().match(regex)?.[2];
+        const key = (f: File) => f.name?.match(frameRegex)?.[2];
         this.files = files.slice().sort((a, b) => {
             const av = key(a);
             const bv = key(b);

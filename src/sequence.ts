@@ -117,6 +117,9 @@ class Sequence {
 const registerSequenceEvents = (events: Events, scene: Scene) => {
     let sequences: Sequence[] = [];
     let idleWaiters: (() => void)[] = [];
+    // video-export frames waiting or loading. While any are, setFrame queues playback's frames
+    // instead of starting loads, so playback cannot keep a sequence busy ahead of the export
+    let exportsPending = 0;
 
     const isLoading = () => sequences.some((seq) => seq.loading);
 
@@ -170,8 +173,8 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         }
         frame = frameFor(seq, frame);
 
-        // coalesce while a frame is in flight (rapid scrubbing)
-        if (seq.loading) {
+        // coalesce while a frame is in flight (rapid scrubbing) or an export frame is pending
+        if (seq.loading || exportsPending) {
             seq.nextFrame = frame;
             return;
         }
@@ -184,8 +187,9 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         await seq.loading;
         seq.loading = null;
 
-        // process the most recent frame requested while we were loading
-        if (seq.nextFrame !== -1) {
+        // process the most recent frame requested while we were loading, unless an export
+        // frame is pending: the export resumes the queue when it is done
+        if (seq.nextFrame !== -1 && !exportsPending) {
             const frameToLoad = seq.nextFrame;
             seq.nextFrame = -1;
             setFrame(seq, frameToLoad);
@@ -196,8 +200,11 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
     };
 
     const addSource = (source: FrameSource) => {
-        sequences.push(new Sequence(source));
+        const seq = new Sequence(source);
+        sequences.push(seq);
         updateTimelineFrames();
+        // start at the playhead, in step with any sequences already loaded
+        setFrame(seq, events.invoke('timeline.frame'));
     };
 
     const removeSequence = (seq: Sequence) => {
@@ -247,27 +254,43 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             return changed;
         }
 
-        for (const seq of sequences.slice()) {
-            const target = frameFor(seq, frame);
+        exportsPending++;
+        try {
+            for (const seq of sequences.slice()) {
+                const target = frameFor(seq, frame);
 
-            // if a load is already in flight, wait for it before deciding
-            while (seq.loading) {
-                await seq.loading;
-            }
+                // let a load already in flight finish: with an export pending, a frame
+                // requested meanwhile is queued rather than loaded after it
+                if (seq.loading) {
+                    await seq.loading;
+                }
 
-            if (seq.removed || seq.currentFrame === target) {
-                continue;
-            }
+                if (seq.removed || seq.currentFrame === target) {
+                    continue;
+                }
 
-            seq.loading = loadFrame(seq, target);
-            try {
-                await seq.loading;
-            } finally {
-                seq.loading = null;
-                notifyIdle();
+                seq.loading = loadFrame(seq, target);
+                try {
+                    await seq.loading;
+                } finally {
+                    seq.loading = null;
+                    notifyIdle();
+                }
+                if (seq.splat) {
+                    changed.push(seq.splat);
+                }
             }
-            if (seq.splat) {
-                changed.push(seq.splat);
+        } finally {
+            exportsPending--;
+            // load the latest frame playback queued while the export held the sequences
+            if (!exportsPending) {
+                for (const seq of sequences) {
+                    if (seq.nextFrame !== -1 && !seq.loading) {
+                        const frameToLoad = seq.nextFrame;
+                        seq.nextFrame = -1;
+                        setFrame(seq, frameToLoad);
+                    }
+                }
             }
         }
         return changed;

@@ -395,7 +395,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 await (await fetch(new URL(file.url, window.location.href).href)).arrayBuffer();
             const reader = await GsafReader.open(new Uint8Array(bytes));
             events.fire('sequence.setGsaf', reader, file.filename);
-            events.fire('timeline.frame', 0);
         } catch (error) {
             if (operation?.throwOnError) throw error;
             await showLoadError(error.message ?? error, file.filename);
@@ -414,7 +413,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 'sequence.setPlyFrames',
                 files.map((f) => f.contents)
             );
-            events.fire('timeline.frame', 0);
         } else if (isSog(filenames) || isLcc(filenames)) {
             const model = await importSplatModel(files, animationFrame, operation);
             if (model) result.push(model);
@@ -693,7 +691,6 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     }
                 }
                 events.fire('sequence.setPlyFrames', files);
-                events.fire('timeline.frame', 0);
             }
         } catch (error) {
             if (error.name !== 'AbortError') {

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 import { analyzeImport, needsReview } from './.build/src/import-analysis.js';
 import {
+    animationExtension,
     documentExtension,
     dropFormats,
     importExtensions,
@@ -55,12 +56,20 @@ const importAnalysisChecks = {
         const files = ['scan1.ply', 'cameras.json', 'model.spz', 'images.txt', 'scene.ssproj', 'loose.webp', 'anim.gsaf'];
         assert.deepEqual(summary(files), [
             ['document', ['scene.ssproj']],
+            ['animation', ['anim.gsaf']],
             ['model', ['scan1.ply']],
             ['model', ['model.spz']],
             ['poses', ['cameras.json']],
             ['poses', ['images.txt']],
-            ['unsupported', ['loose.webp', 'anim.gsaf']]
+            ['unsupported', ['loose.webp']]
         ]);
+    },
+
+    'a gsaf file is offered, listed and grouped as an animation, not a model'() {
+        assert.ok(importExtensions.includes(animationExtension), 'pickers are missing .gsaf');
+        assert.ok(dropFormats.includes(animationExtension), 'the drop overlay is missing .gsaf');
+        assert.equal(isModelFile('anim.gsaf'), false);
+        assert.equal(analyzeImport(['anim.GSAF'])[0].kind, 'animation');
     },
 
     'an unpacked sog takes only its own json and webp files'() {
@@ -89,11 +98,12 @@ const importAnalysisChecks = {
         assert.deepEqual(groups.map(g => g.dir), ['big/', 'lcc/', 'small/']);
     },
 
-    'only a single file or a single bundle skips review'() {
+    'only a single file other than a gsaf, or a single bundle, skips review'() {
         const review = files => needsReview(files.length, analyzeImport(files));
         assert.equal(review(['a.ply']), false);
         assert.equal(review(['notes.txt']), false);
         assert.equal(review(['meta.json', 'means_l.webp']), false);
+        assert.equal(review(['anim.gsaf']), true);
         assert.equal(review(frames('frame_', 2)), true);
         assert.equal(review(['a.ply', 'b.spz']), true);
         assert.equal(review(['meta.json', 'means_l.webp', 'readme.md']), true);

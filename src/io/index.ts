@@ -12,7 +12,8 @@ export {
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,
-    validateSplatSource
+    validateSplatSource,
+    GsafReader
 } from './read';
 
 // Write operations

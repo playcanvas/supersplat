@@ -6,6 +6,9 @@
 // single files that load as one splat model
 const modelExtensions = ['.ply', '.splat', '.ksplat', '.spz', '.sog'];
 
+// an animated splat (GSAF), which loads as a timeline sequence
+const animationExtension = '.gsaf';
+
 // a SuperSplat project, which replaces the scene when opened
 const documentExtension = '.ssproj';
 
@@ -34,12 +37,13 @@ const isModelFile = (filename: string) => modelExtensions.some((ext) => filename
 const modelFormatNames = modelExtensions.map((ext) => ext.substring(1).toUpperCase()).join(', ');
 
 // every extension a file picker should offer
-const importExtensions = [...modelExtensions, documentExtension, ...bundleExtensions, '.txt'];
+const importExtensions = [...modelExtensions, animationExtension, documentExtension, ...bundleExtensions, '.txt'];
 
 // the formats the drop overlay lists as accepted
-const dropFormats = [...modelExtensions, '.lcc', documentExtension];
+const dropFormats = [...modelExtensions, animationExtension, '.lcc', documentExtension];
 
 export {
+    animationExtension,
     basename,
     documentExtension,
     dropFormats,

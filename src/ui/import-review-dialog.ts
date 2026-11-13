@@ -13,8 +13,8 @@ const createSvg = (svgString: string, args = {}) => {
     });
 };
 
-// how each kind of group other than a sequence imports, shown in the As column
-const asKeys: Record<Exclude<ImportGroup['kind'], 'sequence'>, string> = {
+// how each kind of group other than a sequence or animation imports, shown in the As column
+const asKeys: Record<Exclude<ImportGroup['kind'], 'sequence' | 'animation'>, string> = {
     document: 'as-project',
     bundle: 'as-scene',
     model: 'as-scene',
@@ -22,7 +22,7 @@ const asKeys: Record<Exclude<ImportGroup['kind'], 'sequence'>, string> = {
     unsupported: 'unsupported'
 };
 
-// a group the user chose to import; a sequence may be split into separate models
+// a group the user chose to import; a sequence or animation may be split into separate models
 type ImportChoice = {
     group: ImportGroup;
     separate: boolean;
@@ -134,29 +134,25 @@ class ImportReviewDialog extends Container {
         let cells: Element[] = [];
 
         this.show = (groups: ImportGroup[]) => {
-            // The timeline plays one sequence at a time, so only one row may import
-            // as a sequence: the first, by default
-            let sequenceTicked = false;
-
             const rows = groups.map((group) => {
                 const supported = group.kind !== 'unsupported';
-                const ticked = supported && !(group.kind === 'sequence' && sequenceTicked);
-                if (group.kind === 'sequence' && ticked) sequenceTicked = true;
 
                 const name = new Label({ class: ['cell', 'file-name'], text: group.name });
                 name.dom.title = group.name;
                 name.class[supported ? 'remove' : 'add']('unsupported');
 
                 // unsupported files can't be imported
-                const include = new BooleanInput({ class: ['cell', 'include'], value: ticked, enabled: supported });
+                const include = new BooleanInput({ class: ['cell', 'include'], value: supported, enabled: supported });
 
                 let importAs: Element;
                 let mode: SelectInput;
-                if (group.kind === 'sequence') {
+                if (group.kind === 'sequence' || group.kind === 'animation') {
+                    // a sequence's frames are its files; an animation's were read from it before review
+                    const count = group.kind === 'sequence' ? group.files.length : group.frames;
                     mode = new SelectInput({ class: ['cell', 'import-as'], defaultValue: 'sequence' });
                     i18n.bindOptions(mode, () => [
                         { v: 'sequence', t: i18n.t('popup.import-review.as-sequence') },
-                        { v: 'separate', t: i18n.t('popup.import-review.as-scenes', { count: group.files.length }) }
+                        { v: 'separate', t: i18n.t('popup.import-review.as-scenes', { count }) }
                     ]);
                     keepOptionsInList(mode);
                     importAs = mode;
@@ -167,32 +163,20 @@ class ImportReviewDialog extends Container {
                     importAs = label;
                 }
 
-                name.class[ticked ? 'remove' : 'add']('skipped');
-                if (mode) mode.enabled = ticked;
+                name.class[supported ? 'remove' : 'add']('skipped');
+                if (mode) mode.enabled = supported;
 
                 [name, include, importAs].forEach((cell) => table.append(cell));
                 cells.push(name, include, importAs);
                 return { group, name, include, mode };
             });
 
-            const asSequence = (r: (typeof rows)[number]) => r.include.value && r.mode?.value === 'sequence';
-
             rows.forEach((row) => {
-                const changed = () => {
-                    // ticking a second sequence unticks the one before it
-                    if (asSequence(row)) {
-                        rows.filter((r) => r !== row && asSequence(r)).forEach((r) => {
-                            r.include.value = false;
-                        });
-                    }
-                    update();
-                };
                 row.include.on('change', (value: boolean) => {
                     row.name.class[value ? 'remove' : 'add']('skipped');
                     if (row.mode) row.mode.enabled = value;
-                    changed();
+                    update();
                 });
-                row.mode?.on('change', changed);
             });
 
             const update = () => {

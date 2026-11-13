@@ -1,9 +1,10 @@
 // Sort a set of picked or dropped files into the things they make up (sequences,
-// multi-file models, single models, documents, poses, unsupported files), so a
-// mixed set can be reviewed before it is imported. What counts as which kind of
-// file comes from import-formats, shared with the import itself.
+// animations, multi-file models, single models, documents, poses, unsupported
+// files), so a mixed set can be reviewed before it is imported. What counts as
+// which kind of file comes from import-formats, shared with the import itself.
 
 import {
+    animationExtension,
     documentExtension,
     frameRegex,
     isFlatBundleMain,
@@ -13,7 +14,7 @@ import {
     isTreeBundleMain
 } from './import-formats';
 
-type ImportGroupKind = 'document' | 'bundle' | 'sequence' | 'model' | 'poses' | 'unsupported';
+type ImportGroupKind = 'document' | 'bundle' | 'sequence' | 'animation' | 'model' | 'poses' | 'unsupported';
 
 type ImportGroup = {
     kind: ImportGroupKind;
@@ -23,6 +24,8 @@ type ImportGroup = {
     name: string;
     // bundle only: the folder holding the bundle, with trailing delimiter ('' at the root)
     dir?: string;
+    // animation only: its frame count, read from the file before review
+    frames?: number;
 };
 
 const splitPath = (filename: string) => {
@@ -43,7 +46,7 @@ const sequenceName = (first: string, last: string) => {
     return `${dir}${prefix}${from.substring(0, shared)}[${from.substring(shared)}-${to.substring(shared)}]${ext}`;
 };
 
-const kindOrder: ImportGroupKind[] = ['document', 'bundle', 'sequence', 'model', 'poses', 'unsupported'];
+const kindOrder: ImportGroupKind[] = ['document', 'bundle', 'sequence', 'animation', 'model', 'poses', 'unsupported'];
 
 const analyzeImport = (filenames: string[]): ImportGroup[] => {
     const lower = filenames.map((f) => f.toLowerCase());
@@ -115,11 +118,13 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
         const { base } = splitPath(f);
         const kind: ImportGroupKind = f.endsWith(documentExtension)
             ? 'document'
-            : isModelFile(f)
-              ? 'model'
-              : isPosesFile(base)
-                ? 'poses'
-                : 'unsupported';
+            : f.endsWith(animationExtension)
+              ? 'animation'
+              : isModelFile(f)
+                ? 'model'
+                : isPosesFile(base)
+                  ? 'poses'
+                  : 'unsupported';
         if (kind === 'unsupported') {
             unsupported.push(i);
         } else {
@@ -138,9 +143,11 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
 };
 
 // A single file, or one multi-file model, imports directly. Anything else is reviewed
-// first, including a lone sequence, which the user may want as separate models.
-const needsReview = (fileCount: number, groups: ImportGroup[]) =>
-    fileCount > 1 && !(groups.length === 1 && groups[0].kind === 'bundle');
+// first, including a lone sequence or animation, which the user may want as separate models.
+const needsReview = (fileCount: number, groups: ImportGroup[]) => {
+    const only = groups.length === 1 ? groups[0].kind : null;
+    return only === 'animation' || (fileCount > 1 && only !== 'bundle');
+};
 
 export { analyzeImport, needsReview };
 export type { ImportGroup, ImportGroupKind };

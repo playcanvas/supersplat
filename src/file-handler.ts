@@ -456,7 +456,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             return;
         }
 
-        const choices: ImportChoice[] | null = await events.invoke('show.importReview', groups, files.length);
+        const choices: ImportChoice[] | null = await events.invoke('show.importReview', groups);
         if (!choices?.length) return;
 
         for (const { group, separate } of choices) {

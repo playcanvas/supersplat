@@ -31,7 +31,7 @@ type ImportChoice = {
 // Lists what a mixed set of picked or dropped files was found to contain, as a
 // table of files with an import box and, for sequences, how to import them.
 class ImportReviewDialog extends Container {
-    show: (groups: ImportGroup[], fileCount: number) => Promise<ImportChoice[] | null>;
+    show: (groups: ImportGroup[]) => Promise<ImportChoice[] | null>;
     hide: () => void;
 
     constructor(args = {}) {
@@ -56,11 +56,7 @@ class ImportReviewDialog extends Container {
         header.append(headerIcon);
         header.append(headerText);
 
-        // content: a summary line, then a three column grid of files
-
-        let fileTotal = 0;
-        const summary = new Label({ class: 'summary' });
-        i18n.bindText(summary, () => i18n.t('popup.import-review.summary', { count: i18n.formatInteger(fileTotal) }));
+        // content: a three column grid of files
 
         const table = new Container({ class: 'file-table' });
         ['files', 'import', 'as'].forEach((column) => {
@@ -70,7 +66,6 @@ class ImportReviewDialog extends Container {
         });
 
         const content = new Container({ id: 'content' });
-        content.append(summary);
         content.append(table);
 
         // footer
@@ -78,10 +73,8 @@ class ImportReviewDialog extends Container {
         const footer = new Container({ id: 'footer' });
         const cancelButton = new Button({ class: 'button' });
         i18n.bindText(cancelButton, 'popup.cancel');
-        // names how many files the ticked rows will import
-        let importCount = 0;
-        const importButton = new Button({ class: ['button', 'import-button'] });
-        i18n.bindText(importButton, () => i18n.t('popup.import-review.import', { count: importCount }));
+        const importButton = new Button({ class: 'button' });
+        i18n.bindText(importButton, 'popup.import-review.import');
         footer.append(cancelButton);
         footer.append(importButton);
 
@@ -111,10 +104,7 @@ class ImportReviewDialog extends Container {
         // the rows' cells, removed (and their bindings released) on close
         let cells: Element[] = [];
 
-        this.show = (groups: ImportGroup[], fileCount: number) => {
-            fileTotal = fileCount;
-            summary.text = i18n.t('popup.import-review.summary', { count: i18n.formatInteger(fileCount) });
-
+        this.show = (groups: ImportGroup[]) => {
             const rows = groups.map((group) => {
                 const supported = group.kind !== 'unsupported';
 
@@ -153,9 +143,7 @@ class ImportReviewDialog extends Container {
             });
 
             const update = () => {
-                importCount = rows.reduce((sum, r) => sum + (r.include.value ? r.group.files.length : 0), 0);
-                importButton.text = i18n.t('popup.import-review.import', { count: importCount });
-                importButton.enabled = importCount > 0;
+                importButton.enabled = rows.some((r) => r.include.value);
             };
             update();
 

@@ -177,20 +177,8 @@
 #import-review-dialog #dialog {
     width: 520px;
 
-    // grows to fit the file count rather than clipping it
-    #footer .import-button {
-        width: auto;
-        min-width: 120px;
-        padding: 0 16px;
-    }
-
     #content {
-        .summary {
-            display: block;
-            margin: 0 0 12px;
-        }
-
-        // files | skip | import as
+        // files | import | as
         .file-table {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto 168px;

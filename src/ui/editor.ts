@@ -281,8 +281,8 @@ class EditorUI {
             }
         });
 
-        events.function('show.importReview', (groups: ImportGroup[], fileCount: number) => {
-            return importReviewDialog.show(groups, fileCount);
+        events.function('show.importReview', (groups: ImportGroup[]) => {
+            return importReviewDialog.show(groups);
         });
 
         events.function('show.imageSettingsDialog', async () => {

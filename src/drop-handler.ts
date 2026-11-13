@@ -196,6 +196,10 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     const overlay = createDropOverlay(target);
     const hasFiles = (ev: DragEvent) => ev.dataTransfer?.types.includes('Files');
 
+    // the editor's dialogs, popups and progress screens are marked .blocks-shortcuts;
+    // while one is open a drop would start a second import underneath it
+    const dialogOpen = () => !!document.querySelector('.blocks-shortcuts:not(.pcui-hidden)');
+
     const dragstart = (ev: DragEvent) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -206,7 +210,13 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         ev.preventDefault();
         ev.stopPropagation();
         ev.dataTransfer.effectAllowed = 'all';
-        if (hasFiles(ev)) overlay.dragging();
+        if (!hasFiles(ev)) return;
+        if (dialogOpen()) {
+            // show the drop as refused, without the overlay
+            ev.dataTransfer.dropEffect = 'none';
+        } else {
+            overlay.dragging();
+        }
     };
 
     // hide as soon as the drag leaves the window
@@ -217,8 +227,9 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
     const drop = async (ev: DragEvent) => {
         ev.preventDefault();
 
-        // one drop at a time: a second drop while the first is read is ignored
-        if (overlay.isReading || !hasFiles(ev)) return;
+        // one drop at a time: a second drop while the first is read, or while a
+        // dialog is open, is ignored
+        if (overlay.isReading || dialogOpen() || !hasFiles(ev)) return;
         overlay.startReading();
 
         try {

@@ -4,6 +4,7 @@ import type { Mat4 } from 'playcanvas';
 import { version } from '../../package.json';
 import type { Events } from '../events';
 import type { ExportSettings } from '../export-settings';
+import type { ImportGroup } from '../import-analysis';
 import type { BlobReadSource } from '../io';
 
 import { AboutPopup } from './about-popup';
@@ -14,6 +15,7 @@ import { ClipboardMenu } from './clipboard-menu';
 import { DataPanel } from './data-panel';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
+import { ImportReviewDialog } from './import-review-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
 import { OverdrawLegend } from './overdraw-legend';
@@ -199,6 +201,9 @@ class EditorUI {
         // video settings
         const videoSettingsDialog = new VideoSettingsDialog(events);
 
+        // review of a mixed set of picked or dropped files
+        const importReviewDialog = new ImportReviewDialog();
+
         // about popup
         const aboutPopup = new AboutPopup(events);
 
@@ -207,6 +212,7 @@ class EditorUI {
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+        topContainer.append(importReviewDialog);
         topContainer.append(shortcutsPopup);
         topContainer.append(aboutPopup);
         topContainer.append(clipboardMenu);
@@ -273,6 +279,10 @@ class EditorUI {
             if (publishSettings) {
                 await events.invoke('scene.publish', publishSettings);
             }
+        });
+
+        events.function('show.importReview', (groups: ImportGroup[], fileCount: number) => {
+            return importReviewDialog.show(groups, fileCount);
         });
 
         events.function('show.imageSettingsDialog', async () => {

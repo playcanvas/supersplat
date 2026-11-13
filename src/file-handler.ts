@@ -11,6 +11,7 @@ import { buildExportOptions } from './export-options';
 import type { ExportSettings } from './export-settings';
 import { loadExportSettings, saveExportSettings } from './export-settings';
 import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
+import { analyzeImport, needsReview } from './import-analysis';
 import type { BlobReadSource, WriteTarget } from './io';
 import { BrowserFileSystem, MappedReadFileSystem, pickWriteTarget, sourcesOf } from './io';
 import type { RecentImport } from './recent-files';
@@ -26,6 +27,7 @@ import {
     WebGPUUnavailableError,
     writeSplatFile
 } from './splat-serialize';
+import type { ImportChoice } from './ui/import-review-dialog';
 import { i18n } from './ui/localization';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -443,6 +445,35 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         return result;
     };
 
+    // Import files the user picked or dropped. A single file or one multi-file
+    // model loads directly; anything else is listed for the user to choose what to
+    // import and whether each sequence loads as a sequence or as separate models.
+    // Each chosen group is imported, and so remembered for Import Recent, on its own.
+    const importWithReview = async (files: ImportFile[]) => {
+        const groups = analyzeImport(files.map((f) => f.filename));
+        if (!needsReview(files.length, groups)) {
+            await importFiles(files);
+            return;
+        }
+
+        const choices: ImportChoice[] | null = await events.invoke('show.importReview', groups, files.length);
+        if (!choices?.length) return;
+
+        for (const { group, separate } of choices) {
+            const groupFiles = group.files.map((i) => files[i]);
+            if (group.kind === 'bundle') {
+                // name the bundle's files relative to its folder, as a dropped folder is
+                await importFiles(groupFiles.map((f) => ({ ...f, filename: f.filename.substring(group.dir.length) })));
+            } else if (group.kind === 'sequence' && !separate) {
+                await importFiles(groupFiles);
+            } else {
+                for (const file of groupFiles) {
+                    await importFiles([file]);
+                }
+            }
+        }
+    };
+
     events.function('import', (files: ImportFile[], animationFrame = false, operation?: FileOperationOptions) => {
         return importFiles(files, animationFrame, operation);
     });
@@ -500,7 +531,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                     contents: file
                 });
             }
-            importFiles(files);
+            importWithReview(files);
             fileSelector.value = '';
         };
         document.body.append(fileSelector);
@@ -508,7 +539,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, (entries) => {
-        importFiles(
+        importWithReview(
             entries.map((e) => {
                 return {
                     filename: e.filename,
@@ -611,7 +642,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 }
 
                 const readable = await recoverBlocked(files);
-                if (readable.length) await importFiles(readable);
+                if (readable.length) await importWithReview(readable);
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     await showImportError(error);
@@ -641,7 +672,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 };
             });
             const readable = await recoverBlocked(files);
-            if (readable.length) await importFiles(readable);
+            if (readable.length) await importWithReview(readable);
         } catch (error) {
             if (error.name !== 'AbortError') {
                 await showLoadError(error.message ?? error, entry.name);

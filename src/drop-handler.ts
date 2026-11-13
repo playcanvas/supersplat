@@ -1,6 +1,7 @@
 import { path } from 'playcanvas';
 
 import { FileReadBlockedError, readHandle } from './file-read';
+import { i18n } from './ui/localization';
 
 class DroppedFile {
     filename: string;
@@ -131,8 +132,53 @@ const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = fal
     return files;
 };
 
+// Full-window overlay shown while files are dragged over the editor, then while
+// the dropped files are read. If it doesn't appear while dragging, the editor is
+// too busy to take the drop.
+const createDropOverlay = (target: HTMLElement) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'drop-overlay';
+    overlay.hidden = true;
+    const message = document.createElement('div');
+    message.className = 'message';
+    overlay.append(message);
+    target.append(overlay);
+
+    let state: 'hidden' | 'dragging' | 'reading' = 'hidden';
+    let hideTimer: ReturnType<typeof setTimeout>;
+
+    const set = (next: typeof state) => {
+        state = next;
+        clearTimeout(hideTimer);
+        overlay.hidden = state === 'hidden';
+        overlay.classList.toggle('reading', state === 'reading');
+        if (state !== 'hidden') {
+            message.textContent = i18n.t(state === 'dragging' ? 'drop.drop-to-import' : 'drop.reading');
+        }
+    };
+
+    return {
+        get isReading() {
+            return state === 'reading';
+        },
+        // dragover repeats while the drag is over the page, so the overlay hides
+        // shortly after it stops, whichever way the drag ended
+        dragging: () => {
+            if (state === 'reading') return;
+            if (state !== 'dragging') set('dragging');
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => set('hidden'), 300);
+        },
+        startReading: () => set('reading'),
+        hide: () => set('hidden')
+    };
+};
+
 // configure drag and drop
 const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
+    const overlay = createDropOverlay(target);
+    const hasFiles = (ev: DragEvent) => ev.dataTransfer?.types.includes('Files');
+
     const dragstart = (ev: DragEvent) => {
         ev.preventDefault();
         ev.stopPropagation();
@@ -143,11 +189,30 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         ev.preventDefault();
         ev.stopPropagation();
         ev.dataTransfer.effectAllowed = 'all';
+        if (hasFiles(ev)) overlay.dragging();
+    };
+
+    // hide as soon as the drag leaves the window
+    const dragleave = (ev: DragEvent) => {
+        if (!ev.relatedTarget && !overlay.isReading) overlay.hide();
     };
 
     const drop = async (ev: DragEvent) => {
         ev.preventDefault();
 
+        // one drop at a time: a second drop while the first is read is ignored
+        if (overlay.isReading || !hasFiles(ev)) return;
+        overlay.startReading();
+
+        try {
+            dropHandler(await readDrop(ev), ev.shiftKey);
+        } finally {
+            overlay.hide();
+        }
+    };
+
+    // resolve the dropped items, descending into folders, into files
+    const readDrop = async (ev: DragEvent) => {
         const items = Array.from(ev.dataTransfer.items);
 
         // Entries and handles must be requested before the handler first yields,
@@ -161,8 +226,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
         if (items.every((item) => item.getAsFileSystemHandle)) {
             const handles = await Promise.all(items.map((item) => item.getAsFileSystemHandle()));
             try {
-                dropHandler(await resolveHandleFiles(handles.filter((handle) => handle)), ev.shiftKey);
-                return;
+                return await resolveHandleFiles(handles.filter((handle) => handle));
             } catch (error) {
                 if (!(error instanceof FileReadBlockedError)) throw error;
                 console.warn(`${error.message}; reading the dropped items without their handles`);
@@ -187,12 +251,12 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
             removeCommonPrefix(files);
         }
 
-        // finally, call the drop handler
-        dropHandler(files, ev.shiftKey);
+        return files;
     };
 
     target.addEventListener('dragstart', dragstart, true);
     target.addEventListener('dragover', dragover, true);
+    target.addEventListener('dragleave', dragleave, true);
     target.addEventListener('drop', drop, true);
 };
 

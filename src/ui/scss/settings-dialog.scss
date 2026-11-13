@@ -173,3 +173,64 @@
         }
     }
 }
+
+#import-review-dialog #dialog {
+    width: 640px;
+
+    #content {
+        .summary {
+            display: block;
+            margin: 0 0 8px;
+            color: $text-secondary;
+        }
+
+        .group-list {
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .group-row {
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 4px;
+
+            .include {
+                margin: 0;
+                flex-shrink: 0;
+            }
+
+            .kind {
+                width: 80px;
+                margin: 0;
+                flex-shrink: 0;
+                color: $text-secondary;
+            }
+
+            .name {
+                margin: 0;
+                flex-grow: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .details {
+                margin: 0;
+                flex-shrink: 0;
+                color: $text-secondary;
+            }
+
+            .mode {
+                width: 150px;
+                margin: 0;
+                flex-grow: 0;
+                flex-shrink: 0;
+            }
+
+            &.group-unsupported .name {
+                color: $text-secondary;
+            }
+        }
+    }
+}

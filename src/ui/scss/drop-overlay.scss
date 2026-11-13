@@ -1,0 +1,35 @@
+@use 'colors.scss' as *;
+
+// shown while files are dragged over the editor and while dropped files are read
+#drop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: rgba(0, 0, 0, 0.5);
+    outline: 3px dashed $clr-hilight;
+    outline-offset: -12px;
+
+    &[hidden] {
+        display: none;
+    }
+
+    .message {
+        padding: 16px 32px;
+        border-radius: 8px;
+        background-color: $bcg-primary;
+        color: $text-primary;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    &.reading {
+        outline-style: solid;
+        outline-color: $bcg-light;
+    }
+}

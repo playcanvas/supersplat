@@ -1,5 +1,6 @@
 import { path } from 'playcanvas';
 
+import type { Events } from './events';
 import { FileReadBlockedError, readHandle } from './file-read';
 import { dropFormats } from './import-formats';
 import { i18n } from './ui/localization';
@@ -134,9 +135,8 @@ const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = fal
     return files;
 };
 
-// Full-window overlay shown while files are dragged over the editor, then while
-// the dropped files are read. If it doesn't appear while dragging, the editor is
-// too busy to take the drop.
+// Full-window overlay shown while files are dragged over the editor.
+// If it doesn't appear while dragging, the editor is too busy to take the drop.
 const createDropOverlay = (target: HTMLElement) => {
     const element = (className: string, ...children: Node[]) => {
         const el = document.createElement('div');
@@ -150,49 +150,43 @@ const createDropOverlay = (target: HTMLElement) => {
         'image/svg+xml'
     ).documentElement;
     icon.classList.add('icon');
-    const message = element('message');
+    const message = element('message font-bold');
     const formats = element('formats');
-    formats.textContent = dropFormats.join('  ·  ');
+    formats.textContent = dropFormats.map((format) => format.substring(1).toUpperCase()).join(' · ');
 
-    const overlay = element('', icon, message, formats);
+    const content = element('content', message, formats);
+    const overlay = element('', element('drop-zone font-regular', element('icon-badge', icon), content));
     overlay.id = 'drop-overlay';
     overlay.hidden = true;
     target.append(overlay);
 
-    let state: 'hidden' | 'dragging' | 'reading' = 'hidden';
     let hideTimer: ReturnType<typeof setTimeout>;
 
-    const set = (next: typeof state) => {
-        state = next;
+    const hide = () => {
         clearTimeout(hideTimer);
-        overlay.hidden = state === 'hidden';
-        overlay.classList.toggle('reading', state === 'reading');
-        if (state !== 'hidden') {
-            message.textContent = i18n.t(state === 'dragging' ? 'drop.drop-to-import' : 'drop.reading');
-        }
+        overlay.hidden = true;
     };
 
     return {
-        get isReading() {
-            return state === 'reading';
-        },
         // dragover repeats while the drag is over the page, so the overlay hides
         // shortly after it stops, whichever way the drag ended
         dragging: () => {
-            if (state === 'reading') return;
-            if (state !== 'dragging') set('dragging');
+            if (overlay.hidden) {
+                message.textContent = i18n.t('drop.drop-to-import');
+            }
+            overlay.hidden = false;
             clearTimeout(hideTimer);
-            hideTimer = setTimeout(() => set('hidden'), 300);
+            hideTimer = setTimeout(hide, 300);
         },
-        startReading: () => set('reading'),
-        hide: () => set('hidden')
+        hide
     };
 };
 
 // configure drag and drop
-const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) => {
+const CreateDropHandler = (target: HTMLElement, events: Events, dropHandler: DropHandlerFunc) => {
     const overlay = createDropOverlay(target);
     const hasFiles = (ev: DragEvent) => ev.dataTransfer?.types.includes('Files');
+    let reading = false;
 
     // the editor's dialogs, popups and progress screens are marked .blocks-shortcuts;
     // while one is open a drop would start a second import underneath it
@@ -219,7 +213,7 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
     // hide as soon as the drag leaves the window
     const dragleave = (ev: DragEvent) => {
-        if (!ev.relatedTarget && !overlay.isReading) overlay.hide();
+        if (!ev.relatedTarget) overlay.hide();
     };
 
     const drop = async (ev: DragEvent) => {
@@ -227,14 +221,19 @@ const CreateDropHandler = (target: HTMLElement, dropHandler: DropHandlerFunc) =>
 
         // one drop at a time: a second drop while the first is read, or while a
         // dialog is open, is ignored
-        if (overlay.isReading || dialogOpen() || !hasFiles(ev)) return;
-        overlay.startReading();
+        if (reading || dialogOpen() || !hasFiles(ev)) return;
+        reading = true;
+        overlay.hide();
+        events.fire('progressStart', i18n.t('drop.reading'));
 
+        let files: DroppedFile[];
         try {
-            dropHandler(await readDrop(ev), ev.shiftKey);
+            files = await readDrop(ev);
         } finally {
-            overlay.hide();
+            reading = false;
+            events.fire('progressEnd');
         }
+        dropHandler(files, ev.shiftKey);
     };
 
     // resolve the dropped items, descending into folders, into files

@@ -1,6 +1,6 @@
 @use 'colors.scss' as *;
 
-// shown while files are dragged over the editor and while dropped files are read
+// shown while files are dragged over the editor
 #drop-overlay {
     position: fixed;
     inset: 0;
@@ -8,44 +8,59 @@
     pointer-events: none;
 
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
 
-    background-color: rgba(0, 0, 0, 0.5);
-    outline: 2px dashed $clr-hilight;
-    outline-offset: -12px;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.3);
 
     &[hidden] {
         display: none;
     }
 
-    &.reading {
-        outline: none;
+    .drop-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        width: 560px;
+        min-height: 320px;
+        max-width: calc(100% - 64px);
+        padding: clamp(24px, 4vw, 48px);
+        border: 1px dashed $clr-hilight;
+        border-radius: 16px;
+        background-color: rgba(32, 32, 32, 0.85);
+        text-align: center;
+    }
 
-        .formats {
-            display: none;
-        }
+    .icon-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        border-radius: 50%;
+        background-color: rgba($clr-hilight, 0.12);
     }
 
     .icon {
-        width: 56px;
-        height: 56px;
-        margin-bottom: 8px;
+        width: 48px;
+        height: 48px;
         color: $clr-hilight;
     }
 
+    // bold through the editor's .font-bold face, set on the element
     .message {
         color: $text-primary;
         font-size: 20px;
-        font-weight: bold;
+        line-height: 32px;
     }
 
     .formats {
+        margin-top: 24px;
         color: $text-secondary;
-        font-size: 14px;
-        white-space: pre;
+        font-size: 12px;
+        line-height: 20px;
     }
 }

@@ -546,7 +546,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(dropTarget, (entries) => {
+    CreateDropHandler(dropTarget, events, (entries) => {
         importWithReview(
             entries.map((e) => {
                 return {

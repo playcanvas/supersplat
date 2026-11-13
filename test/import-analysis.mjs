@@ -65,11 +65,10 @@ const importAnalysisChecks = {
         ]);
     },
 
-    'a gsaf file is offered, listed and imported on its own, not as a model'() {
+    'a gsaf file is offered, listed and grouped as an animation, not a model'() {
         assert.ok(importExtensions.includes(animationExtension), 'pickers are missing .gsaf');
         assert.ok(dropFormats.includes(animationExtension), 'the drop overlay is missing .gsaf');
         assert.equal(isModelFile('anim.gsaf'), false);
-        assert.equal(needsReview(1, analyzeImport(['anim.GSAF'])), false);
         assert.equal(analyzeImport(['anim.GSAF'])[0].kind, 'animation');
     },
 
@@ -99,11 +98,12 @@ const importAnalysisChecks = {
         assert.deepEqual(groups.map(g => g.dir), ['big/', 'lcc/', 'small/']);
     },
 
-    'only a single file or a single bundle skips review'() {
+    'only a single file other than a gsaf, or a single bundle, skips review'() {
         const review = files => needsReview(files.length, analyzeImport(files));
         assert.equal(review(['a.ply']), false);
         assert.equal(review(['notes.txt']), false);
         assert.equal(review(['meta.json', 'means_l.webp']), false);
+        assert.equal(review(['anim.gsaf']), true);
         assert.equal(review(frames('frame_', 2)), true);
         assert.equal(review(['a.ply', 'b.spz']), true);
         assert.equal(review(['meta.json', 'means_l.webp', 'readme.md']), true);

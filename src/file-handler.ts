@@ -11,6 +11,7 @@ import { buildExportOptions } from './export-options';
 import type { ExportSettings } from './export-settings';
 import { loadExportSettings, saveExportSettings } from './export-settings';
 import { FileReadBlockedError, readHandle, repickBlocked } from './file-read';
+import type { ImportGroup } from './import-analysis';
 import { analyzeImport, needsReview } from './import-analysis';
 import {
     animationExtension,
@@ -400,17 +401,41 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     };
 
+    // read and open a GSAF animated splat file
+    const openGsaf = async (file: ImportFile) => {
+        const bytes = file.contents
+            ? await file.contents.arrayBuffer()
+            : await (await fetch(new URL(file.url, window.location.href).href)).arrayBuffer();
+        return GsafReader.open(new Uint8Array(bytes));
+    };
+
     // import a GSAF animated splat file as a timeline sequence
     const importGsaf = async (file: ImportFile, operation?: FileOperationOptions) => {
         try {
-            const bytes = file.contents
-                ? await file.contents.arrayBuffer()
-                : await (await fetch(new URL(file.url, window.location.href).href)).arrayBuffer();
-            const reader = await GsafReader.open(new Uint8Array(bytes));
-            events.fire('sequence.setGsaf', reader, file.filename);
+            events.fire('sequence.setGsaf', await openGsaf(file), file.filename);
         } catch (error) {
             if (operation?.throwOnError) throw error;
             await showLoadError(error.message ?? error, file.filename);
+        }
+    };
+
+    // Import every frame of an open GSAF as its own splat model, each decoded to a PLY
+    // named like a PLY sequence frame: anim.gsaf gives anim_000.ply, anim_001.ply, ...
+    // Stops at the first frame that fails or is cancelled.
+    const importGsafFrames = async (reader: GsafReader, filename: string) => {
+        const stem = filename.replace(/\.gsaf$/i, '');
+        const digits = String(reader.frameCount - 1).length;
+        for (let i = 0; i < reader.frameCount; i++) {
+            const name = `${stem}_${String(i).padStart(digits, '0')}.ply`;
+            let ply: ArrayBuffer;
+            try {
+                ply = reader.decodeFramePly(i);
+            } catch (error) {
+                await showLoadError(error.message ?? error, filename);
+                return;
+            }
+            const model = await importSplatModel([{ filename: name, contents: new File([ply], name) }], false);
+            if (!model) return;
         }
     };
 
@@ -483,8 +508,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // Import files the user picked or dropped. A single file or one multi-file
     // model loads directly; anything else is listed for the user to choose what to
-    // import and whether each sequence loads as a sequence or as separate models.
-    // Each chosen group is imported, and so remembered for Import Recent, on its own.
+    // import and whether each sequence or GSAF loads as a sequence or as separate
+    // models. Each chosen group is imported, and so remembered for Import Recent, on
+    // its own.
     const importWithReview = async (files: ImportFile[]) => {
         const groups = analyzeImport(files.map((f) => f.filename));
         if (!needsReview(files.length, groups)) {
@@ -492,21 +518,54 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             return;
         }
 
-        const choices: ImportChoice[] | null = await events.invoke('show.importReview', groups);
-        if (!choices?.length) return;
+        // open each GSAF now, so its row can offer its frames as separate models and the
+        // import reuses the reader; one that fails to open is reported and left out
+        const readers = new Map<ImportGroup, GsafReader>();
+        for (const group of groups.filter((g) => g.kind === 'animation')) {
+            const file = files[group.files[0]];
+            try {
+                const reader = await openGsaf(file);
+                readers.set(group, reader);
+                group.frames = reader.frameCount;
+            } catch (error) {
+                await showLoadError(error.message ?? error, file.filename);
+            }
+        }
+        const reviewed = groups.filter((g) => g.kind !== 'animation' || readers.has(g));
 
-        for (const { group, separate } of choices) {
-            const groupFiles = group.files.map((i) => files[i]);
-            if (group.kind === 'bundle') {
-                // name the bundle's files relative to its folder, as a dropped folder is
-                await importFiles(groupFiles.map((f) => ({ ...f, filename: f.filename.substring(group.dir.length) })));
-            } else if (group.kind === 'sequence' && !separate) {
-                await importFiles(groupFiles);
-            } else {
-                for (const file of groupFiles) {
-                    await importFiles([file]);
+        try {
+            if (!reviewed.length) return;
+            const choices: ImportChoice[] | null = await events.invoke('show.importReview', reviewed);
+            if (!choices?.length) return;
+
+            for (const { group, separate } of choices) {
+                const groupFiles = group.files.map((i) => files[i]);
+                if (group.kind === 'bundle') {
+                    // name the bundle's files relative to its folder, as a dropped folder is
+                    await importFiles(
+                        groupFiles.map((f) => ({ ...f, filename: f.filename.substring(group.dir.length) }))
+                    );
+                } else if (group.kind === 'animation') {
+                    const [file] = groupFiles;
+                    if (separate) {
+                        await importGsafFrames(readers.get(group), file.filename);
+                    } else {
+                        // the sequence takes the reader over
+                        events.fire('sequence.setGsaf', readers.get(group), file.filename);
+                        readers.delete(group);
+                    }
+                    recordImports([file]);
+                } else if (group.kind === 'sequence' && !separate) {
+                    await importFiles(groupFiles);
+                } else {
+                    for (const file of groupFiles) {
+                        await importFiles([file]);
+                    }
                 }
             }
+        } finally {
+            // release the readers no sequence took over
+            readers.forEach((reader) => reader.destroy());
         }
     };
 

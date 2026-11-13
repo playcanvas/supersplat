@@ -24,6 +24,8 @@ type ImportGroup = {
     name: string;
     // bundle only: the folder holding the bundle, with trailing delimiter ('' at the root)
     dir?: string;
+    // animation only: its frame count, read from the file before review
+    frames?: number;
 };
 
 const splitPath = (filename: string) => {
@@ -141,9 +143,11 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
 };
 
 // A single file, or one multi-file model, imports directly. Anything else is reviewed
-// first, including a lone sequence, which the user may want as separate models.
-const needsReview = (fileCount: number, groups: ImportGroup[]) =>
-    fileCount > 1 && !(groups.length === 1 && groups[0].kind === 'bundle');
+// first, including a lone sequence or animation, which the user may want as separate models.
+const needsReview = (fileCount: number, groups: ImportGroup[]) => {
+    const only = groups.length === 1 ? groups[0].kind : null;
+    return only === 'animation' || (fileCount > 1 && only !== 'bundle');
+};
 
 export { analyzeImport, needsReview };
 export type { ImportGroup, ImportGroupKind };

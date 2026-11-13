@@ -8,22 +8,33 @@ type ImportGroup = {
     kind: ImportGroupKind;
     // indices into the analysed filenames, in import order
     files: number[];
-    // display name: the filename, the bundle's main file or the sequence's first and last frames
+    // display name: the filename, the bundle's main file or the sequence's frame range
     name: string;
     // bundle only: the folder holding the bundle, with trailing delimiter ('' at the root)
     dir?: string;
-    // sequence only: the number of frame numbers missing between the first and last frame
-    missing?: number;
 };
 
 const modelExtensions = ['.ply', '.splat', '.sog', '.ksplat', '.spz'];
 
-// frameNNNN.ply or frameNNNN.compressed.ply: prefix, frame number
-const frameRegex = /^(.*?)(\d+)(?:\.compressed)?\.ply$/;
+// frameNNNN.ply or frameNNNN.compressed.ply: prefix, frame number, extension
+const frameRegex = /^(.*?)(\d+)((?:\.compressed)?\.ply)$/i;
 
 const splitPath = (filename: string) => {
     const i = filename.lastIndexOf('/');
     return { dir: filename.substring(0, i + 1), base: filename.substring(i + 1) };
+};
+
+// A sequence's frame range, keeping the digits its first and last frame share
+// outside the brackets: frame_0001.ply … frame_0005.ply is frame_000[1-5].ply
+const sequenceName = (first: string, last: string) => {
+    const { dir, base } = splitPath(first);
+    const [, prefix, from, ext] = base.match(frameRegex);
+    const to = splitPath(last).base.match(frameRegex)[2];
+    let shared = 0;
+    if (from.length === to.length) {
+        while (shared < from.length - 1 && from[shared] === to[shared]) shared++;
+    }
+    return `${dir}${prefix}${from.substring(0, shared)}[${from.substring(shared)}-${to.substring(shared)}]${ext}`;
 };
 
 const kindOrder: ImportGroupKind[] = ['document', 'bundle', 'sequence', 'model', 'poses', 'unsupported'];
@@ -88,14 +99,10 @@ const analyzeImport = (filenames: string[]): ImportGroup[] => {
     for (const frames of sequences.values()) {
         if (frames.length < 2) continue;
         frames.sort((a, b) => a.frame - b.frame);
-        const first = frames[0];
-        const last = frames[frames.length - 1];
-        const distinct = new Set(frames.map((f) => f.frame)).size;
         groups.push({
             kind: 'sequence',
             files: claim(frames.map((f) => f.i)),
-            name: `${filenames[first.i]} … ${splitPath(filenames[last.i]).base}`,
-            missing: last.frame - first.frame + 1 - distinct
+            name: sequenceName(filenames[frames[0].i], filenames[frames[frames.length - 1].i])
         });
     }
 

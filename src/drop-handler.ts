@@ -2,6 +2,7 @@ import { path } from 'playcanvas';
 
 import { FileReadBlockedError, readHandle } from './file-read';
 import { i18n } from './ui/localization';
+import sceneImport from './ui/svg/import.svg';
 
 class DroppedFile {
     filename: string;
@@ -132,16 +133,32 @@ const resolveHandleFiles = async (handles: FileSystemHandle[], keepBlocked = fal
     return files;
 };
 
+// the file types the drop overlay lists as accepted
+const dropFormats = ['.ply', '.splat', '.ksplat', '.spz', '.sog', '.lcc', '.ssproj'];
+
 // Full-window overlay shown while files are dragged over the editor, then while
 // the dropped files are read. If it doesn't appear while dragging, the editor is
 // too busy to take the drop.
 const createDropOverlay = (target: HTMLElement) => {
-    const overlay = document.createElement('div');
+    const element = (className: string, ...children: Node[]) => {
+        const el = document.createElement('div');
+        el.className = className;
+        el.append(...children);
+        return el;
+    };
+
+    const icon = new DOMParser().parseFromString(
+        decodeURIComponent(sceneImport.substring('data:image/svg+xml,'.length)),
+        'image/svg+xml'
+    ).documentElement;
+    icon.classList.add('icon');
+    const message = element('message');
+    const formats = element('formats');
+    formats.textContent = dropFormats.join('  ·  ');
+
+    const overlay = element('', icon, message, formats);
     overlay.id = 'drop-overlay';
     overlay.hidden = true;
-    const message = document.createElement('div');
-    message.className = 'message';
-    overlay.append(message);
     target.append(overlay);
 
     let state: 'hidden' | 'dragging' | 'reading' = 'hidden';

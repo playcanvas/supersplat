@@ -13,31 +13,23 @@ const createSvg = (svgString: string, args = {}) => {
     });
 };
 
+// how each kind of group other than a sequence imports, shown in the As column
+const asKeys: Record<Exclude<ImportGroup['kind'], 'sequence'>, string> = {
+    document: 'as-project',
+    bundle: 'as-scene',
+    model: 'as-scene',
+    poses: 'as-poses',
+    unsupported: 'unsupported'
+};
+
 // a group the user chose to import; a sequence may be split into separate models
 type ImportChoice = {
     group: ImportGroup;
     separate: boolean;
 };
 
-const details = (group: ImportGroup) => {
-    switch (group.kind) {
-        case 'sequence': {
-            const frames = i18n.t('popup.import-review.frames', { count: group.files.length });
-            return group.missing
-                ? `${frames}, ${i18n.t('popup.import-review.missing', { count: group.missing })}`
-                : frames;
-        }
-        case 'bundle':
-            return i18n.t('popup.import-review.files', { count: group.files.length });
-        case 'unsupported':
-            return i18n.t('popup.import-review.skipped');
-        default:
-            return '';
-    }
-};
-
-// Lists what a mixed set of picked or dropped files was found to contain, and
-// lets the user choose which groups to import and how to load each sequence.
+// Lists what a mixed set of picked or dropped files was found to contain, as a
+// table of files with an import box and, for sequences, how to import them.
 class ImportReviewDialog extends Container {
     show: (groups: ImportGroup[], fileCount: number) => Promise<ImportChoice[] | null>;
     hide: () => void;
@@ -64,23 +56,32 @@ class ImportReviewDialog extends Container {
         header.append(headerIcon);
         header.append(headerText);
 
-        // content
+        // content: a summary line, then a three column grid of files
 
         let fileTotal = 0;
         const summary = new Label({ class: 'summary' });
         i18n.bindText(summary, () => i18n.t('popup.import-review.summary', { count: i18n.formatInteger(fileTotal) }));
-        const list = new Container({ class: 'group-list' });
+
+        const table = new Container({ class: 'file-table' });
+        ['files', 'import', 'as'].forEach((column) => {
+            const head = new Label({ class: ['column-head', `column-${column}`] });
+            i18n.bindText(head, `popup.import-review.column.${column}`);
+            table.append(head);
+        });
+
         const content = new Container({ id: 'content' });
         content.append(summary);
-        content.append(list);
+        content.append(table);
 
         // footer
 
         const footer = new Container({ id: 'footer' });
         const cancelButton = new Button({ class: 'button' });
         i18n.bindText(cancelButton, 'popup.cancel');
-        const importButton = new Button({ class: 'button' });
-        i18n.bindText(importButton, 'popup.import-review.import');
+        // names how many files the ticked rows will import
+        let importCount = 0;
+        const importButton = new Button({ class: ['button', 'import-button'] });
+        i18n.bindText(importButton, () => i18n.t('popup.import-review.import', { count: importCount }));
         footer.append(cancelButton);
         footer.append(importButton);
 
@@ -107,45 +108,55 @@ class ImportReviewDialog extends Container {
             }
         };
 
+        // the rows' cells, removed (and their bindings released) on close
+        let cells: Element[] = [];
+
         this.show = (groups: ImportGroup[], fileCount: number) => {
             fileTotal = fileCount;
             summary.text = i18n.t('popup.import-review.summary', { count: i18n.formatInteger(fileCount) });
 
             const rows = groups.map((group) => {
                 const supported = group.kind !== 'unsupported';
-                const row = new Container({ class: ['row', 'group-row', `group-${group.kind}`] });
 
-                const include = new BooleanInput({ class: 'include', value: supported, enabled: supported });
-                const kind = new Label({ class: 'kind' });
-                i18n.bindText(kind, `popup.import-review.kind.${group.kind}`);
-                const name = new Label({ class: 'name', text: group.name });
+                const name = new Label({ class: ['cell', 'file-name'], text: group.name });
                 name.dom.title = group.name;
-                const info = new Label({ class: 'details' });
-                i18n.bindText(info, () => details(group));
+                name.class[supported ? 'remove' : 'add']('unsupported');
 
-                row.append(include);
-                row.append(kind);
-                row.append(name);
-                row.append(info);
+                // unsupported files can't be imported
+                const include = new BooleanInput({ class: ['cell', 'include'], value: supported, enabled: supported });
 
+                let importAs: Element;
                 let mode: SelectInput;
                 if (group.kind === 'sequence') {
-                    mode = new SelectInput({ class: 'mode', defaultValue: 'sequence' });
+                    mode = new SelectInput({ class: ['cell', 'import-as'], defaultValue: 'sequence' });
                     i18n.bindOptions(mode, () => [
                         { v: 'sequence', t: i18n.t('popup.import-review.as-sequence') },
-                        { v: 'separate', t: i18n.t('popup.import-review.as-models') }
+                        { v: 'separate', t: i18n.t('popup.import-review.as-scenes', { count: group.files.length }) }
                     ]);
-                    row.append(mode);
+                    importAs = mode;
+                } else {
+                    // the only way a single file imports, as plain text
+                    const label = new Label({ class: ['cell', 'import-as', 'note'] });
+                    i18n.bindText(label, `popup.import-review.${asKeys[group.kind]}`);
+                    importAs = label;
                 }
 
-                list.append(row);
+                include.on('change', (value: boolean) => {
+                    name.class[value ? 'remove' : 'add']('skipped');
+                    if (mode) mode.enabled = value;
+                    update();
+                });
+
+                [name, include, importAs].forEach((cell) => table.append(cell));
+                cells.push(name, include, importAs);
                 return { group, include, mode };
             });
 
             const update = () => {
-                importButton.enabled = rows.some((r) => r.include.value);
+                importCount = rows.reduce((sum, r) => sum + (r.include.value ? r.group.files.length : 0), 0);
+                importButton.text = i18n.t('popup.import-review.import', { count: importCount });
+                importButton.enabled = importCount > 0;
             };
-            rows.forEach((r) => r.include.on('change', update));
             update();
 
             this.hidden = false;
@@ -164,8 +175,8 @@ class ImportReviewDialog extends Container {
             }).finally(() => {
                 document.removeEventListener('keydown', keydown);
                 this.hide();
-                // the rows' localization bindings are released with them
-                list.clear();
+                cells.forEach((cell) => cell.destroy());
+                cells = [];
             });
         };
 

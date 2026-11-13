@@ -15,17 +15,23 @@ const importAnalysisChecks = {
         const groups = analyzeImport(files);
         assert.deepEqual(groups.map(g => g.kind), ['sequence', 'unsupported']);
         assert.equal(groups[0].files.length, 5);
-        assert.equal(groups[0].missing, 0);
+        assert.equal(groups[0].name, 'frame_000[1-5].ply');
         assert.equal(groups[1].name, 'notes.txt, preview.png');
         assert.equal(needsReview(files.length, groups), true);
     },
 
-    'frames are ordered by number, not name, and gaps are counted'() {
+    'frames are ordered by number, not name, and named by their range'() {
         const files = ['f10.ply', 'f2.ply', 'f1.ply', 'f5.ply'];
         const [group] = analyzeImport(files);
         assert.deepEqual(group.files.map(i => files[i]), ['f1.ply', 'f2.ply', 'f5.ply', 'f10.ply']);
-        assert.equal(group.missing, 6);
-        assert.equal(group.name, 'f1.ply … f10.ply');
+        assert.equal(group.name, 'f[1-10].ply');
+    },
+
+    'sequence names keep shared digits and the folder outside the range'() {
+        const name = files => analyzeImport(files)[0].name;
+        assert.equal(name(frames('x/frame_', 240)), 'x/frame_0[001-240].ply');
+        assert.equal(name(['s_0100.ply', 's_0199.ply']), 's_01[00-99].ply');
+        assert.equal(name(['a7.ply', 'a7.ply']), 'a[7-7].ply');
     },
 
     'two sequences in one drop are split by prefix and folder'() {
@@ -89,7 +95,7 @@ const importAnalysisChecks = {
         const files = ['Frame0001.compressed.PLY', 'Frame0002.compressed.PLY'];
         const [group] = analyzeImport(files);
         assert.equal(group.kind, 'sequence');
-        assert.equal(group.name, 'Frame0001.compressed.PLY … Frame0002.compressed.PLY');
+        assert.equal(group.name, 'Frame000[1-2].compressed.PLY');
     }
 };
 

@@ -432,6 +432,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             let output: Output | null = null;
             let muxerWrites = Promise.resolve();
 
+            // keep playback from swapping a sequence frame in between preparing and capturing one
+            events.invoke('sequence.suspendPlayback');
+
             try {
                 const {
                     startFrame,
@@ -860,6 +863,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.lockedRenderMode = false;
                 scene.forceRender = true; // camera likely moved, finish with normal render
 
+                events.invoke('sequence.resumePlayback');
                 events.fire('progressEnd');
             }
         };

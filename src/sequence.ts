@@ -117,9 +117,11 @@ class Sequence {
 const registerSequenceEvents = (events: Events, scene: Scene) => {
     let sequences: Sequence[] = [];
     let idleWaiters: (() => void)[] = [];
-    // video-export frames waiting or loading. While any are, setFrame queues playback's frames
-    // instead of starting loads, so playback cannot keep a sequence busy ahead of the export
-    let exportsPending = 0;
+    // Holds on playback: one for a whole video export, and one per export frame while it
+    // loads. While any are held, setFrame queues playback's frames instead of starting loads,
+    // so playback can neither keep a sequence busy ahead of the export nor swap a frame in
+    // between the export preparing a frame and capturing it
+    let holds = 0;
 
     const isLoading = () => sequences.some((seq) => seq.loading);
 
@@ -173,8 +175,8 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         }
         frame = frameFor(seq, frame);
 
-        // coalesce while a frame is in flight (rapid scrubbing) or an export frame is pending
-        if (seq.loading || exportsPending) {
+        // coalesce while a frame is in flight (rapid scrubbing) or playback is held
+        if (seq.loading || holds) {
             seq.nextFrame = frame;
             return;
         }
@@ -187,9 +189,9 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
         await seq.loading;
         seq.loading = null;
 
-        // process the most recent frame requested while we were loading, unless an export
-        // frame is pending: the export resumes the queue when it is done
-        if (seq.nextFrame !== -1 && !exportsPending) {
+        // process the most recent frame requested while we were loading, unless playback
+        // is held: releasing the last hold resumes the queue
+        if (seq.nextFrame !== -1 && !holds) {
             const frameToLoad = seq.nextFrame;
             seq.nextFrame = -1;
             setFrame(seq, frameToLoad);
@@ -197,6 +199,21 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
 
         // a follow-up load above sets loading synchronously and notifies when it ends
         notifyIdle();
+    };
+
+    // drop a hold on playback; once none remain, load the latest frame playback queued meanwhile
+    const release = () => {
+        holds--;
+        if (holds) {
+            return;
+        }
+        for (const seq of sequences) {
+            if (seq.nextFrame !== -1 && !seq.loading) {
+                const frameToLoad = seq.nextFrame;
+                seq.nextFrame = -1;
+                setFrame(seq, frameToLoad);
+            }
+        }
     };
 
     const addSource = (source: FrameSource) => {
@@ -254,12 +271,12 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
             return changed;
         }
 
-        exportsPending++;
+        holds++;
         try {
             for (const seq of sequences.slice()) {
                 const target = frameFor(seq, frame);
 
-                // let a load already in flight finish: with an export pending, a frame
+                // let a load already in flight finish: while playback is held, a frame
                 // requested meanwhile is queued rather than loaded after it
                 if (seq.loading) {
                     await seq.loading;
@@ -281,20 +298,18 @@ const registerSequenceEvents = (events: Events, scene: Scene) => {
                 }
             }
         } finally {
-            exportsPending--;
-            // load the latest frame playback queued while the export held the sequences
-            if (!exportsPending) {
-                for (const seq of sequences) {
-                    if (seq.nextFrame !== -1 && !seq.loading) {
-                        const frameToLoad = seq.nextFrame;
-                        seq.nextFrame = -1;
-                        setFrame(seq, frameToLoad);
-                    }
-                }
-            }
+            release();
         }
         return changed;
     });
+
+    // The video renderer holds playback for a whole export: a playback frame loaded between
+    // preparing an export frame and capturing it would replace the frame's data. Resuming
+    // loads the latest frame playback requested meanwhile.
+    events.function('sequence.suspendPlayback', () => {
+        holds++;
+    });
+    events.function('sequence.resumePlayback', release);
 
     // resolves once every sequence's frame for the current playhead has been swapped in, so
     // callers that move the playhead can wait for its data (no-op without a sequence)

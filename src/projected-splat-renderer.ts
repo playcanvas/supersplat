@@ -991,7 +991,6 @@ class ProjectedSplatRenderer {
         // selected markers are never filtered, so only the unselected group
         // decides whether the pass is needed
         const filterVisible =
-            camera.visibilityIds &&
             !!events.invoke('selection.useDepth') &&
             editView &&
             !!selectedSplat &&
@@ -1331,7 +1330,9 @@ class ProjectedSplatRenderer {
         }
         // staged for scatterVisibility, which runs after the splat pass
         if (!forPick) {
-            this.frameFilterVisible = filterVisible && ringsCount > 0;
+            // a stochastic frame writes no ids: it filters by the last sorted
+            // frame's bits and scatters nothing
+            this.frameFilterVisible = filterVisible && camera.visibilityIds && ringsCount > 0;
             this.frameRingsFiltered = this.frameFilterVisible && (ringsMask & 1) !== 0;
             this.frameTail = showCenters;
             this.visibilityFresh = false;

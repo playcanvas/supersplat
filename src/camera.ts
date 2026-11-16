@@ -129,15 +129,17 @@ class Camera extends Element {
     splatTarget: RenderTarget;
     colorTarget: RenderTarget;
     workTarget: RenderTarget;
-    // the splat targets with a third attachment, the id of the gaussian owning
+    // the splat target with a third attachment, the id of the gaussian owning
     // each pixel, for the projected renderer's visibility bits
-    // (ProjectedSplatRenderer.scatterVisibility). Frames that want the bits
-    // render the splat pass into these; the attachment costs bandwidth on
-    // every fragment, so other frames keep the two-attachment targets
+    // (ProjectedSplatRenderer.scatterVisibility). Sorted frames that want the
+    // bits render the splat pass into this; the attachment costs bandwidth on
+    // every fragment, so other frames keep the two-attachment targets.
+    // Stochastic frames never write it: their dithered samples would make
+    // nearly every gaussian own a pixel somewhere, so the markers hold the
+    // last sorted frame's set while the camera moves
     splatIdTarget: RenderTarget;
-    stochasticIdTarget: RenderTarget;
     visibilityBuffer: Texture;
-    // whether this frame renders into the id targets (set in onPreRender)
+    // whether this frame renders into the id target (set in onPreRender)
     visibilityIds = false;
     stochasticTarget: RenderTarget;
     warpTarget: RenderTarget;
@@ -156,7 +158,6 @@ class Camera extends Element {
     visibilityPrePass: FramePass;
     preClearPass: RenderPass;
     stochasticSplatPass: RenderPassForward;
-    stochasticSplatIdPass: RenderPassForward;
     warpSplatPass: RenderPassForward;
     stochasticResolvePass: SimpleRenderPass;
     gizmoPass: RenderPassForward;
@@ -400,7 +401,6 @@ class Camera extends Element {
         this.splatPass = new RenderPassForward(device, app.scene, camera);
         this.splatIdPass = new RenderPassForward(device, app.scene, camera);
         this.stochasticSplatPass = new RenderPassForward(device, app.scene, camera);
-        this.stochasticSplatIdPass = new RenderPassForward(device, app.scene, camera);
         this.warpSplatPass = new RenderPassForward(device, app.scene, camera);
         this.stochasticResolvePass = new SimpleRenderPass(
             device,
@@ -556,14 +556,12 @@ class Camera extends Element {
         this.visibilityPrePass?.destroy();
         this.preClearPass?.destroy();
         this.stochasticSplatPass?.destroy();
-        this.stochasticSplatIdPass?.destroy();
         this.warpSplatPass?.destroy();
         (this.stochasticResolvePass?.renderable as ShaderQuad)?.destroy();
         this.stochasticResolvePass?.destroy();
         this.stochasticTarget?.colorBuffer.destroy();
         this.stochasticTarget?.destroy();
         this.splatIdTarget?.destroy();
-        this.stochasticIdTarget?.destroy();
         this.visibilityBuffer?.destroy();
         this.warpTarget?.depthBuffer.destroy();
         this.warpTarget?.destroy();
@@ -666,11 +664,6 @@ class Camera extends Element {
                 depthBuffer,
                 autoResolve: false
             });
-            this.stochasticIdTarget = new RenderTarget({
-                colorBuffers: [stochasticColor, workBuffer, visibilityBuffer],
-                depthBuffer,
-                autoResolve: false
-            });
 
             this.colorTarget = new RenderTarget({
                 colorBuffer,
@@ -717,9 +710,6 @@ class Camera extends Element {
             this.stochasticSplatPass.init(this.stochasticTarget);
             this.stochasticSplatPass.addLayer(scene.splatLayer, false, false);
             this.stochasticSplatPass.addLayer(scene.splatLayer, true, false);
-            this.stochasticSplatIdPass.init(this.stochasticIdTarget);
-            this.stochasticSplatIdPass.addLayer(scene.splatLayer, false, false);
-            this.stochasticSplatIdPass.addLayer(scene.splatLayer, true, false);
             this.stochasticClearPass.init(this.stochasticTarget);
             this.stochasticClearPass.setClearColor(new Color(0, 0, 0, 0));
             this.stochasticResolvePass.init(this.colorTarget);
@@ -749,7 +739,6 @@ class Camera extends Element {
                 this.splatPass,
                 this.splatIdPass,
                 this.stochasticSplatPass,
-                this.stochasticSplatIdPass,
                 this.warpClearPass,
                 this.warpSplatPass,
                 this.depthReducePass,
@@ -767,7 +756,6 @@ class Camera extends Element {
             splatTarget.resize(width, height);
             this.splatIdTarget.resize(width, height);
             this.stochasticTarget.resize(width, height);
-            this.stochasticIdTarget.resize(width, height);
             this.warpTarget?.resize(width, height);
         }
 
@@ -880,11 +868,12 @@ class Camera extends Element {
             this.warpSplatPass.addLayer(scene.splatLayer, false, false);
             this.warpSplatPass.addLayer(scene.splatLayer, true, false);
         }
-        // the splat pass renders into the id targets only on frames that want
-        // the visibility bits (the experimental warp path never does)
+        // the splat pass renders into the id target only on sorted frames that
+        // want the visibility bits (stochastic frames and the experimental warp
+        // path never do)
         const { movingRender, warpedRender } = this.scene;
         const ids = this.scene.projectedSplatRenderer.visibilityWanted();
-        this.visibilityIds = ids && !warpedRender;
+        this.visibilityIds = ids && !movingRender && !warpedRender;
         this.splatPass.enabled = !movingRender && !ids;
         this.splatIdPass.enabled = !movingRender && ids;
         const pre = this.splatIdPass.enabled && this.scene.projectedSplatRenderer.visibilityPrepassWanted();
@@ -892,8 +881,7 @@ class Camera extends Element {
         this.visibilityPrePass.enabled = pre;
         this.preClearPass.enabled = pre;
         this.stochasticClearPass.enabled = movingRender;
-        this.stochasticSplatPass.enabled = movingRender && !warpedRender && !ids;
-        this.stochasticSplatIdPass.enabled = movingRender && !warpedRender && ids;
+        this.stochasticSplatPass.enabled = movingRender && !warpedRender;
         this.warpClearPass.enabled = this.scene.warpedRender;
         this.warpSplatPass.enabled = this.scene.warpedRender;
         this.stochasticResolvePass.enabled = this.scene.movingRender;

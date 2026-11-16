@@ -296,6 +296,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // per-pixel fragment count for the final blit's heat ramp
         output.color = vec4f(1.0, 0.0, 0.0, 0.0);
         output.color1 = vec4f(0.0);
+        output.color2 = vec4f(0.0);
       #else
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
@@ -352,21 +353,16 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let h = hashU32((quad.x * 1973u) ^ (quad.y * 9277u) ^ ((gaussianId + 1u) * 26699u));
         let stratum = ((pix.y & 1u) * 2u + (pix.x & 1u)) ^ (h & 3u);
         let rnd = (f32(stratum) + f32(h >> 8u) * (1.0 / 16777216.0)) * 0.25;
-        // a fragment with nothing to show (a hidden fill) still owns its pixel
-        // for the id attachment, as the pick has no alpha test: it stays as a
-        // transparent sample the resolve treats as empty, so the depth test can
-        // pick the frontmost. Ring bands have alpha and take the normal path
-        let ownerOnly = writeId && alpha <= 0.0;
-        if (rnd >= alpha && !ownerOnly) {
+        if (rnd >= alpha) {
             discard;
         }
         // Opaque coverage in the dedicated RGBA8 splat target; empty pixels
         // remain transparent for the resolve to composite over the world pass.
-        output.color = select(vec4f(color, 1.0), vec4f(0.0), ownerOnly);
+        output.color = vec4f(color, 1.0);
         output.color1 = vec4f(0.0);
-        // the kept sample is the pixel's visibility sample: the depth test
-        // leaves the frontmost one owning the id attachment
-        output.color2 = idOutput(writeId);
+        // stochastic frames never render into the id target (Camera): a
+        // dithered sample set would hand nearly every gaussian a pixel
+        output.color2 = vec4f(0.0);
       #else
         output.color2 = idOutput(writeId);
         if (uniform.outlineMode != 0u) {

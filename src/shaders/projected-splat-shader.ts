@@ -352,10 +352,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let h = hashU32((quad.x * 1973u) ^ (quad.y * 9277u) ^ ((gaussianId + 1u) * 26699u));
         let stratum = ((pix.y & 1u) * 2u + (pix.x & 1u)) ^ (h & 3u);
         let rnd = (f32(stratum) + f32(h >> 8u) * (1.0 / 16777216.0)) * 0.25;
-        // a hidden fill still owns its pixels for the id attachment (the pick
-        // has no alpha test): its fragments stay, as transparent samples that
-        // the resolve treats as empty, so the depth test can pick the frontmost
-        let ownerOnly = writeId && !showGaussian;
+        // a fragment with nothing to show (a hidden fill) still owns its pixel
+        // for the id attachment, as the pick has no alpha test: it stays as a
+        // transparent sample the resolve treats as empty, so the depth test can
+        // pick the frontmost. Ring bands have alpha and take the normal path
+        let ownerOnly = writeId && alpha <= 0.0;
         if (rnd >= alpha && !ownerOnly) {
             discard;
         }

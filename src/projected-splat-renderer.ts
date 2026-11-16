@@ -244,6 +244,10 @@ class ProjectedSplatRenderer {
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
     private visibilityRepaint = false;
+    // the bits describe the current scene from the camera in visibilityView;
+    // false until the first scatter, after a reallocation, or while the pass
+    // was off, so the next filtered frame knows to settle with a repaint
+    private visibilityValid = false;
     // this frame's bits were computed by the pre-pass, so the splat pass
     // read current ones and the post-pass scatter can be skipped
     private visibilityFresh = false;
@@ -898,6 +902,7 @@ class ProjectedSplatRenderer {
                 Math.max(1, Math.ceil(count / 32)) * 4,
                 BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
             );
+            this.visibilityValid = false;
             this.motionContribution = 0;
         }
 
@@ -1363,6 +1368,7 @@ class ProjectedSplatRenderer {
             return;
         }
         this.visibilityView.copy(this.viewProjection);
+        this.visibilityValid = true;
         this.visibilityRepaint = false;
         this.visibilityFresh = true;
     }
@@ -1376,19 +1382,26 @@ class ProjectedSplatRenderer {
     // Scatter the splat pass's id attachment into visibleBits. The centres
     // draw after this pass, so they read this frame's bits; rings are drawn by
     // the splat pass itself, so they read the previous frame's unless the
-    // pre-pass ran. A frame whose camera moved is followed by one repaint so
-    // the settled image shows this camera's set - once, since the repaint
-    // itself changes nothing
+    // pre-pass ran. A frame whose bits were stale for its rings - the camera
+    // moved, a layer moved or changed, the pass just came on - is followed by
+    // one repaint so the settled image shows the current set; once, since the
+    // repaint itself changes nothing. A forced repaint that changed nothing
+    // (a UI toggle, a selection) schedules none
     private scatterVisibility() {
         const { scene } = this;
         if (!this.frameFilterVisible || this.visibilityFresh || !this.scatterBits()) {
             this.visibilityRepaint = false;
+            // bits the pre-pass just wrote stay valid; bits the pass is not
+            // writing do not
+            this.visibilityValid = this.visibilityValid && this.visibilityFresh;
             return;
         }
 
         const moved = !this.visibilityView.equals(this.viewProjection);
+        const stale = moved || !this.visibilityValid || (scene.elementsChanged && !this.visibilityRepaint);
         this.visibilityView.copy(this.viewProjection);
-        if (this.frameRingsFiltered && (moved || (scene.editedRender && !this.visibilityRepaint))) {
+        this.visibilityValid = true;
+        if (this.frameRingsFiltered && stale) {
             this.visibilityRepaint = true;
             scene.forceRender = true;
         } else {

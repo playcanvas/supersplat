@@ -161,6 +161,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         'camera.showPoses',
         'camera.showInfo',
         'selection.changed',
+        'selection.useDepth',
         'tool.coordSpace',
         'colorPanel.pendingChanged'
     ].forEach((eventName) => {
@@ -1054,10 +1055,28 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setEditView(!editView);
     });
 
+    // screen-space picks take the visible surface (true) or everything through
+    // all depths (false). The right toolbar's x-ray switch is this, inverted.
+    // Global: it is a property of the viewport, not of the mode
+    let useDepth = false;
+
+    events.function('selection.useDepth', () => useDepth);
+
+    events.on('selection.setUseDepth', (value: boolean) => {
+        if (value !== useDepth) {
+            useDepth = value;
+            events.fire('selection.useDepth', value);
+        }
+    });
+
+    events.on('selection.toggleUseDepth', () => {
+        events.fire('selection.setUseDepth', !useDepth);
+    });
+
     // view mode and the settings each mode owns (see view-mode.ts). The live
-    // view.* and selection.useDepth values are the active mode's; the other
-    // mode's are kept and applied in full when the mode switches, so each
-    // mode remembers its own arrangement
+    // view.* values are the active mode's; the other mode's are kept and
+    // applied in full when the mode switches, so each mode remembers its own
+    // arrangement
 
     const modeSettings: Record<ViewMode, ModeSettings> = {
         centers: modeDefaults('centers'),
@@ -1067,10 +1086,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     const capitalize = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
 
-    // depth is the selection's event, the rest are the view's
-    const notifyEvent = (key: ModeSettingKey) => (key === 'useDepth' ? 'selection.useDepth' : `view.${key}`);
-    const setEvent = (key: ModeSettingKey) =>
-        key === 'useDepth' ? 'selection.setUseDepth' : `view.set${capitalize(key)}`;
+    const notifyEvent = (key: ModeSettingKey) => `view.${key}`;
+    const setEvent = (key: ModeSettingKey) => `view.set${capitalize(key)}`;
 
     // a mode's settings changed: notify as a whole, for persistence
     const notifySettings = (mode: ViewMode) => {
@@ -1096,10 +1113,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 notifySettings(viewMode);
             }
         });
-    });
-
-    events.on('selection.toggleUseDepth', () => {
-        events.fire('selection.setUseDepth', !modeSettings[viewMode].useDepth);
     });
 
     // whole-object access per mode, for preferences and reset. Keys left out

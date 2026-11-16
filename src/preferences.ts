@@ -154,6 +154,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             validate: isNumber(0, 10),
             group: 'appearance'
         },
+        { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
         // the mode and each mode's settings. The settings objects apply before
         // view.mode so the switch finds both arranged; a stored object may
         // predate a key, which then takes its default
@@ -277,14 +278,14 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
     // footprint mode plus the other mode's five visibility flags. Fold them
     // into the two per-mode settings objects, once, so nothing a user set is
     // lost. The flat keys are no longer descriptors, so they drop out of the
-    // blob on the next write
+    // blob on the next write. selection.useDepth stays a live key and is
+    // left alone
     const migrate = (stored: Record<string, unknown>) => {
         if (stored['view.centersSettings'] !== undefined || stored['view.ringsSettings'] !== undefined) {
             return;
         }
         const legacyKeys = [
             'selection.footprint',
-            'selection.useDepth',
             'view.gaussians',
             'view.centers',
             'view.rings',
@@ -318,7 +319,6 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
         (['gaussians', 'centers', 'rings', 'selectionCenters', 'selectionRings'] as const).forEach((key) =>
             take(active, key, `view.${key}`)
         );
-        take(active, 'useDepth', 'selection.useDepth');
         // these were global: both modes keep them
         [active, other].forEach((target) => {
             (

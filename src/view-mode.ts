@@ -1,8 +1,9 @@
 // The editor's two modes and the settings each one owns. Centers mode marks
 // every gaussian with a dot at its centre and selects by centre point; Rings
 // mode outlines every gaussian's footprint and selects by footprint. The
-// appearance of unselected and selected gaussians and the pick depth are
-// remembered per mode, so switching mode swaps the whole arrangement.
+// appearance of unselected and selected gaussians is remembered per mode, so
+// switching mode swaps the whole arrangement. Whether picks go through all
+// depths (x-ray) is global, not a mode setting.
 type ViewMode = 'centers' | 'rings';
 
 type ModeSettings = {
@@ -24,9 +25,6 @@ type ModeSettings = {
     splatsSelectionBlend: number;
     centersSelectionBlend: number;
     ringsSelectionBlend: number;
-    // screen-space picks take the visible surface (true) or everything through
-    // all depths (false)
-    useDepth: boolean;
 };
 
 type ModeSettingKey = keyof ModeSettings;
@@ -45,8 +43,7 @@ const MODE_SETTING_KEYS: ModeSettingKey[] = [
     'outlineSelection',
     'splatsSelectionBlend',
     'centersSelectionBlend',
-    'ringsSelectionBlend',
-    'useDepth'
+    'ringsSelectionBlend'
 ];
 
 const VIEW_MODES: ViewMode[] = ['centers', 'rings'];
@@ -65,8 +62,7 @@ const modeDefaults = (mode: ViewMode): ModeSettings => ({
     outlineSelection: false,
     splatsSelectionBlend: 1,
     centersSelectionBlend: 1,
-    ringsSelectionBlend: 1,
-    useDepth: mode === 'rings'
+    ringsSelectionBlend: 1
 });
 
 const isBlend = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;

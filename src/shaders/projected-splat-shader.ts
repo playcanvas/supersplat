@@ -12,6 +12,9 @@ attribute vertex_position: vec3f;
 // over the survivor count, so the cpu never knows it
 var<storage, read> sortedIndices: array<u32>;
 var<storage, read> splatCount: array<u32>;
+// one bit per cache entry: the gaussians a visible-surface drag could select
+// from this camera (the visibility pass, see ProjectedSplatRenderer)
+var<storage, read> visible: array<u32>;
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
 
@@ -34,6 +37,8 @@ uniform outlineMode: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform warpStrength: f32;
+// x-ray off: an unselected ring draws only if its gaussian is selectable
+uniform visibleOnly: u32;
 
 varying gaussianUV: vec2f;
 // the two resolved colours - gaussian fill and ring band - travel as six halves
@@ -53,6 +58,11 @@ varying @interpolate(flat, either) gaussianDepth: f32;
 ${overlayEligibleWGSL}
 ${splatAlphaWGSL}
 ${stochasticWarpWGSL}
+
+// selected markers always draw: they show what is selected, not what could be
+fn overlayVisible(entry: u32, flags: u32) -> bool {
+    return uniform.visibleOnly == 0u || (flags & 1u) != 0u || (visible[entry >> 5u] & (1u << (entry & 31u))) != 0u;
+}
 
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
@@ -90,18 +100,23 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // steal frontmost picks or burn fill
     let ringEligible = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && overlayEligible(flags, uniform.ringMask);
+        && overlayEligible(flags, uniform.ringMask) && overlayVisible(entry, flags);
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
     }
+    // with x-ray off the selected layer's quads write the id attachment, so they
+    // rasterize even with their fill hidden and cover what the pick's quads
+    // cover (see ProjectedSplatRenderer.scatterVisibility)
+    let writesId = uniform.visibleOnly != 0u
+        && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount;
     #ifndef PICK_PASS
         // with the gaussian display off for this splat's group (unselected or
         // selected), quads whose fragments could not contribute anything skip
         // rasterization entirely instead of blending transparent pixels - only
         // ring bands and the selection outline still need them
         let drawn = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u, (flags & 1u) != 0u);
-        if (!drawn && !ringEligible) {
+        if (!drawn && !ringEligible && !writesId) {
             output.position = discardPosition;
             return output;
         }
@@ -154,6 +169,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         // pass 1 so surface estimation always sees the true footprint
         axis1 *= max(uniform.pickFootprint, 1.0 / max(length(axis1), 1e-6));
         axis2 *= max(uniform.pickFootprint, 1.0 / max(length(axis2), 1e-6));
+    #else
+        // a quad that writes the id attachment covers what the pick's would
+        if (writesId) {
+            axis1 *= max(1.0, 1.0 / max(length(axis1), 1e-6));
+            axis2 *= max(1.0, 1.0 / max(length(axis2), 1e-6));
+        }
     #endif
 
     let corner = vertex_position.xy;
@@ -207,9 +228,26 @@ uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
+uniform visibleOnly: u32;
+
+var<storage, read> visible: array<u32>;
 
 ${overlayEligibleWGSL}
 ${splatAlphaWGSL}
+
+fn overlayVisible(entry: u32, flags: u32) -> bool {
+    return uniform.visibleOnly == 0u || (flags & 1u) != 0u || (visible[entry >> 5u] & (1u << (entry & 31u))) != 0u;
+}
+
+// the id attachment (color2, rgba16f): the gaussian's cache entry plus one as
+// three 11-bit integers, exact in half floats, with alpha 1, which the pass's
+// premultiplied blend writes in place of whatever was there; zero with alpha 0
+// leaves it alone. The visibility compute scatters the result into the
+// visible bits
+fn idOutput(write: bool) -> vec4f {
+    let id1 = gaussianId + 1u;
+    return select(vec4f(0.0), vec4f(f32(id1 & 2047u), f32((id1 >> 11u) & 2047u), f32(id1 >> 22u), 1.0), write);
+}
 
 const EXP4 = exp(-4.0);
 const INV_EXP4 = 1.0 / (1.0 - EXP4);
@@ -273,7 +311,14 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)) {
+        // x-ray off: the selected layer's fragments report their gaussian to
+        // the id attachment wherever a visible-surface pick would count them,
+        // which is every fragment of the footprint ellipse, however faint (the
+        // pick shader's id branch has no alpha test). Drawn back to front, the
+        // frontmost footprint ends up owning the pixel, as it does in the pick
+        let writeId = uniform.visibleOnly != 0u && rings;
+        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)
+            && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;
@@ -317,7 +362,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // remain transparent for the resolve to composite over the world pass.
         output.color = vec4f(color, 1.0);
         output.color1 = vec4f(0.0);
+        // the kept sample is the pixel's visibility sample: the depth test
+        // leaves the frontmost one owning the id attachment
+        output.color2 = idOutput(writeId);
       #else
+        output.color2 = idOutput(writeId);
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));

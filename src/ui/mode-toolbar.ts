@@ -2,17 +2,12 @@ import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
 import type { Events } from '../events';
 import type { ShortcutManager } from '../shortcut-manager';
-import type { ModeSettings, ViewMode } from '../view-mode';
+import type { ViewMode } from '../view-mode';
 
 import { i18n } from './localization';
-import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
-import markersOffSvg from './svg/markers-off.svg';
-import markersSvg from './svg/markers.svg';
-import overlaysSvg from './svg/overlays.svg';
 import ringsSvg from './svg/rings.svg';
-import depthOffSvg from './svg/selection-depth-off.svg';
-import depthOnSvg from './svg/selection-depth-on.svg';
+import xraySvg from './svg/xray.svg';
 import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -20,12 +15,11 @@ const createSvg = (svgString: string) => {
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
 
-// The mode toolbar, a slim pill at the right end of the header row: the
-// editing mode (centers or rings) as one sliding two-state switch, the pick
-// depth switch beside it, the markers switch (tab), and the buttons of the two
-// display panels (overlays, appearance). Everything about what is drawn and
-// how picks work lives here, labelled and always on screen; the right toolbar
-// is left to the camera
+// The mode toolbar: a slim strip centred at the top of the viewport carrying
+// the two things that decide what a drag selects. The editing mode (centers
+// or rings) as one sliding two-state switch, and the x-ray switch beside it.
+// Labelled and always on screen; everything else about the viewport lives on
+// the right toolbar
 class ModeToolbar extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -51,62 +45,14 @@ class ModeToolbar extends Container {
         // stored preference that differs arrives as one of those
         let viewMode: ViewMode = 'centers';
 
-        // state shows by styling alone, as every other toggle in the editor
-        const setActive = (element: Element, active: boolean) => {
-            element.class[active ? 'add' : 'remove']('active');
-            element.dom.setAttribute('aria-pressed', String(active));
-        };
-
-        // an icon + text segment. With two icons or two labels, the first
-        // shows while the segment is active and the second while it is not.
-        // Both labels are laid out so the segment keeps the wider one's width
-        // whichever is showing, and the pill never changes size
-        const segment = (cls: string, svgs: string[], labelKeys: string[]) => {
-            const button = new Button({ class: ['mode-toolbar-labelled', cls] });
-            const icons = svgs.map((svg) => button.dom.appendChild(createSvg(svg)));
-            const stack = new Container({ class: 'mode-toolbar-label-stack' });
-            const labels = labelKeys.map((key) => {
-                const label = new Label({ class: 'mode-toolbar-label' });
-                i18n.bindText(label, key);
-                stack.append(label);
-                return label;
-            });
-            button.dom.appendChild(stack.dom);
-            const setState = (active: boolean) => {
-                setActive(button, active);
-                if (icons.length > 1) {
-                    icons[0].style.display = active ? '' : 'none';
-                    icons[1].style.display = active ? 'none' : '';
-                }
-                if (labels.length > 1) {
-                    labels[0].class[active ? 'remove' : 'add']('mode-toolbar-label-inactive');
-                    labels[1].class[active ? 'add' : 'remove']('mode-toolbar-label-inactive');
-                }
-            };
-            return { button, setState };
-        };
-
-        // an icon-only button that opens a panel, lit while the panel is open
-        const panelButton = (svg: string, localeKey: string, toggleEvent: string, visibleEvent: string) => {
-            const button = new Button({ class: 'mode-toolbar-button' });
-            button.dom.appendChild(createSvg(svg));
-            i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(localeKey)), button);
-            tooltips.register(button, () => i18n.t(localeKey), 'bottom');
-            button.on('click', () => events.fire(toggleEvent));
-            events.on(visibleEvent, (visible: boolean) => setActive(button, visible));
-            return button;
-        };
-
         // the mode: one two-state switch. Its halves are labels, the highlight
-        // slides to the active one, and a click anywhere on it flips the mode.
-        // The tooltip states the current mode's pick rule with that mode's
-        // live depth setting, so it never promises a default the user changed
+        // slides to the active one, and a click anywhere on it flips the mode
         const modes: { mode: ViewMode; svg: string }[] = [
             { mode: 'centers', svg: centersSvg },
             { mode: 'rings', svg: ringsSvg }
         ];
 
-        const modeGroup = new Container({ class: ['mode-toolbar-group', 'mode-toolbar-group-flat'] });
+        const modeGroup = new Container({ class: 'mode-toolbar-group' });
         modeGroup.dom.setAttribute('role', 'button');
         modeGroup.dom.setAttribute('tabindex', '0');
 
@@ -132,11 +78,7 @@ class ModeToolbar extends Container {
         });
         tooltips.register(
             modeGroup,
-            () => {
-                const settings = events.invoke(`view.${viewMode}Settings`) as ModeSettings;
-                const depth = settings?.useDepth ? 'visible' : 'through';
-                return withShortcut(i18n.t(`mode-toolbar.${viewMode}.tooltip.${depth}`), 'view.toggleMode');
-            },
+            () => withShortcut(i18n.t(`mode-toolbar.${viewMode}.tooltip`), 'view.toggleMode'),
             'bottom'
         );
 
@@ -159,82 +101,69 @@ class ModeToolbar extends Container {
             }
         };
 
-        // relayout (first display, a language change) moves the halves
-        new ResizeObserver(positionThumb).observe(modeGroup.dom);
-
         const updateMode = () => {
             halves.forEach(({ mode, half }) => half.class[mode === viewMode ? 'add' : 'remove']('active'));
             modeGroup.dom.setAttribute('aria-label', i18n.t(`panel.appearance.mode.${viewMode}`));
             positionThumb();
         };
 
-        // depth switch: "Visible only" while screen-space picks take the
-        // frontmost surface, "Through all" while they take every depth. It
-        // edits the current mode's setting (see view-mode.ts), so it shows the
-        // mode's default until the user changes it for that mode
-        const depth = segment(
-            'mode-toolbar-toggle',
-            [depthOnSvg, depthOffSvg],
-            ['mode-toolbar.visible-only', 'mode-toolbar.through-all']
-        );
-        i18n.onChange(
-            () => depth.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.visible-only')),
-            depth.button
-        );
+        // x-ray: screen-space picks go through all depths rather than taking
+        // the visible surface. The editor's setting is the inverse (useDepth)
+        const xray = new Button({ class: 'mode-toolbar-toggle' });
+        xray.dom.appendChild(createSvg(xraySvg));
+        const xrayLabel = new Label({ class: 'mode-toolbar-label' });
+        i18n.bindText(xrayLabel, 'mode-toolbar.xray');
+        xray.dom.appendChild(xrayLabel.dom);
+        i18n.onChange(() => xray.dom.setAttribute('aria-label', i18n.t('mode-toolbar.xray')), xray);
         tooltips.register(
-            depth.button,
-            () => withShortcut(i18n.t('mode-toolbar.visible-only.tooltip'), 'selection.toggleUseDepth'),
+            xray,
+            () => withShortcut(i18n.t('mode-toolbar.xray.tooltip'), 'selection.toggleUseDepth'),
             'bottom'
         );
-        depth.button.on('click', () => events.fire('selection.toggleUseDepth'));
+        xray.on('click', () => events.fire('selection.toggleUseDepth'));
 
-        // markers switch (tab): a constant label, the icon struck out while off
-        const markers = segment('mode-toolbar-toggle', [markersSvg, markersOffSvg], ['mode-toolbar.markers']);
-        i18n.onChange(
-            () => markers.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.markers')),
-            markers.button
-        );
-        tooltips.register(
-            markers.button,
-            () => withShortcut(i18n.t('mode-toolbar.markers.tooltip'), 'view.toggleEditView'),
-            'bottom'
-        );
-        markers.button.on('click', () => events.fire('view.toggleEditView'));
-
-        // the display panels
-        const appearance = panelButton(
-            appearanceSvg,
-            'panel.appearance',
-            'appearancePanel.toggleVisible',
-            'appearancePanel.visible'
-        );
-        // its artwork carries its own padding; sized up to match the eye
-        appearance.class.add('mode-toolbar-button-appearance');
-        const overlays = panelButton(
-            overlaysSvg,
-            'panel.overlays',
-            'overlaysPanel.toggleVisible',
-            'overlaysPanel.visible'
-        );
+        const setXray = (active: boolean) => {
+            xray.class[active ? 'add' : 'remove']('active');
+            xray.dom.setAttribute('aria-pressed', String(active));
+        };
 
         this.append(modeGroup);
-        this.append(depth.button);
-        this.append(markers.button);
-        this.append(new Element({ class: 'mode-toolbar-separator' }));
-        this.append(appearance);
-        this.append(overlays);
+        this.append(xray);
+
+        // centred on the viewport, but never over the menu bar: at narrow
+        // widths it sits just right of the menu bar instead
+        const place = () => {
+            const parent = this.dom.parentElement;
+            if (!parent || this.dom.offsetWidth === 0) {
+                return;
+            }
+            const menuBar = document.getElementById('menu-bar');
+            const menuRight = menuBar ? menuBar.offsetLeft + menuBar.offsetWidth : 0;
+            const centred = Math.round((parent.clientWidth - this.dom.offsetWidth) / 2);
+            this.dom.style.left = `${Math.max(menuRight + 16, centred)}px`;
+        };
+
+        // relayout (first display, a window or language change) moves the
+        // halves and the strip
+        let parentObserved = false;
+        new ResizeObserver(() => {
+            positionThumb();
+            place();
+            if (!parentObserved && this.dom.parentElement) {
+                parentObserved = true;
+                new ResizeObserver(place).observe(this.dom.parentElement);
+            }
+        }).observe(this.dom);
 
         updateMode();
-        depth.setState(false);
-        markers.setState(false);
+        setXray(true);
 
         events.on('view.mode', (mode: ViewMode) => {
             viewMode = mode;
             updateMode();
         });
 
-        events.on('selection.useDepth', (value: boolean) => depth.setState(value));
-        events.on('view.editView', (value: boolean) => markers.setState(value));
+        events.on('selection.useDepth', (value: boolean) => setXray(!value));
 
         // the accessible name follows the language
         i18n.onChange(updateMode, this);

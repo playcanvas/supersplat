@@ -129,6 +129,16 @@ class Camera extends Element {
     splatTarget: RenderTarget;
     colorTarget: RenderTarget;
     workTarget: RenderTarget;
+    // the splat targets with a third attachment, the id of the gaussian owning
+    // each pixel, for the projected renderer's visibility bits
+    // (ProjectedSplatRenderer.scatterVisibility). Frames that want the bits
+    // render the splat pass into these; the attachment costs bandwidth on
+    // every fragment, so other frames keep the two-attachment targets
+    splatIdTarget: RenderTarget;
+    stochasticIdTarget: RenderTarget;
+    visibilityBuffer: Texture;
+    // whether this frame renders into the id targets (set in onPreRender)
+    visibilityIds = false;
     stochasticTarget: RenderTarget;
     warpTarget: RenderTarget;
 
@@ -138,7 +148,9 @@ class Camera extends Element {
     warpClearPass: RenderPass;
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
+    splatIdPass: RenderPassForward;
     stochasticSplatPass: RenderPassForward;
+    stochasticSplatIdPass: RenderPassForward;
     warpSplatPass: RenderPassForward;
     stochasticResolvePass: SimpleRenderPass;
     gizmoPass: RenderPassForward;
@@ -380,7 +392,9 @@ class Camera extends Element {
         this.warpClearPass = new RenderPass(device);
         this.mainPass = new RenderPassForward(device, app.scene, camera);
         this.splatPass = new RenderPassForward(device, app.scene, camera);
+        this.splatIdPass = new RenderPassForward(device, app.scene, camera);
         this.stochasticSplatPass = new RenderPassForward(device, app.scene, camera);
+        this.stochasticSplatIdPass = new RenderPassForward(device, app.scene, camera);
         this.warpSplatPass = new RenderPassForward(device, app.scene, camera);
         this.stochasticResolvePass = new SimpleRenderPass(
             device,
@@ -398,12 +412,13 @@ class Camera extends Element {
         );
         this.gizmoPass = new RenderPassForward(device, app.scene, camera);
         // compute-only pass between the splat and gizmo passes - a FramePass,
-        // as it draws into no render target. It folds a stochastic frame's
-        // splat depth into the projected renderer's occlusion map before the
+        // as it draws into no render target. It scatters the splat pass's id
+        // attachment into the projected renderer's visibility bits, and folds
+        // a stochastic frame's splat depth into its occlusion map, before the
         // gizmo pass clears the depth buffer
         this.depthReducePass = new FramePass(device);
         this.depthReducePass.name = 'depthReduce';
-        this.depthReducePass.execute = () => scene.projectedSplatRenderer.reduceDepth();
+        this.depthReducePass.execute = () => scene.projectedSplatRenderer.afterSplatPass();
         this.finalPass = new SimpleRenderPass(
             device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'),
@@ -525,12 +540,17 @@ class Camera extends Element {
         this.warpClearPass?.destroy();
         this.mainPass?.destroy();
         this.splatPass?.destroy();
+        this.splatIdPass?.destroy();
         this.stochasticSplatPass?.destroy();
+        this.stochasticSplatIdPass?.destroy();
         this.warpSplatPass?.destroy();
         (this.stochasticResolvePass?.renderable as ShaderQuad)?.destroy();
         this.stochasticResolvePass?.destroy();
         this.stochasticTarget?.colorBuffer.destroy();
         this.stochasticTarget?.destroy();
+        this.splatIdTarget?.destroy();
+        this.stochasticIdTarget?.destroy();
+        this.visibilityBuffer?.destroy();
         this.warpTarget?.depthBuffer.destroy();
         this.warpTarget?.destroy();
         this.gizmoPass?.destroy();
@@ -590,6 +610,12 @@ class Camera extends Element {
 
             const colorBuffer = createTexture('cameraColor', width, height, PIXELFORMAT_RGBA16F);
             const workBuffer = createTexture('workColor', width, height, PIXELFORMAT_RGBA8);
+            // half floats hold the id as three exact 11-bit integers with alpha 1,
+            // so the splat pass's premultiplied blend replaces the pixel (see
+            // the splat shader's idOutput); rgba8 could not, since its fourth
+            // byte would be the id's own top byte and the blend's alpha at once
+            const visibilityBuffer = createTexture('visibilityIds', width, height, PIXELFORMAT_RGBA16F);
+            this.visibilityBuffer = visibilityBuffer;
             const depthBuffer = createTexture('cameraDepth', width, height, PIXELFORMAT_DEPTH);
 
             // create main render target
@@ -609,6 +635,13 @@ class Camera extends Element {
                 autoResolve: false
             });
 
+            // the same with the id attachment
+            this.splatIdTarget = new RenderTarget({
+                colorBuffers: [colorBuffer, workBuffer, visibilityBuffer],
+                depthBuffer,
+                autoResolve: false
+            });
+
             // Stochastic samples need no blend accumulation. Both projections
             // share one RGBA8 colour buffer, resolved over the world pass.
             const stochasticColor = createTexture('stochasticSplats', width, height, PIXELFORMAT_RGBA8);
@@ -616,6 +649,11 @@ class Camera extends Element {
             stochasticColor.magFilter = FILTER_LINEAR;
             this.stochasticTarget = new RenderTarget({
                 colorBuffers: [stochasticColor, workBuffer],
+                depthBuffer,
+                autoResolve: false
+            });
+            this.stochasticIdTarget = new RenderTarget({
+                colorBuffers: [stochasticColor, workBuffer, visibilityBuffer],
                 depthBuffer,
                 autoResolve: false
             });
@@ -636,8 +674,8 @@ class Camera extends Element {
             // set picker render targets
             this.picker.setRenderTargets(this.colorTarget, this.workTarget);
 
-            // clear all targets
-            this.clearPass.init(this.splatTarget);
+            // clear all targets, the id attachment included
+            this.clearPass.init(this.splatIdTarget);
             this.clearPass.setClearColor(new Color(0, 0, 0, 0));
             this.clearPass.setClearDepth(1);
             this.clearPass.setClearStencil(0);
@@ -651,10 +689,16 @@ class Camera extends Element {
             this.splatPass.init(this.splatTarget);
             this.splatPass.addLayer(scene.splatLayer, false, false);
             this.splatPass.addLayer(scene.splatLayer, true, false);
+            this.splatIdPass.init(this.splatIdTarget);
+            this.splatIdPass.addLayer(scene.splatLayer, false, false);
+            this.splatIdPass.addLayer(scene.splatLayer, true, false);
 
             this.stochasticSplatPass.init(this.stochasticTarget);
             this.stochasticSplatPass.addLayer(scene.splatLayer, false, false);
             this.stochasticSplatPass.addLayer(scene.splatLayer, true, false);
+            this.stochasticSplatIdPass.init(this.stochasticIdTarget);
+            this.stochasticSplatIdPass.addLayer(scene.splatLayer, false, false);
+            this.stochasticSplatIdPass.addLayer(scene.splatLayer, true, false);
             this.stochasticClearPass.init(this.stochasticTarget);
             this.stochasticClearPass.setClearColor(new Color(0, 0, 0, 0));
             this.stochasticResolvePass.init(this.colorTarget);
@@ -679,7 +723,9 @@ class Camera extends Element {
                 this.stochasticClearPass,
                 this.mainPass,
                 this.splatPass,
+                this.splatIdPass,
                 this.stochasticSplatPass,
+                this.stochasticSplatIdPass,
                 this.warpClearPass,
                 this.warpSplatPass,
                 this.depthReducePass,
@@ -695,7 +741,9 @@ class Camera extends Element {
             workTarget.resize(width, height);
             colorTarget.resize(width, height);
             splatTarget.resize(width, height);
+            this.splatIdTarget.resize(width, height);
             this.stochasticTarget.resize(width, height);
+            this.stochasticIdTarget.resize(width, height);
             this.warpTarget?.resize(width, height);
         }
 
@@ -808,9 +856,16 @@ class Camera extends Element {
             this.warpSplatPass.addLayer(scene.splatLayer, false, false);
             this.warpSplatPass.addLayer(scene.splatLayer, true, false);
         }
-        this.splatPass.enabled = !this.scene.movingRender;
-        this.stochasticClearPass.enabled = this.scene.movingRender;
-        this.stochasticSplatPass.enabled = this.scene.movingRender && !this.scene.warpedRender;
+        // the splat pass renders into the id targets only on frames that want
+        // the visibility bits (the experimental warp path never does)
+        const { movingRender, warpedRender } = this.scene;
+        const ids = this.scene.projectedSplatRenderer.visibilityWanted();
+        this.visibilityIds = ids && !warpedRender;
+        this.splatPass.enabled = !movingRender && !ids;
+        this.splatIdPass.enabled = !movingRender && ids;
+        this.stochasticClearPass.enabled = movingRender;
+        this.stochasticSplatPass.enabled = movingRender && !warpedRender && !ids;
+        this.stochasticSplatIdPass.enabled = movingRender && !warpedRender && ids;
         this.warpClearPass.enabled = this.scene.warpedRender;
         this.warpSplatPass.enabled = this.scene.warpedRender;
         this.stochasticResolvePass.enabled = this.scene.movingRender;

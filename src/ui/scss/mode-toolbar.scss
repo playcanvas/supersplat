@@ -6,16 +6,13 @@
 $segment-active: #3a3a3a;
 $segment-track: $bcg-darkest;
 
-// the mode toolbar: a slim bar at the right end of the header row, beside the
-// view cube (which owns the top-right 140px), vertically centred on the menu
-// bar. It takes the height, corner radius and colour of the option panels'
-// title bars (see settings-panel.scss), since the appearance and overlays
-// panels drop down from it and the two should read as one piece of chrome.
-// Right-anchored rather than centred so it never lands on the menu bar at
-// narrow widths
+// the mode toolbar: a slim strip in the header row, centred on the viewport
+// (positioned from script so it never lands on the menu bar at narrow widths)
+// and vertically centred on the menu bar. It takes the option panels'
+// title-bar height (32px), corner radius and colour
 #mode-toolbar {
     position: absolute;
-    right: 164px;
+    left: 50%;
     top: 33px;
     height: 32px;
     padding: 0px 4px;
@@ -59,11 +56,11 @@ $segment-track: $bcg-darkest;
 
         // flat inner edge: the highlight keeps its outer curve and meets the
         // other half with a straight side, so the two read as one control
-        &.mode-toolbar-group-flat.mode-toolbar-group-left .mode-toolbar-thumb {
+        &.mode-toolbar-group-left .mode-toolbar-thumb {
             border-radius: 3px 0px 0px 3px;
         }
 
-        &.mode-toolbar-group-flat.mode-toolbar-group-right .mode-toolbar-thumb {
+        &.mode-toolbar-group-right .mode-toolbar-thumb {
             border-radius: 0px 3px 3px 0px;
         }
 
@@ -105,8 +102,8 @@ $segment-track: $bcg-darkest;
         }
     }
 
-    // icon + text segments: the depth switch and the markers switch
-    .mode-toolbar-labelled {
+    // the x-ray switch: icon + text, lit while on
+    .mode-toolbar-toggle {
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -132,20 +129,6 @@ $segment-track: $bcg-darkest;
             white-space: nowrap;
         }
 
-        // a segment whose text changes with its state lays both texts out in
-        // one cell, the inactive one invisible, so it keeps the wider width
-        .mode-toolbar-label-stack {
-            display: grid;
-
-            & > .mode-toolbar-label {
-                grid-area: 1 / 1;
-            }
-
-            & > .mode-toolbar-label-inactive {
-                visibility: hidden;
-            }
-        }
-
         &.active {
             background-color: $segment-active !important;
 
@@ -158,64 +141,20 @@ $segment-track: $bcg-darkest;
             }
         }
     }
-
-    // icon-only: the overlays and appearance panel buttons, lit while open
-    .mode-toolbar-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        margin: 0px;
-        padding: 0px;
-        border: 0px;
-        border-radius: 4px;
-
-        svg {
-            display: block;
-            width: 24px;
-            height: 24px;
-            color: $clr-default;
-        }
-
-        &.active svg {
-            color: $clr-hilight;
-        }
-
-        // the appearance glyph sits inside a padded 32-unit box; render it
-        // larger so the visible mark matches the eye
-        &.mode-toolbar-button-appearance svg {
-            width: 34px;
-            height: 34px;
-        }
-    }
-
-    .mode-toolbar-separator {
-        width: 1px;
-        height: 16px;
-        margin: 0px 4px;
-        background-color: $bcg-lighter;
-    }
 }
 
-// the header row holds the menu bar (400px from the left), this bar and the
-// view cube (140px on the right). Below the width that fits all three with
-// text, the bar sheds labels in two steps, the mode's last since it matters
-// most: the depth and markers switches keep their icons, then the mode halves
-// do. The tooltips still name every control
-@media (max-width: 1100px) {
-    #mode-toolbar .mode-toolbar-labelled {
-        padding: 0px 6px;
-
-        .mode-toolbar-label-stack {
-            display: none;
+// below the width that fits the menu bar, the strip and the view cube with
+// text, the strip keeps its icons and drops its labels. The tooltips still
+// name every control
+@media (max-width: 900px) {
+    #mode-toolbar {
+        .mode-toolbar-toggle {
+            padding: 0px 6px;
         }
-    }
-}
 
-@media (max-width: 960px) {
-    #mode-toolbar .mode-toolbar-group .mode-toolbar-mode {
-        padding: 0px 8px;
+        .mode-toolbar-group .mode-toolbar-mode {
+            padding: 0px 8px;
+        }
 
         .mode-toolbar-label {
             display: none;

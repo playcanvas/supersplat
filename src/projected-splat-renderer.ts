@@ -243,6 +243,9 @@ class ProjectedSplatRenderer {
     private frameRingsFiltered = false;
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
+    // the layer whose gaussians the bits describe: another layer's entries
+    // were never written, so switching layers invalidates them
+    private visibilityLayer: Splat | null = null;
     private visibilityRepaint = false;
     // the bits describe the current scene from the camera in visibilityView;
     // false until the first scatter, after a reallocation, or while the pass
@@ -1334,6 +1337,10 @@ class ProjectedSplatRenderer {
             this.visibilityFresh = false;
             // Camera read it for this frame's pre-pass before this
             this.contentEdited = false;
+            if ((selectedSplat ?? null) !== this.visibilityLayer) {
+                this.visibilityLayer = selectedSplat ?? null;
+                this.visibilityValid = false;
+            }
         }
         this.submissionCpuMs = performance.now() - start;
     }

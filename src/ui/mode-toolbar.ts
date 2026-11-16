@@ -1,13 +1,19 @@
-import { Button, Container, Element, Label } from '@playcanvas/pcui';
+import type { Element } from '@playcanvas/pcui';
+import { BooleanInput, Button, Container, SliderInput } from '@playcanvas/pcui';
 
 import type { Events } from '../events';
 import type { ShortcutManager } from '../shortcut-manager';
 import type { ViewMode } from '../view-mode';
+import { VIEW_MODES } from '../view-mode';
 
 import { i18n } from './localization';
+import type { MenuItem } from './menu-panel';
+import { MenuPanel } from './menu-panel';
 import centersSvg from './svg/centers.svg';
+import markersSvg from './svg/markers.svg';
 import ringsSvg from './svg/rings.svg';
 import xraySvg from './svg/xray.svg';
+import { createSwitch } from './toolbar-switch';
 import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -15,16 +21,25 @@ const createSvg = (svgString: string) => {
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
 
-// The mode toolbar: a slim strip centred at the top of the viewport carrying
-// the two things that decide what a drag selects. The editing mode (centers
-// or rings) as one sliding two-state switch, and the x-ray switch beside it.
-// Labelled and always on screen; everything else about the viewport lives on
-// the right toolbar
+// press duration that opens a button's flyout instead of pressing it
+const HOLD_MS = 400;
+
+const capitalize = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
+
+// The mode strip: an icon toolbar at the top of the viewport carrying the
+// three switches that decide what you see and what a drag selects. The
+// editing mode (centers or rings) as a two-option switch, the markers switch
+// (tab) and the x-ray switch. The few remaining options live in flyouts:
+// press and hold the mode switch for the marker's size and colour, the
+// markers switch for markers only and the selection's tint and outline. The
+// controls are toolbar.scss's, shared with the other toolbars; the names are
+// in the tooltips, each a name line over a description
 class ModeToolbar extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'mode-toolbar'
+            id: 'mode-toolbar',
+            class: 'toolbar-horizontal'
         };
 
         super(args);
@@ -35,138 +50,220 @@ class ModeToolbar extends Container {
 
         const shortcutManager: ShortcutManager = events.invoke('shortcutManager');
 
-        const withShortcut = (text: string, shortcutId: string) => {
+        // a control's tooltip: its name and shortcut, then its description
+        const describe = (localeKey: string, shortcutId: string) => () => {
             const shortcut = shortcutManager.formatShortcut(shortcutId);
-            return shortcut ? i18n.formatTooltipWithShortcut(text, shortcut) : text;
+            const name = i18n.t(localeKey);
+            const title = shortcut ? i18n.formatTooltipWithShortcut(name, shortcut) : name;
+            return `${title}\n${i18n.t(`${localeKey}.tooltip`)}`;
         };
+
+        const setActive = (element: Element, active: boolean) => {
+            element.class[active ? 'add' : 'remove']('active');
+            element.dom.setAttribute('aria-pressed', String(active));
+        };
+
+        // flyout rows: a switch row flips a view flag and stays open (shown
+        // inverted when the row's wording is the flag's opposite); a slider
+        // row edits a view value in place. The rows pull the live value when
+        // the flyout opens and follow the notify events while it is open
+        const switchRow = (
+            localeKey: string,
+            name: string,
+            inverted = false,
+            visible: () => boolean = () => true
+        ): MenuItem => {
+            const toggle = new BooleanInput({ type: 'toggle', class: 'mode-toolbar-menu-switch', value: false });
+            // the row handles the press, so the switch only shows the state
+            toggle.dom.style.pointerEvents = 'none';
+            const update = () => {
+                toggle.value = !!events.invoke(`view.${name}`) !== inverted;
+            };
+            events.on(`view.${name}`, update);
+            return {
+                text: () => i18n.t(localeKey),
+                extra: toggle,
+                keepOpen: true,
+                isVisible: () => {
+                    update();
+                    return visible();
+                },
+                onSelect: () => events.fire(`view.set${capitalize(name)}`, !events.invoke(`view.${name}`))
+            };
+        };
+
+        const sliderRow = (localeKey: string, name: string, min: number, max: number, precision: number): MenuItem => {
+            const slider = new SliderInput({ class: 'mode-toolbar-menu-slider', min, max, precision, value: min });
+            let syncing = false;
+            const update = () => {
+                syncing = true;
+                slider.value = events.invoke(`view.${name}`) as number;
+                syncing = false;
+            };
+            events.on(`view.${name}`, update);
+            slider.on('change', (value: number) => {
+                if (!syncing) {
+                    events.fire(`view.set${capitalize(name)}`, value);
+                }
+            });
+            return {
+                text: () => i18n.t(localeKey),
+                extra: slider,
+                isVisible: () => {
+                    update();
+                    return true;
+                }
+            };
+        };
+
+        // press and hold opens a button's flyout below it; a short press runs
+        // the button's own action, told where the press landed. Pressing
+        // again while the flyout is open closes it
+        const holdToOpen = (button: Element, popup: MenuPanel, shortPress: (target: Node) => void) => {
+            button.class.add('toolbar-flyout');
+            popup.class.add('mode-toolbar-menu');
+            this.append(popup);
+
+            let timer = -1;
+            let suppress = false;
+
+            const cancelHold = () => {
+                if (timer !== -1) {
+                    clearTimeout(timer);
+                    timer = -1;
+                }
+            };
+
+            button.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+                if (event.button !== 0) return;
+                suppress = !popup.hidden;
+                if (suppress) {
+                    popup.hidden = true;
+                    return;
+                }
+                if (button.dom.hasPointerCapture(event.pointerId)) {
+                    button.dom.releasePointerCapture(event.pointerId);
+                }
+                timer = window.setTimeout(() => {
+                    timer = -1;
+                    tooltips.hide();
+                    // below the strip, flush with its right edge: every flyout
+                    // drops into the same place, and none runs off the screen
+                    popup.dom.style.left = 'auto';
+                    popup.dom.style.right = '0px';
+                    popup.dom.style.top = `${this.dom.offsetHeight + 8}px`;
+                    popup.hidden = false;
+                }, HOLD_MS);
+            });
+
+            button.dom.addEventListener('pointerup', (event: PointerEvent) => {
+                if (event.button !== 0) return;
+                if (timer !== -1) {
+                    cancelHold();
+                    if (!suppress) {
+                        shortPress(event.target as Node);
+                    }
+                }
+            });
+
+            // keyboard activation arrives as a click with detail 0
+            button.dom.addEventListener('click', (event: MouseEvent) => {
+                if (event.detail === 0) {
+                    shortPress(event.target as Node);
+                }
+            });
+
+            button.dom.addEventListener('pointerleave', cancelHold);
+            button.dom.addEventListener('pointercancel', cancelHold);
+
+            // close on a press anywhere outside the flyout and its button
+            window.addEventListener(
+                'pointerdown',
+                (event: PointerEvent) => {
+                    const target = event.target as Node;
+                    if (!popup.hidden && !popup.dom.contains(target) && !button.dom.contains(target)) {
+                        popup.hidden = true;
+                    }
+                },
+                true
+            );
+        };
+
+        // the mode: one two-option switch. Presses are handled by the flyout
+        // logic below, which selects the option the press landed on
+        const modeSwitch = createSwitch<ViewMode>(
+            'horizontal',
+            [
+                { value: 'centers', svg: centersSvg, localeKey: 'mode-toolbar.centers' },
+                { value: 'rings', svg: ringsSvg, localeKey: 'mode-toolbar.rings' }
+            ],
+            (mode) => events.fire('view.setMode', mode),
+            false
+        );
+        const modeGroup = modeSwitch.container;
+        modeGroup.dom.setAttribute('role', 'group');
+
+        modeSwitch.buttons.forEach((button, i) => {
+            tooltips.register(button, describe(`mode-toolbar.${VIEW_MODES[i]}`, 'view.toggleMode'), 'bottom');
+        });
+
+        // each option's flyout: that marker's size and colour, whichever mode
+        // is current. The colour switch reads as "splat colours", the flag as
+        // "tint". A short press on an option chooses it
+        const modeMenus = [
+            new MenuPanel([
+                sliderRow('mode-toolbar.center-size', 'centerSize', 0, 10, 1),
+                switchRow('mode-toolbar.splat-colors', 'tintCenters', true)
+            ]),
+            new MenuPanel([
+                sliderRow('mode-toolbar.ring-thickness', 'ringSize', 1, 50, 1),
+                switchRow('mode-toolbar.splat-colors', 'tintRings', true)
+            ])
+        ];
+        modeSwitch.buttons.forEach((button, i) => {
+            holdToOpen(button, modeMenus[i], () => events.fire('view.setMode', VIEW_MODES[i]));
+        });
+
+        // an icon toggle, named for assistive tech
+        const toggle = (svg: string, localeKey: string) => {
+            const button = new Button({ class: 'toolbar-toggle' });
+            button.dom.appendChild(createSvg(svg));
+            i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(localeKey)), button);
+            return button;
+        };
+
+        // markers (tab): the editing view. Its flyout holds what the editing
+        // view shows: markers only, the selection's tint and outline
+        const markers = toggle(markersSvg, 'mode-toolbar.markers');
+        tooltips.register(markers, describe('mode-toolbar.markers', 'view.toggleEditView'), 'bottom');
+        const markersMenu = new MenuPanel([
+            switchRow('mode-toolbar.markers-only', 'markersOnly'),
+            switchRow('mode-toolbar.selection-tint', 'selectionColor'),
+            switchRow('mode-toolbar.selection-outline', 'outlineSelection')
+        ]);
+        holdToOpen(markers, markersMenu, () => events.fire('view.toggleEditView'));
+
+        // x-ray: screen-space picks go through all depths rather than taking
+        // the visible surface. The editor's setting is the inverse (useDepth)
+        const xray = toggle(xraySvg, 'mode-toolbar.xray');
+        tooltips.register(xray, describe('mode-toolbar.xray', 'selection.toggleUseDepth'), 'bottom');
+        xray.on('click', () => events.fire('selection.toggleUseDepth'));
+
+        this.append(modeGroup);
+        this.append(markers);
+        this.append(xray);
 
         // the toolbar is constructed before the editor registers its state, so
         // start from the editor's defaults and follow the notify events; a
         // stored preference that differs arrives as one of those
-        let viewMode: ViewMode = 'centers';
+        modeSwitch.setValue('centers');
+        setActive(markers, false);
+        setActive(xray, true);
 
-        // the mode: one two-state switch. Its halves are labels, the highlight
-        // slides to the active one, and a click anywhere on it flips the mode
-        const modes: { mode: ViewMode; svg: string }[] = [
-            { mode: 'centers', svg: centersSvg },
-            { mode: 'rings', svg: ringsSvg }
-        ];
+        events.on('view.mode', (mode: ViewMode) => modeSwitch.setValue(mode));
 
-        const modeGroup = new Container({ class: 'mode-toolbar-group' });
-        modeGroup.dom.setAttribute('role', 'button');
-        modeGroup.dom.setAttribute('tabindex', '0');
-
-        const thumb = new Element({ class: 'mode-toolbar-thumb' });
-        modeGroup.append(thumb);
-
-        const halves = modes.map(({ mode, svg }) => {
-            const half = new Container({ class: 'mode-toolbar-mode' });
-            half.dom.appendChild(createSvg(svg));
-            const label = new Label({ class: 'mode-toolbar-label' });
-            i18n.bindText(label, `mode-toolbar.${mode}`);
-            half.append(label);
-            modeGroup.append(half);
-            return { mode, half };
-        });
-
-        modeGroup.on('click', () => events.fire('view.toggleMode'));
-        modeGroup.dom.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                events.fire('view.toggleMode');
-            }
-        });
-        tooltips.register(
-            modeGroup,
-            () => withShortcut(i18n.t(`mode-toolbar.${viewMode}.tooltip`), 'view.toggleMode'),
-            'bottom'
-        );
-
-        // the highlight covers the active half. Measured rather than styled
-        // because the halves are as wide as their text in the current language.
-        // The first placement is instant; later ones slide
-        let placed = false;
-        const positionThumb = () => {
-            const active = halves.find(({ mode }) => mode === viewMode)?.half.dom;
-            if (!active || active.offsetWidth === 0) {
-                return;
-            }
-            thumb.dom.style.left = `${active.offsetLeft}px`;
-            thumb.dom.style.width = `${active.offsetWidth}px`;
-            modeGroup.class[viewMode === 'centers' ? 'add' : 'remove']('mode-toolbar-group-left');
-            modeGroup.class[viewMode === 'rings' ? 'add' : 'remove']('mode-toolbar-group-right');
-            if (!placed) {
-                placed = true;
-                requestAnimationFrame(() => thumb.class.add('mode-toolbar-thumb-animated'));
-            }
-        };
-
-        const updateMode = () => {
-            halves.forEach(({ mode, half }) => half.class[mode === viewMode ? 'add' : 'remove']('active'));
-            modeGroup.dom.setAttribute('aria-label', i18n.t(`panel.appearance.mode.${viewMode}`));
-            positionThumb();
-        };
-
-        // x-ray: screen-space picks go through all depths rather than taking
-        // the visible surface. The editor's setting is the inverse (useDepth)
-        const xray = new Button({ class: 'mode-toolbar-toggle' });
-        xray.dom.appendChild(createSvg(xraySvg));
-        const xrayLabel = new Label({ class: 'mode-toolbar-label' });
-        i18n.bindText(xrayLabel, 'mode-toolbar.xray');
-        xray.dom.appendChild(xrayLabel.dom);
-        i18n.onChange(() => xray.dom.setAttribute('aria-label', i18n.t('mode-toolbar.xray')), xray);
-        tooltips.register(
-            xray,
-            () => withShortcut(i18n.t('mode-toolbar.xray.tooltip'), 'selection.toggleUseDepth'),
-            'bottom'
-        );
-        xray.on('click', () => events.fire('selection.toggleUseDepth'));
-
-        const setXray = (active: boolean) => {
-            xray.class[active ? 'add' : 'remove']('active');
-            xray.dom.setAttribute('aria-pressed', String(active));
-        };
-
-        this.append(modeGroup);
-        this.append(xray);
-
-        // centred on the viewport, but never over the menu bar: at narrow
-        // widths it sits just right of the menu bar instead
-        const place = () => {
-            const parent = this.dom.parentElement;
-            if (!parent || this.dom.offsetWidth === 0) {
-                return;
-            }
-            const menuBar = document.getElementById('menu-bar');
-            const menuRight = menuBar ? menuBar.offsetLeft + menuBar.offsetWidth : 0;
-            const centred = Math.round((parent.clientWidth - this.dom.offsetWidth) / 2);
-            this.dom.style.left = `${Math.max(menuRight + 16, centred)}px`;
-        };
-
-        // relayout (first display, a window or language change) moves the
-        // halves and the strip
-        let parentObserved = false;
-        new ResizeObserver(() => {
-            positionThumb();
-            place();
-            if (!parentObserved && this.dom.parentElement) {
-                parentObserved = true;
-                new ResizeObserver(place).observe(this.dom.parentElement);
-            }
-        }).observe(this.dom);
-
-        updateMode();
-        setXray(true);
-
-        events.on('view.mode', (mode: ViewMode) => {
-            viewMode = mode;
-            updateMode();
-        });
-
-        events.on('selection.useDepth', (value: boolean) => setXray(!value));
-
-        // the accessible name follows the language
-        i18n.onChange(updateMode, this);
+        events.on('view.editView', (value: boolean) => setActive(markers, value));
+        events.on('selection.useDepth', (value: boolean) => setActive(xray, !value));
     }
 }
 

@@ -72,13 +72,14 @@ type Results = {
     'view.centers': boolean;
     'view.editView': boolean;
     'view.gaussians': boolean;
+    'view.markersOnly': boolean;
     'view.outlineSelection': boolean;
     'view.ringSize': number;
-    'view.ringsSelectionBlend': number;
     'view.selectionCenters': boolean;
     'view.selectionColor': boolean;
     'view.selectionRings': boolean;
-    'view.splatsSelectionBlend': number;
+    'view.tintCenters': boolean;
+    'view.tintRings': boolean;
 };
 
 class Events extends EventHandler {

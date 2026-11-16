@@ -1,4 +1,5 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 
 #menu {
     position: absolute;
@@ -8,10 +9,10 @@
     transition: width 0.1s ease;
 
     position: absolute;
-    top: 24px;
-    left: 24px;
-    height: 50px;
-    border-radius: 8px;
+    top: $edge;
+    left: $edge;
+    height: $menu-height;
+    border-radius: $toolbar-radius;
 
     overflow: hidden;
 

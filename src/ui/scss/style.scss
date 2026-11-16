@@ -1,5 +1,6 @@
 @use 'pcui-theme-grey.scss';
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 @use 'tooltips.scss';
 @use 'panel.scss';
 @use 'menu-panel.scss';
@@ -10,6 +11,7 @@
 @use 'color-panel.scss';
 @use 'splat-list.scss';
 @use 'transform.scss';
+@use 'toolbar.scss';
 @use 'bottom-toolbar.scss';
 @use 'mode-toolbar.scss';
 @use 'right-toolbar.scss';
@@ -256,8 +258,8 @@ body {
 
 #view-cube-container {
     position: absolute;
-    width: 140px;
-    height: 140px;
+    width: $view-cube-size;
+    height: $view-cube-size;
     right: 0px;
     top: 0px;
     pointer-events: none;

@@ -19,8 +19,8 @@ import type { Scene } from './scene';
 import { runSelectionGesture } from './selection-gesture';
 import { packRegion, emptyRegion, rectRegion } from './selection-rectangle';
 import type { Splat } from './splat';
-import { MODE_SETTING_KEYS, VIEW_MODES, modeDefaults } from './view-mode';
-import type { ModeSettingKey, ModeSettings, ViewMode } from './view-mode';
+import { VIEW_MODES } from './view-mode';
+import type { ViewMode } from './view-mode';
 
 // view settings as stored in documents
 type ViewSettings = {
@@ -133,22 +133,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     [
         'view.mode',
         'view.centerSize',
-        'view.outlineSelection',
-        'view.gaussians',
-        'view.centers',
-        'view.rings',
         'view.ringSize',
         'view.editView',
-        'view.selectionGaussians',
+        'view.markersOnly',
         'view.selectionColor',
-        'view.selectionCenters',
-        'view.selectionRings',
-        'view.splatsColorBlend',
-        'view.splatsSelectionBlend',
-        'view.centersColorBlend',
-        'view.centersSelectionBlend',
-        'view.ringsColorBlend',
-        'view.ringsSelectionBlend',
+        'view.outlineSelection',
+        'view.tintCenters',
+        'view.tintRings',
         'view.bands',
         'view.minPixelSize',
         'view.stochastic',
@@ -1073,84 +1064,55 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('selection.setUseDepth', !useDepth);
     });
 
-    // view mode and the settings each mode owns (see view-mode.ts). The live
-    // view.* values are the active mode's; the other mode's are kept and
-    // applied in full when the mode switches, so each mode remembers its own
-    // arrangement
-
-    const modeSettings: Record<ViewMode, ModeSettings> = {
-        centers: modeDefaults('centers'),
-        rings: modeDefaults('rings')
-    };
-    let viewMode: ViewMode = 'centers';
-
+    // the global switches of the view, each stored as a preference. The
+    // unselected markers' colour, one switch per marker: the flat unselected
+    // colour (tinted) or the gaussians' own. A centre dot in its gaussian's
+    // colour vanishes into the gaussian, so centres tint by default; a ring
+    // sits where the gaussian is faint, so rings show the splat colours by
+    // default. Selected markers always take the selection colour. Markers
+    // only hides the gaussian fill while the markers are up, the selection
+    // tint fills the selected gaussians with the selection colour, and the
+    // outline draws the selection's silhouette
     const capitalize = (s: string) => `${s[0].toUpperCase()}${s.slice(1)}`;
 
-    const notifyEvent = (key: ModeSettingKey) => `view.${key}`;
-    const setEvent = (key: ModeSettingKey) => `view.set${capitalize(key)}`;
-
-    // a mode's settings changed: notify as a whole, for persistence
-    const notifySettings = (mode: ViewMode) => {
-        events.fire(`view.${mode}Settings`, { ...modeSettings[mode] });
-    };
-
-    const setSetting = (mode: ViewMode, key: ModeSettingKey, value: boolean | number) => {
-        const settings = modeSettings[mode] as Record<ModeSettingKey, boolean | number>;
-        if (settings[key] === value) {
-            return false;
-        }
-        settings[key] = value;
-        if (mode === viewMode) {
-            events.fire(notifyEvent(key), value);
-        }
-        return true;
-    };
-
-    MODE_SETTING_KEYS.forEach((key) => {
-        events.function(notifyEvent(key), () => modeSettings[viewMode][key]);
-        events.on(setEvent(key), (value: boolean | number) => {
-            if (setSetting(viewMode, key, value)) {
-                notifySettings(viewMode);
+    const flag = (name: string, initial: boolean) => {
+        let value = initial;
+        events.function(`view.${name}`, () => value);
+        events.on(`view.set${capitalize(name)}`, (next: boolean) => {
+            if (next !== value) {
+                value = next;
+                events.fire(`view.${name}`, value);
             }
         });
+    };
+
+    flag('tintCenters', true);
+    flag('tintRings', false);
+    flag('markersOnly', false);
+    flag('selectionColor', false);
+    flag('outlineSelection', false);
+
+    events.on('view.toggleMarkersOnly', () => {
+        events.fire('view.setMarkersOnly', !events.invoke('view.markersOnly'));
     });
 
-    // whole-object access per mode, for preferences and reset. Keys left out
-    // keep their values
-    VIEW_MODES.forEach((mode) => {
-        events.function(`view.${mode}Settings`, () => ({ ...modeSettings[mode] }));
-        events.on(`view.set${capitalize(mode)}Settings`, (settings: Partial<ModeSettings>) => {
-            let changed = false;
-            MODE_SETTING_KEYS.forEach((key) => {
-                if (settings[key] !== undefined && setSetting(mode, key, settings[key])) {
-                    changed = true;
-                }
-            });
-            if (changed) {
-                notifySettings(mode);
-            }
-        });
-    });
-
-    // the active mode back to its defaults
-    events.on('view.resetModeSettings', () => {
-        events.fire(`view.set${capitalize(viewMode)}Settings`, modeDefaults(viewMode));
-    });
+    // the mode: which marker every gaussian gets, and what geometry counts
+    // for a screen-space pick. The marker flags the renderer and the API read
+    // follow it, and the fill hides only in the markers-only view
+    let viewMode: ViewMode = 'centers';
 
     events.function('view.mode', () => viewMode);
+    events.function('view.centers', () => viewMode === 'centers');
+    events.function('view.rings', () => viewMode === 'rings');
+    events.function('view.selectionCenters', () => viewMode === 'centers');
+    events.function('view.selectionRings', () => viewMode === 'rings');
+    events.function('view.gaussians', () => !(editView && events.invoke('view.markersOnly')));
 
     const setViewMode = (mode: ViewMode) => {
         if (mode === viewMode) {
             return;
         }
-        const previous = modeSettings[viewMode];
         viewMode = mode;
-        const next = modeSettings[mode];
-        MODE_SETTING_KEYS.forEach((key) => {
-            if (next[key] !== previous[key]) {
-                events.fire(notifyEvent(key), next[key]);
-            }
-        });
         events.fire('view.mode', mode);
         events.fire('selection.footprint', mode === 'rings' ? 1 : 0);
         // choosing a mode is asking to see its markers
@@ -1172,17 +1134,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // what geometry counts for a screen-space pick: the mode's marker. 0 is
     // the centre point, 1 the full projected footprint
     events.function('selection.footprint', () => (viewMode === 'rings' ? 1 : 0));
-
-    // turning the unselected gaussians or their markers on or off adjusts the
-    // editing view, so it switches the markers back on rather than being made
-    // blind. A mode switch fires these too, to the same effect
-    ['view.gaussians', 'view.centers', 'view.rings'].forEach((eventName) => {
-        events.on(eventName, () => {
-            if (prefsSuspendDepth === 0) {
-                setEditView(true);
-            }
-        });
-    });
 
     // camera control mode (orbit/fly)
 

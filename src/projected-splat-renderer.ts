@@ -1212,52 +1212,38 @@ class ProjectedSplatRenderer {
         // regardless of the mode's flag, untinted, without their markers. A
         // colour preview draws both groups so the grade can be seen
         this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
-        this.material.setParameter(
-            'showSelectedGaussians',
-            events.invoke('view.selectionGaussians') || pending ? 1 : 0
-        );
+        this.material.setParameter('showSelectedGaussians', events.invoke('view.gaussians') || pending ? 1 : 0);
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringMask', ringsMask);
         this.material.setParameter('visible', this.visibleBits);
         this.material.setParameter('visibleOnly', filterVisible ? 1 : 0);
-        // the colour alphas carry blend weights, not opacity. The gaussian
-        // tints blend the fill from the splat's own colour toward the flat
-        // unselected colour, then toward the selection colour; the vertex
-        // shader applies them inside the selection entry range (ringsBase /
-        // ringsCount), which stands in for the projector's per-placement
-        // selectionEnabled
+        // the colour alphas carry blend weights, not opacity. The selection
+        // tint blends the selected gaussians' fill toward the selection colour;
+        // the vertex shader applies it inside the selection entry range
+        // (ringsBase / ringsCount), which stands in for the projector's
+        // per-placement selectionEnabled. The unselected fill is never tinted
         this.material.setParameter(
             'selectedColor',
             events.invoke('view.selectionColor') && !pending
-                ? [
-                      selectedColor.r,
-                      selectedColor.g,
-                      selectedColor.b,
-                      events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
-                  ]
+                ? [selectedColor.r, selectedColor.g, selectedColor.b, selectedSplat?.selectionAlpha ?? 1]
                 : [0, 0, 0, 0]
         );
-        this.material.setParameter(
-            'unselectedColor',
-            !pending && editView
-                ? [unselectedColor.r, unselectedColor.g, unselectedColor.b, events.invoke('view.splatsColorBlend')]
-                : [0, 0, 0, 0]
-        );
-        // the ring blends start from the splat's own colour too, so they stay
+        this.material.setParameter('unselectedColor', [0, 0, 0, 0]);
+        // the unselected markers take the flat colour or the gaussians' own,
+        // one switch per marker; selected markers always the selection colour.
+        // The ring blends start from the splat's own colour, so they stay
         // independent of the gaussian tints
         this.material.setParameter('ringColor', [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,
-            events.invoke('view.ringsColorBlend')
+            events.invoke('view.tintRings') ? 1 : 0
         ]);
         this.material.setParameter('selectedRingColor', [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            events.invoke('view.selectionRings')
-                ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
-                : 0
+            events.invoke('view.selectionRings') ? (selectedSplat?.selectionAlpha ?? 1) : 0
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
@@ -1305,8 +1291,8 @@ class ProjectedSplatRenderer {
             centers.setParameter('drawMask', centersMask);
             centers.setParameter('visible', this.visibleBits);
             centers.setParameter('visibleOnly', filterVisible ? 1 : 0);
-            centers.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
-            centers.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
+            centers.setParameter('colorBlend', events.invoke('view.tintCenters') ? 1 : 0);
+            centers.setParameter('selectionBlend', 1);
             centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);
             centers.setParameter('unselectedClr', [
                 unselectedColor.r,
@@ -1333,8 +1319,7 @@ class ProjectedSplatRenderer {
             camera.renderOverlays &&
             !!events.invoke('selection') &&
             !!events.invoke('selection.useDepth') &&
-            !!events.invoke('view.editView') &&
-            (!!events.invoke('view.centers') || !!events.invoke('view.rings'))
+            !!events.invoke('view.editView')
         );
     }
 

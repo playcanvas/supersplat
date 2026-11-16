@@ -1,57 +1,12 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 
-// shared shell for the appearance, overlays and settings popups
+// shared shell for the overlays and settings popups
 .options-panel {
-    // the expanded appearance panel can be taller than the window: keep it
-    // inside and scroll, with the title bar pinned. It has no select inputs,
-    // so the overflow: visible below isn't needed for it
-    &#appearance-panel {
-        // centred vertically: clear the menu bar above and the status bar below
-        max-height: calc(100vh - 160px);
-        overflow-y: auto;
-
-        // overflow, don't squash the sections into the capped height
-        & > * {
-            flex-shrink: 0;
-        }
-
-        & > .panel-header:first-child {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-    }
-
-    // a collapsible section's header carries an arrow that turns when open
-    & > .options-panel-section.options-panel-collapsible {
-        cursor: pointer;
-
-        & > .options-panel-collapse {
-            margin: 0 6px;
-            color: $clr-default;
-
-            & > svg {
-                display: block;
-                width: 12px;
-                height: 12px;
-                transform: rotate(90deg);
-                transition: transform 0.1s ease-out;
-            }
-        }
-
-        &.collapsed > .options-panel-collapse > svg {
-            transform: none;
-        }
-    }
-
-    // the panel header icon follows the mode: one of two svgs is shown
-    & > .panel-header:first-child .panel-header-icon > svg.hidden {
-        display: none;
-    }
-
     top: 50%;
     transform: translate(0, -50%);
-    right: 102px;
+    // beside the right toolbar, which opens them
+    right: $edge + $side-toolbar-width + $panel-gap;
     width: 320px;
     flex-direction: column;
     padding-bottom: 8px;

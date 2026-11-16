@@ -22,7 +22,7 @@ The adapter uses `document.modelContext`, with feature detection for preview bro
 | `undo`, `redo` | Step through the shared editor history, including user edits. |
 | `set_camera`, `focus_camera`, `pick_points` | Position the camera, frame content or find world positions under viewport points. |
 | `render_view` | Render an image from any camera pose without moving the user's view, optionally showing the selection, a property heatmap, layer colours or normal shading, from up to four angles. |
-| `set_view` | Change display preferences without changing splat data, including the editing mode (`centers` or `rings`) and the current mode's marker settings. |
+| `set_view` | Change display preferences without changing splat data: the editing mode (`centers` or `rings`), markers, markers only, X-Ray, selection tint and outline. |
 | `get_timeline`, `set_timeline` | Inspect or set the timeline length, frame rate, playhead, playback, smoothness and looping. |
 | `set_keyframes`, `move_keyframe`, `delete_keyframes` | Add, replace, move, copy or delete camera keyframes; each call is one undo entry. |
 | `import_url` | Add a CORS-accessible PLY, SPLAT, SOG, SPZ or KSPLAT URL as an undoable layer. |

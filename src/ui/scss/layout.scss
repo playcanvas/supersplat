@@ -1,0 +1,20 @@
+// The viewport chrome's shared distances. Every toolbar, panel and floating
+// bar is placed by arithmetic on these, so a change here moves them together:
+// the panels keep their gap to the toolbar that opens them, the selection
+// tools' floating bar keeps its gap above the bottom toolbar, and so on
+
+// between the chrome and the screen edge
+$edge: 12px;
+// between a toolbar and the panel or bar that hangs off it
+$panel-gap: 24px;
+
+$menu-height: 50px;
+// the mode strip matches the menu bar, so the header row is one height
+$top-toolbar-height: $menu-height;
+$side-toolbar-width: 54px;
+$bottom-toolbar-height: 54px;
+
+$toolbar-radius: 8px;
+
+// the view cube's box in the top-right corner; the mode strip sits against it
+$view-cube-size: 140px;

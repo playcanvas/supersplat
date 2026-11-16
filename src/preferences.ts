@@ -3,13 +3,11 @@ import { Color } from 'playcanvas';
 import type { Events } from './events';
 import type { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
-import { isModeSettings, modeDefaults } from './view-mode';
-import type { ModeSettings, ViewMode } from './view-mode';
 
 const storageKey = 'supersplat:preferences';
 const storageVersion = 1;
 
-type PrefValue = boolean | number | string | number[] | string[] | Record<string, boolean | number>;
+type PrefValue = boolean | number | string | number[] | string[];
 type EventValue = PrefValue | Color;
 type PreferenceGroup = 'appearance' | 'overlays' | 'preferences';
 
@@ -155,25 +153,6 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             group: 'appearance'
         },
         { key: 'selection.useDepth', setCommand: 'selection.setUseDepth', getDefault: () => false, validate: isBool },
-        // the mode and each mode's settings. The settings objects apply before
-        // view.mode so the switch finds both arranged; a stored object may
-        // predate a key, which then takes its default
-        {
-            key: 'view.centersSettings',
-            setCommand: 'view.setCentersSettings',
-            getDefault: () => modeDefaults('centers'),
-            validate: isModeSettings,
-            group: 'appearance',
-            toEvent: (v) => ({ ...modeDefaults('centers'), ...(v as Partial<ModeSettings>) })
-        },
-        {
-            key: 'view.ringsSettings',
-            setCommand: 'view.setRingsSettings',
-            getDefault: () => modeDefaults('rings'),
-            validate: isModeSettings,
-            group: 'appearance',
-            toEvent: (v) => ({ ...modeDefaults('rings'), ...(v as Partial<ModeSettings>) })
-        },
         {
             key: 'view.mode',
             setCommand: 'view.setMode',
@@ -186,6 +165,41 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             setCommand: 'view.setRingSize',
             getDefault: () => 4,
             validate: isNumber(1, 50),
+            group: 'appearance'
+        },
+        {
+            key: 'view.tintCenters',
+            setCommand: 'view.setTintCenters',
+            getDefault: () => true,
+            validate: isBool,
+            group: 'appearance'
+        },
+        {
+            key: 'view.tintRings',
+            setCommand: 'view.setTintRings',
+            getDefault: () => false,
+            validate: isBool,
+            group: 'appearance'
+        },
+        {
+            key: 'view.markersOnly',
+            setCommand: 'view.setMarkersOnly',
+            getDefault: () => false,
+            validate: isBool,
+            group: 'appearance'
+        },
+        {
+            key: 'view.selectionColor',
+            setCommand: 'view.setSelectionColor',
+            getDefault: () => false,
+            validate: isBool,
+            group: 'appearance'
+        },
+        {
+            key: 'view.outlineSelection',
+            setCommand: 'view.setOutlineSelection',
+            getDefault: () => false,
+            validate: isBool,
             group: 'appearance'
         },
         // after the mode and its settings above: applying those must not
@@ -274,83 +288,32 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
         }
     ];
 
-    // 3.0-3.7 stored the appearance as flat per-flag keys for the active
-    // footprint mode plus the other mode's five visibility flags. Fold them
-    // into the two per-mode settings objects, once, so nothing a user set is
-    // lost. The flat keys are no longer descriptors, so they drop out of the
-    // blob on the next write. selection.useDepth stays a live key and is
-    // left alone
+    // 3.0-3.7 stored the appearance as flat keys per footprint mode, and an
+    // interim build as two per-mode settings objects. Derive what the global
+    // switches can take from either; the rest is dropped, since keys without a
+    // descriptor never survive a load
     const migrate = (stored: Record<string, unknown>) => {
-        if (stored['view.centersSettings'] !== undefined || stored['view.ringsSettings'] !== undefined) {
-            return;
+        if (stored['view.mode'] === undefined && typeof stored['selection.footprint'] === 'number') {
+            stored['view.mode'] = stored['selection.footprint'] > 0 ? 'rings' : 'centers';
         }
-        const legacyKeys = [
-            'selection.footprint',
-            'view.gaussians',
-            'view.centers',
-            'view.rings',
-            'view.selectionColor',
-            'view.selectionCenters',
-            'view.selectionRings',
-            'view.outlineSelection',
-            'view.inactiveProfile',
-            'view.splatsColorBlend',
-            'view.splatsSelectionBlend',
-            'view.centersColorBlend',
-            'view.centersSelectionBlend',
-            'view.ringsColorBlend',
-            'view.ringsSelectionBlend'
-        ];
-        if (!legacyKeys.some((key) => stored[key] !== undefined)) {
-            return;
-        }
-        const footprint = typeof stored['selection.footprint'] === 'number' ? stored['selection.footprint'] : 0;
-        const activeMode: ViewMode = footprint > 0 ? 'rings' : 'centers';
-        const otherMode: ViewMode = footprint > 0 ? 'centers' : 'rings';
-        const active = modeDefaults(activeMode);
-        const other = modeDefaults(otherMode);
-        const take = (target: ModeSettings, key: keyof ModeSettings, legacy: string) => {
-            const value = stored[legacy];
-            if (typeof value === typeof target[key]) {
-                (target as Record<string, boolean | number>)[key] = value as boolean | number;
+        // the marker tints collapsed to a switch per marker
+        for (const [key, legacy] of [
+            ['view.tintCenters', 'view.centersColorBlend'],
+            ['view.tintRings', 'view.ringsColorBlend']
+        ]) {
+            if (stored[key] === undefined && typeof stored[legacy] === 'number') {
+                stored[key] = (stored[legacy] as number) >= 0.5;
             }
-        };
-        // the live flags were the active mode's
-        (['gaussians', 'centers', 'rings', 'selectionCenters', 'selectionRings'] as const).forEach((key) =>
-            take(active, key, `view.${key}`)
-        );
-        // these were global: both modes keep them
-        [active, other].forEach((target) => {
-            (
-                [
-                    'selectionColor',
-                    'outlineSelection',
-                    'splatsColorBlend',
-                    'splatsSelectionBlend',
-                    'centersColorBlend',
-                    'centersSelectionBlend',
-                    'ringsColorBlend',
-                    'ringsSelectionBlend'
-                ] as const
-            ).forEach((key) => take(target, key, `view.${key}`));
-        });
-        // the other mode's profile: [gaussians, centers, rings, selectionCenters, selectionRings] as 0/1
-        const profile = stored['view.inactiveProfile'];
-        if (Array.isArray(profile) && profile.length === 5) {
-            other.gaussians = !!profile[0];
-            other.centers = !!profile[1];
-            other.rings = !!profile[2];
-            other.selectionCenters = !!profile[3];
-            other.selectionRings = !!profile[4];
         }
-        // the selected gaussians were filled when either the gaussians or the
-        // selection tint was on; they now have their own flag
-        [active, other].forEach((target) => {
-            target.selectionGaussians = target.gaussians || target.selectionColor;
-        });
-        stored['view.mode'] = activeMode;
-        stored[`view.${activeMode}Settings`] = active;
-        stored[`view.${otherMode}Settings`] = other;
+        const modeSettings = stored[`view.${stored['view.mode'] === 'rings' ? 'rings' : 'centers'}Settings`];
+        if (typeof modeSettings === 'object' && modeSettings !== null) {
+            for (const key of ['selectionColor', 'outlineSelection']) {
+                const value = (modeSettings as Record<string, unknown>)[key];
+                if (stored[`view.${key}`] === undefined && typeof value === 'boolean') {
+                    stored[`view.${key}`] = value;
+                }
+            }
+        }
     };
 
     // load and validate the stored blob. unknown keys and invalid values are

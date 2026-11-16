@@ -1,163 +1,71 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 
-// the active segment: a step above the bar, well short of the orange fill the
-// tool toolbars use for the active tool. The mode is state, not a tool, and
-// the bar should read as one quiet control
-$segment-active: #3a3a3a;
-$segment-track: $bcg-darkest;
-
-// the mode toolbar: a slim strip in the header row, centred on the viewport
-// (positioned from script so it never lands on the menu bar at narrow widths)
-// and vertically centred on the menu bar. It takes the option panels'
-// title-bar height (32px), corner radius and colour
+// the mode strip: an icon toolbar in the header row, the menu bar's height,
+// against the view cube in the top-right corner. Its controls are
+// toolbar.scss's
 #mode-toolbar {
     position: absolute;
-    left: 50%;
-    top: 33px;
-    height: 32px;
-    padding: 0px 4px;
-    border-radius: 8px;
+    right: $view-cube-size;
+    top: $edge;
+    height: $top-toolbar-height;
+    padding: 0px 5px;
+    border-radius: $toolbar-radius;
 
-    background-color: $bcg-darker;
+    background-color: $bcg-dark;
 
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 2px;
-
-    // the mode: one two-state switch. An inset track holds the two halves and
-    // a highlight that slides to the active one (positioned from script, as
-    // the halves are as wide as their text); a click anywhere flips it
-    .mode-toolbar-group {
-        position: relative;
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        height: 24px;
-        padding: 0px 2px;
-        border-radius: 4px;
-        background-color: $segment-track;
-        cursor: pointer;
-
-        .mode-toolbar-thumb {
-            position: absolute;
-            top: 2px;
-            height: 20px;
-            border-radius: 3px;
-            background-color: $segment-active;
-            pointer-events: none;
-
-            // the first placement is instant (see mode-toolbar.ts); later
-            // ones slide
-            &.mode-toolbar-thumb-animated {
-                transition: left 0.15s ease-out, width 0.15s ease-out, border-radius 0.15s ease-out;
-            }
-        }
-
-        // flat inner edge: the highlight keeps its outer curve and meets the
-        // other half with a straight side, so the two read as one control
-        &.mode-toolbar-group-left .mode-toolbar-thumb {
-            border-radius: 3px 0px 0px 3px;
-        }
-
-        &.mode-toolbar-group-right .mode-toolbar-thumb {
-            border-radius: 0px 3px 3px 0px;
-        }
-
-        .mode-toolbar-mode {
-            position: relative;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 6px;
-            height: 20px;
-            margin: 0px;
-            padding: 0px 10px 0px 8px;
-
-            svg {
-                display: block;
-                flex-shrink: 0;
-                width: 12px;
-                height: 12px;
-                color: $clr-default;
-                transition: color 0.15s ease-out;
-            }
-
-            .mode-toolbar-label {
-                margin: 0;
-                color: $text-secondary;
-                white-space: nowrap;
-                transition: color 0.15s ease-out;
-            }
-
-            &.active {
-                svg {
-                    color: $clr-hilight;
-                }
-
-                .mode-toolbar-label {
-                    color: $clr-active;
-                }
-            }
-        }
-    }
-
-    // the x-ray switch: icon + text, lit while on
-    .mode-toolbar-toggle {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 6px;
-        height: 24px;
-        margin: 0px;
-        padding: 0px 10px 0px 8px;
-        border: 0px;
-        border-radius: 4px;
-        background-color: transparent;
-
-        svg {
-            display: block;
-            flex-shrink: 0;
-            width: 12px;
-            height: 12px;
-            color: $clr-default;
-        }
-
-        .mode-toolbar-label {
-            margin: 0;
-            color: $text-secondary;
-            white-space: nowrap;
-        }
-
-        &.active {
-            background-color: $segment-active !important;
-
-            svg {
-                color: $clr-hilight;
-            }
-
-            .mode-toolbar-label {
-                color: $clr-active;
-            }
-        }
-    }
 }
 
-// below the width that fits the menu bar, the strip and the view cube with
-// text, the strip keeps its icons and drops its labels. The tooltips still
-// name every control
-@media (max-width: 900px) {
-    #mode-toolbar {
-        .mode-toolbar-toggle {
-            padding: 0px 6px;
+// the flyouts hold settings rows, so they take the Preferences panel's tones
+// and row metrics rather than the menus' darker ones
+#mode-toolbar .mode-toolbar-menu {
+    z-index: 1;
+    background-color: $bcg-primary;
+
+    .menu-row {
+        min-width: 300px;
+        height: 28px;
+        padding: 2px 10px;
+        gap: 8px;
+
+        &:hover:not(.pcui-disabled) {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+    }
+
+    // no row has an icon; drop the slot so the labels start at the edge
+    .menu-row-icon {
+        display: none;
+    }
+
+    .mode-toolbar-menu-slider {
+        flex: 0 0 187px;
+        width: 187px;
+        margin: 0;
+
+        .pcui-slider-handle {
+            background-color: $clr-default;
+            border-radius: 3px;
+        }
+    }
+
+    .mode-toolbar-menu-switch {
+        margin: 0;
+        background-color: $bcg-dark;
+
+        &::after {
+            background-color: $clr-default;
         }
 
-        .mode-toolbar-group .mode-toolbar-mode {
-            padding: 0px 8px;
-        }
+        &.pcui-boolean-input-ticked {
+            background-color: $clr-hilight;
 
-        .mode-toolbar-label {
-            display: none;
+            &::after {
+                background-color: $clr-active;
+            }
         }
     }
 }

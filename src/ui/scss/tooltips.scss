@@ -12,6 +12,14 @@
     box-sizing: border-box;
 }
 
+// a tooltip with a description puts the control's name on its own line
+.tooltips-title {
+    display: block;
+    color: $clr-active;
+    white-space: nowrap;
+    margin: 0px 0px 4px;
+}
+
 .tooltips-content {
     display: block;
     box-sizing: border-box;

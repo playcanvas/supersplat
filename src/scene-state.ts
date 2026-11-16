@@ -1,17 +1,26 @@
-import { Element, ElementType, ElementTypeList } from './element';
+import type { Element, ElementType } from './element';
+import { ElementTypeList } from './element';
 import { Serializer } from './serializer';
 
 const common = new Set<Element>();
+
+type Value = boolean | number | string | null | undefined;
+type State = {
+    elements: Map<Element, number>;
+    valueStart: number[];
+    valueCount: number[];
+    values: Value[];
+};
 
 // this class tracks the state of scene elements and determines what
 // type of objects have changed in a frame. this allows the rest of
 // the application to respond to changes like re-rendering
 // the scene or recalculating the scene bounding box.
 class SceneState {
-    states: any = {};
-    activeValues: any[];
+    states = {} as Record<ElementType, State>;
+    activeValues: Value[];
 
-    serializer = new Serializer((value: any) => {
+    serializer = new Serializer((value: Value) => {
         this.activeValues.push(value);
     });
 

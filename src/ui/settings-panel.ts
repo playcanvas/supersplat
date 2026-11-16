@@ -1,9 +1,11 @@
 import { BooleanInput, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { AntiAliasMode } from '../editor-splat-resource';
+import type { Events } from '../events';
+
 import { i18n } from './localization';
 import resetSvg from './svg/reset.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -106,7 +108,7 @@ class SettingsPanel extends Container {
         // their native form so they're recognisable regardless of current UI lang
         i18n.bindOptions(languageSelection, () => [
             { v: 'auto', t: i18n.t('panel.settings.language.auto') },
-            ...i18n.languages.map(l => ({ v: l.code, t: l.name }))
+            ...i18n.languages.map((l) => ({ v: l.code, t: l.name }))
         ]);
 
         // switch language live (no reload). a stored choice persists across
@@ -208,6 +210,30 @@ class SettingsPanel extends Container {
         shBandsRow.append(shBandsLabel);
         shBandsRow.append(shBandsSlider);
 
+        // minimum projected splat size
+
+        const minSplatSizeRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const minSplatSizeLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(minSplatSizeLabel, 'panel.settings.min-splat-size');
+
+        // the projector's 0.3px² low-pass floor keeps every splat at least
+        // ~1.55px across, so values up to there cull nothing
+        const minSplatSizeSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0,
+            max: 5,
+            precision: 1,
+            value: 2
+        });
+
+        minSplatSizeRow.append(minSplatSizeLabel);
+        minSplatSizeRow.append(minSplatSizeSlider);
+
         // camera fly speed
 
         const cameraFlySpeedRow = new Container({
@@ -255,6 +281,30 @@ class SettingsPanel extends Container {
         stochasticRow.append(stochasticLabel);
         stochasticRow.append(stochasticSelection);
 
+        // anti-aliasing
+
+        const antiAliasRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const antiAliasLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(antiAliasLabel, 'panel.settings.anti-alias');
+
+        const antiAliasSelection = new SelectInput({
+            class: 'settings-panel-row-select',
+            defaultValue: 'auto'
+        });
+        i18n.bindOptions(antiAliasSelection, () => [
+            { v: 'auto', t: i18n.t('panel.settings.anti-alias.auto') },
+            { v: 'on', t: i18n.t('panel.settings.anti-alias.on') },
+            { v: 'off', t: i18n.t('panel.settings.anti-alias.off') }
+        ]);
+
+        antiAliasRow.append(antiAliasLabel);
+        antiAliasRow.append(antiAliasSelection);
+
         // sort mode
 
         const sortModeRow = new Container({
@@ -285,6 +335,8 @@ class SettingsPanel extends Container {
         this.append(sectionHeader('panel.settings.section-rendering'));
         this.append(tonemappingRow);
         this.append(shBandsRow);
+        this.append(minSplatSizeRow);
+        this.append(antiAliasRow);
         this.append(sortModeRow);
         this.append(stochasticRow);
         this.append(sectionHeader('panel.settings.section-camera'));
@@ -335,6 +387,16 @@ class SettingsPanel extends Container {
             events.fire('view.setBands', value);
         });
 
+        // minimum projected splat size
+
+        events.on('view.minPixelSize', (value: number) => {
+            minSplatSizeSlider.value = value;
+        });
+
+        minSplatSizeSlider.on('change', (value: number) => {
+            events.fire('view.setMinPixelSize', value);
+        });
+
         // camera speed
 
         events.on('camera.flySpeed', (value: number) => {
@@ -373,6 +435,16 @@ class SettingsPanel extends Container {
 
         sortModeSelection.on('change', (value: string) => {
             events.fire('view.setSortMode', value);
+        });
+
+        // anti-aliasing
+
+        events.on('view.antiAlias', (value: string) => {
+            antiAliasSelection.value = value;
+        });
+
+        antiAliasSelection.on('change', (value: AntiAliasMode) => {
+            events.fire('view.setAntiAlias', value);
         });
 
         // camera fov
@@ -417,6 +489,8 @@ class SettingsPanel extends Container {
         tooltips.register(languageLabel, help('panel.settings.language.tooltip'), 'top');
         tooltips.register(tonemappingLabel, help('panel.settings.tone-mapping.tooltip'), 'top');
         tooltips.register(shBandsLabel, help('panel.settings.sh-bands.tooltip'), 'top');
+        tooltips.register(minSplatSizeLabel, help('panel.settings.min-splat-size.tooltip'), 'top');
+        tooltips.register(antiAliasLabel, help('panel.settings.anti-alias.tooltip'), 'top');
         tooltips.register(sortModeLabel, help('panel.settings.sort-mode.tooltip'), 'top');
         tooltips.register(stochasticLabel, help('panel.settings.stochastic-alpha.tooltip'), 'top');
         tooltips.register(fovLabel, help('panel.settings.fov.tooltip'), 'top');

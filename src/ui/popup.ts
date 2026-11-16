@@ -1,21 +1,22 @@
-import { Button, Container, Label, SelectInput, TextInput } from '@playcanvas/pcui';
+import { Button, Container, Label, SelectInput } from '@playcanvas/pcui';
 
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 interface ShowOptions {
     type: 'error' | 'info' | 'yesno' | 'okcancel';
     message: string;
     header?: string;
     link?: string;
-    icon?: boolean;     // show the type icon before the message (default true)
+    icon?: boolean; // show the type icon before the message (default true)
     select?: {
-        options: { v: string, t: string }[];
+        options: { v: string; t: string }[];
         value: string;
     };
-    warning?: {         // secondary note below the select
+    warning?: {
+        // secondary note below the select
         text: string;
-        link?: string;  // optional link rendered inline after the text
+        link?: string; // optional link rendered inline after the text
     };
 }
 
@@ -106,10 +107,11 @@ class Popup extends Container {
             id: 'popup-buttons'
         });
 
-        buttons.append(okButton);
+        // the action goes on the right, as in the editor's other dialogs
         buttons.append(cancelButton);
-        buttons.append(yesButton);
+        buttons.append(okButton);
         buttons.append(noButton);
+        buttons.append(yesButton);
 
         dialog.append(header);
         dialog.append(text);
@@ -205,7 +207,7 @@ class Popup extends Container {
                     this.hide();
                     resolve({
                         action: 'ok',
-                        value: select ? selectInput.value : undefined
+                        value: select ? (selectInput.value as string) : undefined
                     });
                 };
                 cancelFn = () => {

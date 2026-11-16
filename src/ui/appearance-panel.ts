@@ -1,15 +1,16 @@
 import { BooleanInput, ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
 import type { ViewMode } from '../view-mode';
+
 import { i18n } from './localization';
 import arrowSvg from './svg/arrow.svg';
 import centersSvg from './svg/centers.svg';
 import resetSvg from './svg/reset.svg';
 import ringsSvg from './svg/rings.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -154,7 +155,12 @@ class AppearancePanel extends Container {
 
         let syncing = false;
 
-        const toggleRow = (labelText: () => string, tooltip: () => string, get: () => boolean, set: (value: boolean) => void): Row => {
+        const toggleRow = (
+            labelText: () => string,
+            tooltip: () => string,
+            get: () => boolean,
+            set: (value: boolean) => void
+        ): Row => {
             const row = new Container({
                 class: ['settings-panel-row', 'options-panel-row-clickable']
             });
@@ -191,7 +197,15 @@ class AppearancePanel extends Container {
             };
         };
 
-        const sliderRow = (labelText: () => string, tooltip: () => string, min: number, max: number, precision: number, get: () => number, set: (value: number) => void): Row => {
+        const sliderRow = (
+            labelText: () => string,
+            tooltip: () => string,
+            min: number,
+            max: number,
+            precision: number,
+            get: () => number,
+            set: (value: number) => void
+        ): Row => {
             const row = new Container({
                 class: 'settings-panel-row'
             });
@@ -224,71 +238,176 @@ class AppearancePanel extends Container {
             };
         };
 
-        const viewToggle = (name: string, labelText: () => string, tooltip: () => string) => toggleRow(
-            labelText, tooltip,
-            () => events.invoke(`view.${name}`),
-            value => events.fire(`view.set${capitalize(name)}`, value)
-        );
+        const viewToggle = (name: string, labelText: () => string, tooltip: () => string) =>
+            toggleRow(
+                labelText,
+                tooltip,
+                () => events.invoke(`view.${name}`),
+                (value) => events.fire(`view.set${capitalize(name)}`, value)
+            );
 
-        const viewSlider = (name: string, labelText: () => string, tooltip: () => string, min: number, max: number, precision: number) => sliderRow(
-            labelText, tooltip, min, max, precision,
-            () => events.invoke(`view.${name}`),
-            value => events.fire(`view.set${capitalize(name)}`, value)
-        );
+        const viewSlider = (
+            name: string,
+            labelText: () => string,
+            tooltip: () => string,
+            min: number,
+            max: number,
+            precision: number
+        ) =>
+            sliderRow(
+                labelText,
+                tooltip,
+                min,
+                max,
+                precision,
+                () => events.invoke(`view.${name}`),
+                (value) => events.fire(`view.set${capitalize(name)}`, value)
+            );
 
         // the mode's marker reads "Centers" / "Rings" in the primary sections;
         // the other marker is named in full in Advanced
-        const markerText = (marker: ViewMode, group: 'unselected' | 'selected') => () => i18n.t(mode === marker ? `panel.appearance.${marker}` : `panel.appearance.${group}-${marker}`);
+        const markerText = (marker: ViewMode, group: 'unselected' | 'selected') => () =>
+            i18n.t(mode === marker ? `panel.appearance.${marker}` : `panel.appearance.${group}-${marker}`);
 
         // top rows
 
         const showMarkers = toggleRow(
-            text('panel.appearance.show-markers'), helpWithShortcut('panel.appearance.show-markers.tooltip', 'view.toggleEditView'),
+            text('panel.appearance.show-markers'),
+            helpWithShortcut('panel.appearance.show-markers.tooltip', 'view.toggleEditView'),
             () => events.invoke('view.editView'),
-            value => events.fire('view.setEditView', value)
+            (value) => events.fire('view.setEditView', value)
         );
 
         const sizeRows: Record<ViewMode, Row> = {
-            centers: viewSlider('centerSize', text('panel.appearance.center-size'), help('panel.appearance.center-size.tooltip'), 0, 10, 1),
-            rings: viewSlider('ringSize', text('panel.appearance.ring-thickness'), help('panel.appearance.ring-thickness.tooltip'), 1, 50, 1)
+            centers: viewSlider(
+                'centerSize',
+                text('panel.appearance.center-size'),
+                help('panel.appearance.center-size.tooltip'),
+                0,
+                10,
+                1
+            ),
+            rings: viewSlider(
+                'ringSize',
+                text('panel.appearance.ring-thickness'),
+                help('panel.appearance.ring-thickness.tooltip'),
+                1,
+                50,
+                1
+            )
         };
 
         // unselected gaussians
 
-        const unselectedGaussians = viewToggle('gaussians', text('panel.appearance.gaussians'), help('panel.appearance.unselected-gaussians.tooltip'));
+        const unselectedGaussians = viewToggle(
+            'gaussians',
+            text('panel.appearance.gaussians'),
+            help('panel.appearance.unselected-gaussians.tooltip')
+        );
         const unselectedMarkers: Record<ViewMode, Row> = {
-            centers: viewToggle('centers', markerText('centers', 'unselected'), help('panel.appearance.unselected-centers.tooltip')),
-            rings: viewToggle('rings', markerText('rings', 'unselected'), help('panel.appearance.unselected-rings.tooltip'))
+            centers: viewToggle(
+                'centers',
+                markerText('centers', 'unselected'),
+                help('panel.appearance.unselected-centers.tooltip')
+            ),
+            rings: viewToggle(
+                'rings',
+                markerText('rings', 'unselected'),
+                help('panel.appearance.unselected-rings.tooltip')
+            )
         };
-        const unselectedTint = viewSlider('splatsColorBlend', text('panel.appearance.tint'), help('panel.appearance.gaussians-unselected-blend.tooltip'), 0, 1, 2);
+        const unselectedTint = viewSlider(
+            'splatsColorBlend',
+            text('panel.appearance.tint'),
+            help('panel.appearance.gaussians-unselected-blend.tooltip'),
+            0,
+            1,
+            2
+        );
 
         // the mode's marker tint as a switch: own colours (blend 0) or the
         // flat unselected colour (blend 1). The continuous value is in Advanced
         const markerBlend: Record<ViewMode, string> = { centers: 'centersColorBlend', rings: 'ringsColorBlend' };
         const splatColors = toggleRow(
-            text('panel.appearance.splat-colors'), help('panel.appearance.splat-colors.tooltip'),
+            text('panel.appearance.splat-colors'),
+            help('panel.appearance.splat-colors.tooltip'),
             () => (events.invoke(`view.${markerBlend[mode]}`) as number) < 0.5,
-            value => events.fire(`view.set${capitalize(markerBlend[mode])}`, value ? 0 : 1)
+            (value) => events.fire(`view.set${capitalize(markerBlend[mode])}`, value ? 0 : 1)
         );
 
         // selected gaussians
 
-        const selectedGaussians = viewToggle('selectionGaussians', text('panel.appearance.gaussians'), help('panel.appearance.selected-gaussians.tooltip'));
+        const selectedGaussians = viewToggle(
+            'selectionGaussians',
+            text('panel.appearance.gaussians'),
+            help('panel.appearance.selected-gaussians.tooltip')
+        );
         const selectedMarkers: Record<ViewMode, Row> = {
-            centers: viewToggle('selectionCenters', markerText('centers', 'selected'), help('panel.appearance.selected-centers.tooltip')),
-            rings: viewToggle('selectionRings', markerText('rings', 'selected'), help('panel.appearance.selected-rings.tooltip'))
+            centers: viewToggle(
+                'selectionCenters',
+                markerText('centers', 'selected'),
+                help('panel.appearance.selected-centers.tooltip')
+            ),
+            rings: viewToggle(
+                'selectionRings',
+                markerText('rings', 'selected'),
+                help('panel.appearance.selected-rings.tooltip')
+            )
         };
-        const selectedTint = viewToggle('selectionColor', text('panel.appearance.tint'), help('panel.appearance.selected-tint.tooltip'));
-        const outline = viewToggle('outlineSelection', text('panel.appearance.outline'), help('panel.appearance.outline.tooltip'));
+        const selectedTint = viewToggle(
+            'selectionColor',
+            text('panel.appearance.tint'),
+            help('panel.appearance.selected-tint.tooltip')
+        );
+        const outline = viewToggle(
+            'outlineSelection',
+            text('panel.appearance.outline'),
+            help('panel.appearance.outline.tooltip')
+        );
 
         // advanced: the continuous marker tints and the selection tint
         // strengths; the other marker's rows join these per mode
 
-        const centersTint = viewSlider('centersColorBlend', text('panel.appearance.centers-tint'), help('panel.appearance.centers-unselected-blend.tooltip'), 0, 1, 2);
-        const ringsTint = viewSlider('ringsColorBlend', text('panel.appearance.rings-tint'), help('panel.appearance.rings-unselected-blend.tooltip'), 0, 1, 2);
-        const gaussiansSelectionTint = viewSlider('splatsSelectionBlend', text('panel.appearance.gaussians'), help('panel.appearance.gaussians-selection-blend.tooltip'), 0, 1, 2);
-        const centersSelectionTint = viewSlider('centersSelectionBlend', text('panel.appearance.centers'), help('panel.appearance.centers-selection-blend.tooltip'), 0, 1, 2);
-        const ringsSelectionTint = viewSlider('ringsSelectionBlend', text('panel.appearance.rings'), help('panel.appearance.rings-selection-blend.tooltip'), 0, 1, 2);
+        const centersTint = viewSlider(
+            'centersColorBlend',
+            text('panel.appearance.centers-tint'),
+            help('panel.appearance.centers-unselected-blend.tooltip'),
+            0,
+            1,
+            2
+        );
+        const ringsTint = viewSlider(
+            'ringsColorBlend',
+            text('panel.appearance.rings-tint'),
+            help('panel.appearance.rings-unselected-blend.tooltip'),
+            0,
+            1,
+            2
+        );
+        const gaussiansSelectionTint = viewSlider(
+            'splatsSelectionBlend',
+            text('panel.appearance.gaussians'),
+            help('panel.appearance.gaussians-selection-blend.tooltip'),
+            0,
+            1,
+            2
+        );
+        const centersSelectionTint = viewSlider(
+            'centersSelectionBlend',
+            text('panel.appearance.centers'),
+            help('panel.appearance.centers-selection-blend.tooltip'),
+            0,
+            1,
+            2
+        );
+        const ringsSelectionTint = viewSlider(
+            'ringsSelectionBlend',
+            text('panel.appearance.rings'),
+            help('panel.appearance.rings-selection-blend.tooltip'),
+            0,
+            1,
+            2
+        );
 
         // colours, shared by both modes
 
@@ -432,21 +551,41 @@ class AppearancePanel extends Container {
         };
 
         const rows: Row[] = [
-            showMarkers, sizeRows.centers, sizeRows.rings,
-            unselectedGaussians, unselectedMarkers.centers, unselectedMarkers.rings, unselectedTint, splatColors,
-            selectedGaussians, selectedMarkers.centers, selectedMarkers.rings, selectedTint, outline,
-            centersTint, ringsTint, gaussiansSelectionTint, centersSelectionTint, ringsSelectionTint
+            showMarkers,
+            sizeRows.centers,
+            sizeRows.rings,
+            unselectedGaussians,
+            unselectedMarkers.centers,
+            unselectedMarkers.rings,
+            unselectedTint,
+            splatColors,
+            selectedGaussians,
+            selectedMarkers.centers,
+            selectedMarkers.rings,
+            selectedTint,
+            outline,
+            centersTint,
+            ringsTint,
+            gaussiansSelectionTint,
+            centersSelectionTint,
+            ringsSelectionTint
         ];
 
         // the unselected rows have no effect while the markers are hidden:
         // dim them, with the switch that explains why directly above. The
         // size rows stay lit: they size the selected markers too
-        const unselectedRows = [unselectedGaussians, unselectedMarkers.centers, unselectedMarkers.rings, unselectedTint, splatColors];
+        const unselectedRows = [
+            unselectedGaussians,
+            unselectedMarkers.centers,
+            unselectedMarkers.rings,
+            unselectedTint,
+            splatColors
+        ];
 
         const syncRows = () => {
             syncing = true;
             try {
-                rows.forEach(row => row.sync());
+                rows.forEach((row) => row.sync());
                 const overridden = !events.invoke('view.editView');
                 unselectedRows.forEach(({ row }) => row.class[overridden ? 'add' : 'remove']('overridden'));
             } finally {
@@ -506,10 +645,23 @@ class AppearancePanel extends Container {
         });
 
         [
-            'view.editView', 'view.centerSize', 'view.ringSize',
-            'view.gaussians', 'view.centers', 'view.rings', 'view.splatsColorBlend', 'view.centersColorBlend', 'view.ringsColorBlend',
-            'view.selectionGaussians', 'view.selectionCenters', 'view.selectionRings', 'view.selectionColor', 'view.outlineSelection',
-            'view.splatsSelectionBlend', 'view.centersSelectionBlend', 'view.ringsSelectionBlend'
+            'view.editView',
+            'view.centerSize',
+            'view.ringSize',
+            'view.gaussians',
+            'view.centers',
+            'view.rings',
+            'view.splatsColorBlend',
+            'view.centersColorBlend',
+            'view.ringsColorBlend',
+            'view.selectionGaussians',
+            'view.selectionCenters',
+            'view.selectionRings',
+            'view.selectionColor',
+            'view.outlineSelection',
+            'view.splatsSelectionBlend',
+            'view.centersSelectionBlend',
+            'view.ringsSelectionBlend'
         ].forEach((eventName) => {
             events.on(eventName, () => {
                 if (!this.hidden) {

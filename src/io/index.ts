@@ -12,14 +12,9 @@ export {
     defaultLodIndex,
     loadSplatSource,
     PermutedChunkSource,
-    validateSplatSource
+    validateSplatSource,
+    GsafReader
 } from './read';
 
 // Write operations
-export {
-    BrowserFileSystem,
-    GZipWriter,
-    pickWriteTarget,
-    ProgressWriter,
-    WriteTarget
-} from './write';
+export { BrowserFileSystem, GZipWriter, pickWriteTarget, ProgressWriter, WriteTarget } from './write';

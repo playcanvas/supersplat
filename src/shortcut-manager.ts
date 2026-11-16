@@ -1,7 +1,8 @@
 import { platform } from 'playcanvas';
 
-import { Events } from './events';
-import { Shortcuts, ShortcutBinding } from './shortcuts';
+import type { Events } from './events';
+import type { ShortcutBinding } from './shortcuts';
+import { Shortcuts } from './shortcuts';
 
 // Mac uses different symbols for modifier keys
 const isMac = platform.name === 'osx';

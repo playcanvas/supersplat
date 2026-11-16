@@ -1,13 +1,14 @@
-import { Button, Container, Element, Label } from '@playcanvas/pcui';
+import { Button, Container, Element } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import flyCameraSvg from './svg/fly-camera.svg';
 import orbitCameraSvg from './svg/orbit-camera.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -93,7 +94,11 @@ class RightToolbar extends Container {
 
         tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
-        tooltips.register(cameraFrameSelection, tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'), 'left');
+        tooltips.register(
+            cameraFrameSelection,
+            tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'),
+            'left'
+        );
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
         tooltips.register(settings, tooltip('panel.settings'), 'left');
 

@@ -1,7 +1,7 @@
 // High bit flags a single index entry (1 uint32) vs a range pair [start, count] (2 uint32s).
 // This limits index values to 2^31 - 1, which is sufficient for any practical gaussian count.
 const SINGLE_BIT = 0x80000000;
-const INDEX_MASK = 0x7FFFFFFF;
+const INDEX_MASK = 0x7fffffff;
 
 // Emit a run of contiguous indices to the ranges array.
 const emit = (ranges: number[], start: number, count: number) => {
@@ -17,7 +17,7 @@ const emit = (ranges: number[], start: number, count: number) => {
  * that tests whether a given index is in the set. Must be called with strictly increasing
  * values of i (as IndexRanges.fromPredicate guarantees).
  */
-const sortedPredicate = (sortedIds: Uint32Array): (i: number) => boolean => {
+const sortedPredicate = (sortedIds: Uint32Array): ((i: number) => boolean) => {
     let cursor = 0;
     return (i: number) => {
         if (cursor < sortedIds.length && sortedIds[cursor] === i) {

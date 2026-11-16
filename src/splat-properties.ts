@@ -5,7 +5,7 @@
 // the current view direction), so they are camera-dependent.
 // modes 66..68 read the raw f_dc_N coefficients reconstructed from the
 // already-decoded splatColor texture.
-const PROP_MODE: { [key: string]: number } = {
+const PROP_MODE: Record<string, number> = {
     x: 0,
     y: 1,
     z: 2,
@@ -35,7 +35,7 @@ const PROP_MODE: { [key: string]: number } = {
 // f_rest_N maps to mode (21 + N). max 45 SH coefficients (shBands 3).
 const F_REST_BASE_MODE = 21;
 
-const SH_NUM_COEFFS: { [k: number]: number } = { 0: 0, 1: 3, 2: 8, 3: 15 };
+const SH_NUM_COEFFS: Record<number, number> = { 0: 0, 1: 3, 2: 8, 3: 15 };
 
 const propModeFor = (prop: string): number | undefined => {
     if (Object.hasOwn(PROP_MODE, prop)) return PROP_MODE[prop];

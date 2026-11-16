@@ -1,7 +1,5 @@
-import {
-    BlendState,
-    Layer
-} from 'playcanvas';
+import type { Layer } from 'playcanvas';
+import { BlendState } from 'playcanvas';
 
 import { Element, ElementType } from './element';
 import { vertexShader, fragmentShader } from './shaders/outline-shader';

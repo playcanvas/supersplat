@@ -2,7 +2,7 @@
 // at +/-1. The derivative m / (1 + (m*m - 1)*x*x)^(3/2) is positive and falls
 // smoothly toward the edges: no circular pinch or return to normal sampling.
 // Strength 0..1 gives centre magnification m = 1..2 on both axes.
-const stochasticWarpWGSL = /* wgsl */`
+const stochasticWarpWGSL = /* wgsl */ `
 fn warpPosition(p: vec2f, strength: f32) -> vec2f {
     let m = 1.0 + strength;
     let d = sqrt(vec2f(1.0) + (m * m - 1.0) * p * p);

@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import type { Events } from '../events';
 import { opFromModifiers } from '../select-op';
 
 class RectSelection {
@@ -87,19 +87,16 @@ class RectSelection {
 
                 if (dragMoved) {
                     // rect select - wait for selection to complete before hiding rect
-                    await events.invoke(
-                        'select.rect',
-                        opFromModifiers(e), {
-                            start: { x: clamp01(Math.min(start.x, end.x) / w), y: clamp01(Math.min(start.y, end.y) / h) },
-                            end: { x: clamp01(Math.max(start.x, end.x) / w), y: clamp01(Math.max(start.y, end.y) / h) }
-                        });
+                    await events.invoke('select.rect', opFromModifiers(e), {
+                        start: { x: clamp01(Math.min(start.x, end.x) / w), y: clamp01(Math.min(start.y, end.y) / h) },
+                        end: { x: clamp01(Math.max(start.x, end.x) / w), y: clamp01(Math.max(start.y, end.y) / h) }
+                    });
                 } else {
                     // pick - wait for selection to complete before hiding rect
-                    await events.invoke(
-                        'select.point',
-                        opFromModifiers(e),
-                        { x: e.offsetX / parent.clientWidth, y: e.offsetY / parent.clientHeight }
-                    );
+                    await events.invoke('select.point', opFromModifiers(e), {
+                        x: e.offsetX / parent.clientWidth,
+                        y: e.offsetY / parent.clientHeight
+                    });
                 }
 
                 dragEnd();
@@ -135,7 +132,7 @@ class RectSelection {
     }
 
     destroy() {
-
+        // nothing to release
     }
 }
 

@@ -13,7 +13,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
-import { Serializer } from './serializer';
+import type { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/sphere-shape-shader';
 
 const v = new Vec3();
@@ -47,8 +47,12 @@ class SphereShape extends Element {
         material.cull = CULLFACE_FRONT;
         material.blendState = new BlendState(
             true,
-            BLENDEQUATION_ADD, BLENDMODE_SRC_ALPHA, BLENDMODE_ONE_MINUS_SRC_ALPHA,
-            BLENDEQUATION_ADD, BLENDMODE_ONE, BLENDMODE_ONE_MINUS_SRC_ALPHA
+            BLENDEQUATION_ADD,
+            BLENDMODE_SRC_ALPHA,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA,
+            BLENDEQUATION_ADD,
+            BLENDMODE_ONE,
+            BLENDMODE_ONE_MINUS_SRC_ALPHA
         );
         material.update();
 
@@ -68,7 +72,7 @@ class SphereShape extends Element {
     }
 
     destroy() {
-
+        // nothing to release
     }
 
     serialize(serializer: Serializer): void {

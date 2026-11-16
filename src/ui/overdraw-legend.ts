@@ -1,6 +1,6 @@
 import { Container } from '@playcanvas/pcui';
 
-import { Events } from '../events';
+import type { Events } from '../events';
 
 // the blit shader's ramp (overdrawColor in blit-shader.ts): stop k is the colour
 // of 2^k - 1 fragments per pixel, so the two tables have to stay in step

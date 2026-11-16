@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { BoundingBox, Color, Mat4 } from 'playcanvas';
+import { BoundingBox, Color, Mat4, Quat, Vec3 } from 'playcanvas';
 
+import { registerCameraPosesEvents } from './.build/src/camera-poses.js';
+import { histogramStats, mergeBins } from './.build/src/histogram-stats.js';
+import { registerTimelineEvents } from './.build/src/timeline.js';
 import { createWebMCPTools, registerWebMCP } from './.build/src/webmcp.js';
 import { setup } from './editor-commands.mjs';
 
@@ -22,6 +25,40 @@ const use = async (fn) => {
     const call = (name, input = {}, options) => tools.get(name).execute(input, options);
     try { await fn({ ...state, tools, call }); } finally { state.layers.forEach(layer => layer.instances.destroy()); }
 };
+// The real timeline and camera track, driving a stub camera that holds the
+// last pose applied to it, as the editor camera does at speed 0.
+const useTimeline = fn => use(async (state) => {
+    const { events, scene } = state;
+    const camera = { position: new Vec3(0, 0, 10), target: new Vec3(), fov: 60 };
+    events.function('camera.getPose', () => ({ position: { ...camera.position }, target: { ...camera.target }, fov: camera.fov }));
+    events.function('camera.fov', () => camera.fov);
+    events.on('camera.setPose', (pose) => {
+        camera.position.copy(pose.position);
+        camera.target.copy(pose.target);
+        if (pose.fov !== undefined) camera.fov = pose.fov;
+    });
+    // replaceable so a test can hold back a PLY sequence frame swap
+    let sequenceIdle = () => Promise.resolve();
+    events.function('sequence.idle', () => sequenceIdle());
+    scene.camera = {
+        azim: 0, elevation: 0, distance: 1,
+        onUpdate() {},
+        captureFrame: () => ({
+            position: camera.position.clone(), fov: camera.fov, ortho: false, target: { width: 1, height: 1 },
+            view: new Mat4().setTranslate(-camera.position.x, -camera.position.y, -camera.position.z), projection: new Mat4()
+        })
+    };
+    scene.canvas = { getBoundingClientRect: () => ({ x: 0, y: 0, width: 1, height: 1 }) };
+    registerTimelineEvents(events);
+    registerCameraPosesEvents(events);
+    try {
+        await fn({ ...state, camera, holdSequence: idle => { sequenceIdle = idle; } });
+    } finally {
+        events.fire('timeline.setPlaying', false);
+    }
+});
+const close = (a, b) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
+const frames = async call => (await call('get_timeline')).keys.map(k => k.frame);
 
 const checks = {
     async 'WebMCP rejects malformed input without mutating history'() {
@@ -197,11 +234,268 @@ const checks = {
             const registered = [];
             const dispose = registerWebMCP(api, { registerTool: (tool, options) => registered.push({ tool, options }) });
             await tick();
-            assert.equal(registered.length, 24);
-            assert.equal(new Set(registered.map(r => r.tool.name)).size, 24);
+            assert.equal(registered.length, 32);
+            assert.equal(new Set(registered.map(r => r.tool.name)).size, 32);
             assert.equal(registered.find(r => r.tool.name === 'get_scene').tool.annotations.readOnlyHint, true);
             dispose();
             assert(registered.every(r => r.options.signal.aborted));
+        });
+    },
+
+    async 'creation tools reject invalid input before creating anything'() {
+        await use(async ({ call, api, history }) => {
+            let created = 0;
+            api.create.generator = api.layers.instance = () => { created++; return {}; };
+            for (const [name, input] of [
+                ['create_from_generator', {}],
+                ['create_from_generator', { source: ' ' }],
+                ['create_from_generator', { source: 'x', params: [{ name: 'n' }] }],
+                ['create_from_generator', { source: 'x', params: [{ name: 'n', value: 3 }] }],
+                ['instance_layer', { layer: 0, copies: [] }],
+                ['instance_layer', { layer: 0, copies: [{ scale: 0 }] }],
+                ['instance_layer', { layer: 0, copies: new Array(129).fill({}) }],
+                ['instance_layer', { layer: 0, copies: [{ translate: [1, 2] }] }]
+            ]) {
+                const result = await call(name, input);
+                assert.equal(result.error?.code, 'invalid_input', `${name} ${JSON.stringify(input).slice(0, 80)}`);
+            }
+            assert.equal(created, 0);
+            assert.equal(history.history.length, 0);
+        });
+    },
+
+    async 'creation tools pass world-space arguments to the editor API'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.create.generator = (...args) => { calls.push(['generator', ...args]); return {}; };
+            api.layers.instance = (...args) => { calls.push(['instance', ...args]); return {}; };
+            await call('create_from_generator', { source: 'export class Generator {}', params: [{ name: 'n', value: '5' }] });
+            assert.deepEqual(calls[0].slice(0, 4), ['generator', 'export class Generator {}', [{ name: 'n', value: '5' }], undefined]);
+
+            await call('instance_layer', { layer: 1, copies: [{ translate: [1, 0, 0] }, { rotate: [0, 45, 0], scale: 2, center: [0, 0, 0] }], name: 'tree' });
+            const [, layer, copies, prefix] = calls[1];
+            assert.deepEqual([layer, prefix, copies.length], [1, 'tree', 2]);
+            assert.equal(copies[0].translate.x, 1);
+            assert.equal(copies[0].rotate, undefined);
+            assert(copies[1].rotate.equals(new Quat().setFromEulerAngles(0, 45, 0)));
+            assert.deepEqual([copies[1].scale, copies[1].center.x], [2, 0]);
+        });
+    },
+
+    async 'histogram stats interpolate percentiles within bins'() {
+        // 100 values spread evenly over [0, 10): one per 0.1
+        const counts = new Array(10).fill(10);
+        const stats = histogramStats(counts, 0, 10);
+        assert.equal(stats.count, 100);
+        assert(Math.abs(stats.mean - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p50 - 5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p5 - 0.5) < 1e-9);
+        assert(Math.abs(stats.percentiles.p99 - 9.9) < 1e-9);
+        // a single populated bin bounds every percentile to that bin
+        const spike = histogramStats([0, 0, 40, 0], 0, 4);
+        assert(Object.values(spike.percentiles).every(p => p >= 2 && p <= 3));
+        assert.equal(histogramStats([0, 0], 0, 1), null);
+        assert.deepEqual(mergeBins([1, 2, 3, 4, 5, 6, 7, 8], 2), [10, 26]);
+    },
+
+    async 'histogram and render tools validate and map their arguments'() {
+        await use(async ({ call, api }) => {
+            const calls = [];
+            api.inspect.histogram = (...args) => { calls.push(['histogram', ...args]); return {}; };
+            api.viewport.render = (...args) => { calls.push(['render', ...args]); return {}; };
+            for (const [name, input] of [
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 24 }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: '16' }],
+                ['get_histogram', { layer: 0, property: 'opacity', bins: 512 }],
+                ['get_histogram', { layer: 0, property: 'opacity', range: [0] }],
+                ['render_view', { width: 8 }],
+                ['render_view', { format: 'gif' }],
+                ['render_view', { quality: 0 }],
+                ['render_view', { mode: 'heat' }],
+                ['render_view', { views: [] }],
+                ['render_view', { views: ['front', 'back', 'left', 'right', 'top'] }],
+                ['render_view', { views: ['side'] }],
+                ['render_view', { mode: 'property', property: 'opacity', range: [0] }]
+            ]) {
+                assert.equal((await call(name, input)).error?.code, 'invalid_input', `${name} ${JSON.stringify(input)}`);
+            }
+            assert.equal(calls.length, 0);
+            await call('get_histogram', { layer: 0, property: 'opacity', bins: 16, range: [0, 0.1] });
+            assert.deepEqual([calls[0][1], calls[0][2], calls[0][3].bins, calls[0][3].range], [0, 'opacity', 16, [0, 0.1]]);
+            await call('render_view', { position: [0, 1, 5], target: [0, 1, 0], width: 320, format: 'png' });
+            const [, settings] = calls[1];
+            assert.deepEqual([settings.position.z, settings.target.y, settings.width, settings.format], [5, 1, 320, 'png']);
+            await call('render_view', { mode: 'property', property: 'opacity', range: [0, 0.1], views: ['current', 'top'] });
+            const [, analysis] = calls[2];
+            assert.deepEqual([analysis.mode, analysis.property, analysis.range, analysis.views], ['property', 'opacity', [0, 0.1], ['current', 'top']]);
+        });
+    },
+
+    async 'keyframes capture the camera or take explicit poses, as one undo step'() {
+        await useTimeline(async ({ call, history, camera }) => {
+            for (const keys of [[{ frame: 0, position: [0, 0, 1] }], [{ frame: 0 }, { frame: 0 }], [{ frame: 0, position: [1, 1, 1], target: [1, 1, 1] }], [{ frame: 180 }]]) {
+                assert.equal((await call('set_keyframes', { keys })).error.code, 'invalid_input');
+            }
+            camera.position.set(1, 2, 3);
+            const written = await call('set_keyframes', { keys: [{ frame: 0 }, { frame: 60, position: [0, 0, 5], target: [0, 1, 0], fov: 40 }] });
+            assert.equal(written.affected, 2);
+            assert.deepEqual(written.keys.map(k => [k.frame, k.position, k.fov]), [[0, [1, 2, 3], 60], [60, [0, 0, 5], 40]]);
+            assert.equal(history.history.length, 1);
+            const unchanged = await call('set_keyframes', { keys: [{ frame: 60, position: [0, 0, 5], target: [0, 1, 0], fov: 40 }] });
+            assert.equal(unchanged.affected, 0);
+            assert.equal(history.history.length, 1);
+            assert.deepEqual(await frames(call), [0, 60]);
+            // moving the playhead evaluates the camera path
+            const at60 = await call('set_timeline', { frame: 60 });
+            assert(close(at60.camera.position, [0, 0, 5]), JSON.stringify(at60.camera));
+            assert.notEqual(at60.viewport.viewToken, written.viewport.viewToken);
+            await call('undo');
+            assert.deepEqual(await frames(call), []);
+            await call('redo');
+            assert.equal((await call('get_timeline')).keys[1].fov, 40);
+        });
+    },
+
+    async 'set_timeline applies settings before the playhead and is not undoable'() {
+        await useTimeline(async ({ call, history, camera }) => {
+            await call('set_keyframes', { keys: [{ frame: 0, position: [0, 0, 4], target: [0, 0, 0], fov: 60 }, { frame: 100, position: [4, 0, 0], target: [0, 0, 0], fov: 40 }] });
+            const mid = await call('set_timeline', { frame: 50, smoothness: 0, loop: false });
+            assert.equal(mid.affected, 3);
+            assert.equal(mid.rendered, true);
+            assert(close(mid.camera.position, [2, 0, 2]), JSON.stringify(mid.camera));
+            assert(Math.abs(camera.fov - 50) < 1e-6);
+            for (const input of [{}, { frameRate: 25 }, { frame: 180 }, { frames: 0 }, { smoothness: 2 }, { frames: 40, frame: 40 }]) {
+                assert.equal((await call('set_timeline', input)).error.code, 'invalid_input', JSON.stringify(input));
+            }
+            // shortening the timeline clamps the playhead and strands the later key
+            const short = await call('set_timeline', { frames: 40, frameRate: 24 });
+            assert.deepEqual([short.timeline.frame, short.timeline.outOfRangeKeys, short.timeline.duration], [39, 1, 40 / 24]);
+            assert.equal((await call('get_timeline')).keys[1].inRange, false);
+            assert.equal(history.history.length, 1);
+        });
+    },
+
+    async 'move, copy and delete keyframes, each one undo step'() {
+        await useTimeline(async ({ call, history }) => {
+            await call('set_keyframes', { keys: [0, 30, 60].map(frame => ({ frame, position: [frame, 0, 1], target: [frame, 0, 0] })) });
+            const cursorBefore = history.cursor;
+            assert.equal((await call('move_keyframe', { from: 30, to: 60 })).error.code, 'key_exists');
+            assert.equal(history.cursor, cursorBefore);
+            const moved = await call('move_keyframe', { from: 30, to: 60, overwrite: true });
+            assert.equal(moved.replaced, true);
+            assert.deepEqual(moved.keys[0].position, [30, 0, 1]);
+            assert.deepEqual(await frames(call), [0, 60]);
+            await call('undo');
+            assert.deepEqual((await call('get_timeline')).keys.map(k => k.position[0]), [0, 30, 60]);
+            const copied = await call('move_keyframe', { from: 0, to: 90, copy: true });
+            assert.equal(copied.replaced, false);
+            assert.deepEqual(await frames(call), [0, 30, 60, 90]);
+            assert.equal((await call('move_keyframe', { from: 0, to: 180 })).error.code, 'invalid_input');
+            assert.equal((await call('move_keyframe', { from: 45, to: 50 })).error.code, 'key_not_found');
+            assert.equal((await call('delete_keyframes', { frames: [0, 45] })).error.code, 'key_not_found');
+            assert.equal((await call('delete_keyframes', { frames: [0, 0] })).error.code, 'invalid_input');
+            const cursor = history.cursor;
+            const deleted = await call('delete_keyframes', { frames: [90, 0] });
+            assert.deepEqual(deleted.deleted, [0, 90]);
+            assert.equal(history.cursor, cursor + 1);
+            assert.deepEqual(await frames(call), [30, 60]);
+            await call('undo');
+            assert.deepEqual(await frames(call), [0, 30, 60, 90]);
+        });
+    },
+
+    async 'stranded keys move back into range and capture waits for a pause'() {
+        await useTimeline(async ({ call }) => {
+            await call('set_keyframes', { keys: [{ frame: 120, position: [0, 0, 1], target: [0, 0, 0] }] });
+            await call('set_timeline', { frames: 60 });
+            const back = await call('move_keyframe', { from: 120, to: 10 });
+            assert.deepEqual([back.keys[0].inRange, back.timeline.outOfRangeKeys], [true, 0]);
+            assert.equal((await call('set_timeline', { playing: true })).timeline.playing, true);
+            assert.equal((await call('set_keyframes', { keys: [{ frame: 0 }] })).error.code, 'timeline_playing');
+            assert.equal((await call('set_keyframes', { keys: [{ frame: 0, position: [1, 0, 0], target: [0, 0, 0], fov: 50 }] })).affected, 1);
+            const moved = await call('set_timeline', { frame: 5 });
+            assert.deepEqual([moved.timeline.frame, moved.timeline.playing], [5, true]);
+            const paused = await call('set_timeline', { playing: false });
+            assert.deepEqual([paused.affected, paused.timeline.playing], [1, false]);
+        });
+    },
+
+    async 'seeking the current frame returns a moved camera to the path'() {
+        await useTimeline(async ({ call, camera }) => {
+            // without keys a seek leaves the camera alone
+            camera.position.set(7, 7, 7);
+            assert(close((await call('set_timeline', { frame: 30 })).camera.position, [7, 7, 7]));
+            await call('set_keyframes', { keys: [{ frame: 0, position: [0, 0, 4], target: [0, 0, 0] }, { frame: 60, position: [4, 0, 0], target: [0, 0, 0] }] });
+            const onPath = (await call('set_timeline', { frame: 30 })).camera.position;
+            camera.position.set(9, 9, 9);
+            const restored = await call('set_timeline', { frame: 30 });
+            assert.equal(restored.affected, 0);
+            assert(close(restored.camera.position, onPath), JSON.stringify(restored.camera));
+        });
+    },
+
+    async 'an omitted key frame is the playhead when the command runs'() {
+        await useTimeline(async ({ call, camera }) => {
+            await call('set_timeline', { frame: 20 });
+            camera.position.set(1, 2, 3);
+            const added = await call('set_keyframes', { keys: [{}] });
+            assert.deepEqual([added.keys[0].frame, added.keys[0].position], [20, [1, 2, 3]]);
+            assert.equal((await call('set_keyframes', { keys: [{}, { frame: 20 }] })).error.code, 'invalid_input');
+        });
+    },
+
+    async 'timeline commands snapshot inputs and commit before a queued UI undo'() {
+        await useTimeline(async ({ api, queue, history }) => {
+            const gate = barrier();
+            queue.enqueue(() => gate.promise);
+            const position = new Vec3(2, 3, 4);
+            const pending = api.timeline.setKeys([{ frame: 0, position, target: new Vec3(), fov: 65 }]);
+            const undo = history.undo();
+            position.set(100, 100, 100);
+            gate.release();
+            const result = await pending;
+            await undo;
+            assert.deepEqual([result.keys[0].position.x, result.timeline.totalKeys], [2, 1]);
+            assert.equal((await api.inspect.timeline()).totalKeys, 0);
+            assert.equal(history.canRedo(), true);
+        });
+    },
+
+    async 'cancelled or busy timeline commands change nothing'() {
+        await quietly(() => useTimeline(async ({ api, events, queue, history, scene }) => {
+            await api.timeline.update({ playing: true });
+            const key = { frame: 0, position: new Vec3(0, 0, 1), target: new Vec3() };
+            const gate = barrier();
+            queue.enqueue(() => gate.promise);
+            const controller = new AbortController();
+            const keyed = api.timeline.setKeys([key], { signal: controller.signal });
+            const seek = api.timeline.update({ frame: 10, playing: false }, { signal: controller.signal });
+            controller.abort();
+            gate.release();
+            await assert.rejects(keyed, error => error.code === 'cancelled');
+            await assert.rejects(seek, error => error.code === 'cancelled');
+            scene.lockedRenderMode = 'video';
+            await assert.rejects(api.timeline.setKeys([key]), error => error.code === 'busy');
+            await assert.rejects(api.timeline.update({ playing: false }), error => error.code === 'busy');
+            scene.lockedRenderMode = null;
+            assert.deepEqual([history.cursor, events.invoke('timeline.playing'), events.invoke('timeline.frame')], [0, true, 0]);
+        }));
+    },
+
+    async 'a playhead move waits for the PLY sequence frame unless playing'() {
+        await useTimeline(async ({ call, holdSequence }) => {
+            const swap = barrier();
+            holdSequence(() => swap.promise);
+            let settled = false;
+            const seek = call('set_timeline', { frame: 10 }).then(result => { settled = true; return result; });
+            await tick();
+            assert.equal(settled, false);
+            swap.release();
+            assert.equal((await seek).timeline.frame, 10);
+            // playback keeps changing frames, so there is no single swap to wait for
+            holdSequence(() => new Promise(() => {}));
+            assert.equal((await call('set_timeline', { playing: true })).timeline.playing, true);
+            holdSequence(() => Promise.resolve());
         });
     }
 };

@@ -1,8 +1,9 @@
 import { Button, Container, Element, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
 import type { ModeSettings, ViewMode } from '../view-mode';
+
 import { i18n } from './localization';
 import appearanceSvg from './svg/appearance.svg';
 import centersSvg from './svg/centers.svg';
@@ -12,7 +13,7 @@ import overlaysSvg from './svg/overlays.svg';
 import ringsSvg from './svg/rings.svg';
 import depthOffSvg from './svg/selection-depth-off.svg';
 import depthOnSvg from './svg/selection-depth-on.svg';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
     const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
@@ -62,7 +63,7 @@ class ModeToolbar extends Container {
         // whichever is showing, and the pill never changes size
         const segment = (cls: string, svgs: string[], labelKeys: string[]) => {
             const button = new Button({ class: ['mode-toolbar-labelled', cls] });
-            const icons = svgs.map(svg => button.dom.appendChild(createSvg(svg)));
+            const icons = svgs.map((svg) => button.dom.appendChild(createSvg(svg)));
             const stack = new Container({ class: 'mode-toolbar-label-stack' });
             const labels = labelKeys.map((key) => {
                 const label = new Label({ class: 'mode-toolbar-label' });
@@ -100,7 +101,7 @@ class ModeToolbar extends Container {
         // slides to the active one, and a click anywhere on it flips the mode.
         // The tooltip states the current mode's pick rule with that mode's
         // live depth setting, so it never promises a default the user changed
-        const modes: { mode: ViewMode, svg: string }[] = [
+        const modes: { mode: ViewMode; svg: string }[] = [
             { mode: 'centers', svg: centersSvg },
             { mode: 'rings', svg: ringsSvg }
         ];
@@ -129,11 +130,15 @@ class ModeToolbar extends Container {
                 events.fire('view.toggleMode');
             }
         });
-        tooltips.register(modeGroup, () => {
-            const settings = events.invoke(`view.${viewMode}Settings`) as ModeSettings;
-            const depth = settings?.useDepth ? 'visible' : 'through';
-            return withShortcut(i18n.t(`mode-toolbar.${viewMode}.tooltip.${depth}`), 'view.toggleMode');
-        }, 'bottom');
+        tooltips.register(
+            modeGroup,
+            () => {
+                const settings = events.invoke(`view.${viewMode}Settings`) as ModeSettings;
+                const depth = settings?.useDepth ? 'visible' : 'through';
+                return withShortcut(i18n.t(`mode-toolbar.${viewMode}.tooltip.${depth}`), 'view.toggleMode');
+            },
+            'bottom'
+        );
 
         // the highlight covers the active half. Measured rather than styled
         // because the halves are as wide as their text in the current language.
@@ -167,22 +172,50 @@ class ModeToolbar extends Container {
         // frontmost surface, "Through all" while they take every depth. It
         // edits the current mode's setting (see view-mode.ts), so it shows the
         // mode's default until the user changes it for that mode
-        const depth = segment('mode-toolbar-toggle', [depthOnSvg, depthOffSvg], ['mode-toolbar.visible-only', 'mode-toolbar.through-all']);
-        i18n.onChange(() => depth.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.visible-only')), depth.button);
-        tooltips.register(depth.button, () => withShortcut(i18n.t('mode-toolbar.visible-only.tooltip'), 'selection.toggleUseDepth'), 'bottom');
+        const depth = segment(
+            'mode-toolbar-toggle',
+            [depthOnSvg, depthOffSvg],
+            ['mode-toolbar.visible-only', 'mode-toolbar.through-all']
+        );
+        i18n.onChange(
+            () => depth.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.visible-only')),
+            depth.button
+        );
+        tooltips.register(
+            depth.button,
+            () => withShortcut(i18n.t('mode-toolbar.visible-only.tooltip'), 'selection.toggleUseDepth'),
+            'bottom'
+        );
         depth.button.on('click', () => events.fire('selection.toggleUseDepth'));
 
         // markers switch (tab): a constant label, the icon struck out while off
         const markers = segment('mode-toolbar-toggle', [markersSvg, markersOffSvg], ['mode-toolbar.markers']);
-        i18n.onChange(() => markers.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.markers')), markers.button);
-        tooltips.register(markers.button, () => withShortcut(i18n.t('mode-toolbar.markers.tooltip'), 'view.toggleEditView'), 'bottom');
+        i18n.onChange(
+            () => markers.button.dom.setAttribute('aria-label', i18n.t('mode-toolbar.markers')),
+            markers.button
+        );
+        tooltips.register(
+            markers.button,
+            () => withShortcut(i18n.t('mode-toolbar.markers.tooltip'), 'view.toggleEditView'),
+            'bottom'
+        );
         markers.button.on('click', () => events.fire('view.toggleEditView'));
 
         // the display panels
-        const appearance = panelButton(appearanceSvg, 'panel.appearance', 'appearancePanel.toggleVisible', 'appearancePanel.visible');
+        const appearance = panelButton(
+            appearanceSvg,
+            'panel.appearance',
+            'appearancePanel.toggleVisible',
+            'appearancePanel.visible'
+        );
         // its artwork carries its own padding; sized up to match the eye
         appearance.class.add('mode-toolbar-button-appearance');
-        const overlays = panelButton(overlaysSvg, 'panel.overlays', 'overlaysPanel.toggleVisible', 'overlaysPanel.visible');
+        const overlays = panelButton(
+            overlaysSvg,
+            'panel.overlays',
+            'overlaysPanel.toggleVisible',
+            'overlaysPanel.visible'
+        );
 
         this.append(modeGroup);
         this.append(depth.button);

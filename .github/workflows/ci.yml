@@ -63,6 +63,9 @@ jobs:
     - name: Install
       run: npm ci
 
+    - name: Format
+      run: npm run fmt
+
     - name: Lint
       run: npm run lint
 

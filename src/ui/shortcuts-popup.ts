@@ -1,19 +1,20 @@
 import { Container, Label } from '@playcanvas/pcui';
 
-import { Events } from '../events';
-import { ShortcutManager } from '../shortcut-manager';
+import type { Events } from '../events';
+import type { ShortcutManager } from '../shortcut-manager';
+
 import { i18n } from './localization';
 
 // Popup display configuration - maps shortcuts to categories and locale keys
 // This is separate from the shortcut bindings themselves (separation of concerns)
 interface ShortcutDisplayItem {
-    id: string;           // event ID to look up in ShortcutManager
-    localeKey: string;    // localization key for the action description
+    id: string; // event ID to look up in ShortcutManager
+    localeKey: string; // localization key for the action description
 }
 
 interface HintDisplayItem {
-    displayKey: string;   // what to show in the key column
-    localeKey: string;    // localization key for the action description
+    displayKey: string; // what to show in the key column
+    localeKey: string; // localization key for the action description
 }
 
 interface CategoryConfig {
@@ -192,7 +193,7 @@ class ShortcutsPopup extends Container {
             // Add shortcuts for this category
             for (const item of config.shortcuts) {
                 const keyText = shortcutManager.formatShortcut(item.id);
-                if (!keyText) continue;  // Skip if shortcut not found
+                if (!keyText) continue; // Skip if shortcut not found
 
                 const key = new Label({
                     class: 'shortcut-key',

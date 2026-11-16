@@ -1,4 +1,4 @@
-const vertexShader = /* wgsl */`
+const vertexShader = /* wgsl */ `
 attribute vertex_position: vec3f;
 uniform matrix_model: mat4x4f;
 uniform matrix_viewProjection: mat4x4f;
@@ -11,7 +11,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 }
 `;
 
-const fragmentShader = /* wgsl */`
+const fragmentShader = /* wgsl */ `
 uniform matrix_viewProjection: mat4x4f;
 uniform sphere: vec4f;
 uniform near_origin: vec3f;

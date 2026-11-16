@@ -1,21 +1,45 @@
 import { BooleanInput, Container, Label } from '@playcanvas/pcui';
 import { Camera, Mat4 } from 'playcanvas';
 
-import { Element } from '../element';
-import { Events } from '../events';
+import type { CalcHistogramOptions } from '../data-processor/calc-histogram';
+import type { Element } from '../element';
+import type { Events } from '../events';
 import { Splat } from '../splat';
-import { PROP_MODE, propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-properties';
+import { propModeFor, SH_NUM_COEFFS, isFinalColorMode } from '../splat-properties';
+
 import { Histogram } from './histogram';
 import { i18n } from './localization';
-import { Tooltips } from './tooltips';
+import type { Tooltips } from './tooltips';
+
+// payloads fired by Histogram
+type OverlayInfo = { x: number; cursorValue: number; selected: number; unselected: number; total: number };
+type HighlightInfo = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    startBucket: number;
+    endBucket: number;
+    anchorBucket: number;
+    cursorBucket: number;
+    anchorX: number;
+    cursorX: number;
+    anchorValue: number;
+    cursorValue: number;
+};
 
 // what kinds of state changes affect a given prop's histogram. mirrors the
 // previous per-event filtering, but consulted only inside hash().
 const isCameraDependentMode = (mode: number) => mode === 4 /* camera-depth */ || isFinalColorMode(mode);
 const isPositionDependentMode = (mode: number) => {
-    return mode === 0 || mode === 1 || mode === 2 || // x / y / z
-        mode === 3 || mode === 4 ||                  // distance / camera-depth
-        isFinalColorMode(mode);
+    return (
+        mode === 0 ||
+        mode === 1 ||
+        mode === 2 || // x / y / z
+        mode === 3 ||
+        mode === 4 || // distance / camera-depth
+        isFinalColorMode(mode)
+    );
 };
 // ColorGrade-dependent. f_dc_* (raw DC, modes 66..68) bypasses ColorGrade.
 const isColorGradeDependentMode = (mode: number) => mode === 8 /* opacity */ || isFinalColorMode(mode);
@@ -40,13 +64,15 @@ const hashInputs = (i: HistogramInputs): string => {
     const camMatters = i.onScreenOnly || isCameraDependentMode(m);
     const posMatters = isPositionDependentMode(m);
     const cgMatters = isColorGradeDependentMode(m);
-    return `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logBins ? 1 : 0}|` +
+    return (
+        `${i.splatId}|${m}|${i.onScreenOnly ? 1 : 0}|${i.logBins ? 1 : 0}|` +
         `${camMatters ? i.cameraVersion : 0}|${i.stateVersion}|` +
-        `${cgMatters ? i.colorGradeVersion : 0}|${posMatters ? i.positionsVersion : 0}`;
+        `${cgMatters ? i.colorGradeVersion : 0}|${posMatters ? i.positionsVersion : 0}`
+    );
 };
 
 class DataPanel extends Container {
-    constructor(events: Events, tooltips: Tooltips, args = { }) {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
             id: 'data-panel',
@@ -195,7 +221,7 @@ class DataPanel extends Container {
             // default prop localizations - order defines display order. "red",
             // "green", "blue" and HSV here are the final on-screen color (DC
             // + evaluated SH for the current view direction).
-            const localizations: any = {
+            const localizations: Record<string, string> = {
                 x: `${i18n.t('panel.splat-data.position')} X`,
                 y: `${i18n.t('panel.splat-data.position')} Y`,
                 z: `${i18n.t('panel.splat-data.position')} Z`,
@@ -223,7 +249,7 @@ class DataPanel extends Container {
             // harmonics coefficients labelled with their channel (R/G/B) and
             // within-channel index. all filtered by the splat's actual SH band
             // count so we never offer a mode the GPU shader can't decode.
-            const extras: any = {
+            const extras: Record<string, string> = {
                 f_dc_0: i18n.t('panel.splat-data.dc-red'),
                 f_dc_1: i18n.t('panel.splat-data.dc-green'),
                 f_dc_2: i18n.t('panel.splat-data.dc-blue')
@@ -239,16 +265,25 @@ class DataPanel extends Container {
             }
 
             const dataProps = [...splat.resource.propertyNames];
-            const derivedProps = ['distance', 'camera-depth', 'volume', 'surface-area', 'red', 'green', 'blue', 'hue', 'saturation', 'value'];
+            const derivedProps = [
+                'distance',
+                'camera-depth',
+                'volume',
+                'surface-area',
+                'red',
+                'green',
+                'blue',
+                'hue',
+                'saturation',
+                'value'
+            ];
             const availableProps = new Set(dataProps.concat(derivedProps));
 
             // build ordered default props from localizations keys, filtered to available
-            const defaultProps = Object.keys(localizations).filter(p => availableProps.has(p));
+            const defaultProps = Object.keys(localizations).filter((p) => availableProps.has(p));
 
             // build ordered extra props from extras keys, filtered to available
-            const extraProps = showAllValue.value ?
-                Object.keys(extras).filter(p => availableProps.has(p)) :
-                [];
+            const extraProps = showAllValue.value ? Object.keys(extras).filter((p) => availableProps.has(p)) : [];
 
             const allProps = [...defaultProps, ...extraProps];
 
@@ -259,7 +294,7 @@ class DataPanel extends Container {
             // with no active row to indicate it.
             if (allProps.length > 0 && !allProps.includes(selectedDataProp)) {
                 selectedDataProp = allProps[0];
-                // eslint-disable-next-line no-use-before-define
+
                 inputs.mode = propModeFor(selectedDataProp) ?? 0;
             }
 
@@ -276,13 +311,13 @@ class DataPanel extends Container {
 
                 item.addEventListener('click', () => {
                     selectedDataProp = prop;
-                    // eslint-disable-next-line no-use-before-define
+
                     inputs.mode = propModeFor(prop) ?? 0;
                     dataListBox.dom.querySelectorAll('.data-list-item').forEach((el) => {
                         el.classList.remove('active');
                     });
                     item.classList.add('active');
-                    tick(); // eslint-disable-line no-use-before-define
+                    tick();
                 });
 
                 dataListBox.dom.appendChild(item);
@@ -425,7 +460,7 @@ class DataPanel extends Container {
 
         const buildGpuOpts = () => {
             const cam = splat.scene.camera.camera;
-            const opts: any = {
+            const opts: CalcHistogramOptions = {
                 entityMatrix: splat.entity.getWorldTransform(),
                 viewMatrix: cam.viewMatrix,
                 cameraPos: splat.scene.camera.position,
@@ -433,7 +468,10 @@ class DataPanel extends Container {
             };
             if (inputs.onScreenOnly) {
                 const projection = Camera.applyShaderProjectionTransform(
-                    cam.projectionMatrix, shaderProjection, false, splat.scene.graphicsDevice.isWebGPU
+                    cam.projectionMatrix,
+                    shaderProjection,
+                    false,
+                    splat.scene.graphicsDevice.isWebGPU
                 );
                 viewProjection.mul2(projection, cam.viewMatrix);
                 opts.viewProjection = viewProjection;
@@ -471,7 +509,6 @@ class DataPanel extends Container {
                         logBins: logBins_
                     });
 
-                    // eslint-disable-next-line no-use-before-define
                     refreshRange();
                 } catch (err) {
                     // clear lastHash so the next tick with the same inputs retries
@@ -697,7 +734,7 @@ class DataPanel extends Container {
         const clearAnchorLabel = () => clearLabel(histogramInfoAnchor);
 
         const showStats = (count: number, selected: number, total: number) => {
-            const pct = total ? (count / total * 100).toFixed(1) : '0.0';
+            const pct = total ? ((count / total) * 100).toFixed(1) : '0.0';
             const fmt = (n: number) => n.toLocaleString();
             statsCountValue.textContent = `${fmt(count)} (${pct}%)`;
             statsSelectedValue.textContent = fmt(selected);
@@ -722,7 +759,7 @@ class DataPanel extends Container {
             }
         });
 
-        histogram.events.on('updateOverlay', (info: any) => {
+        histogram.events.on('updateOverlay', (info: OverlayInfo) => {
             if (dragging) return; // drag handler owns the labels mid-gesture
             if (!histogram.histogram.numValues) return;
             // continuous (non-bucketed) value at the cursor pixel, centered.
@@ -745,7 +782,7 @@ class DataPanel extends Container {
         svg.appendChild(rect);
         histogramCanvasArea.appendChild(svg);
 
-        histogram.events.on('highlight', (info: any) => {
+        histogram.events.on('highlight', (info: HighlightInfo) => {
             rect.setAttribute('x', info.x.toString());
             rect.setAttribute('y', info.y.toString());
             rect.setAttribute('width', info.width.toString());

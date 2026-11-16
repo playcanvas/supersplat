@@ -19,6 +19,15 @@
                 if (key.startsWith('superSplat-v')) caches.delete(key);
             }));
         </script>
+
+        <!-- Never let dropped files fall through to the browser, which opens
+             each one in a tab. Active before the editor starts; once it has,
+             its own drop handler imports them. -->
+        <script>
+            ['dragover', 'drop'].forEach((type) => window.addEventListener(type, (e) => {
+                if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+            }));
+        </script>
     </head>
 
     <body>

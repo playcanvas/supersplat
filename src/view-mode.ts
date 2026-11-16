@@ -32,10 +32,20 @@ type ModeSettings = {
 type ModeSettingKey = keyof ModeSettings;
 
 const MODE_SETTING_KEYS: ModeSettingKey[] = [
-    'gaussians', 'centers', 'rings',
-    'splatsColorBlend', 'centersColorBlend', 'ringsColorBlend',
-    'selectionGaussians', 'selectionColor', 'selectionCenters', 'selectionRings', 'outlineSelection',
-    'splatsSelectionBlend', 'centersSelectionBlend', 'ringsSelectionBlend',
+    'gaussians',
+    'centers',
+    'rings',
+    'splatsColorBlend',
+    'centersColorBlend',
+    'ringsColorBlend',
+    'selectionGaussians',
+    'selectionColor',
+    'selectionCenters',
+    'selectionRings',
+    'outlineSelection',
+    'splatsSelectionBlend',
+    'centersSelectionBlend',
+    'ringsSelectionBlend',
     'useDepth'
 ];
 

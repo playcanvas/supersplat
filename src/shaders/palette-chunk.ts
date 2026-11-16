@@ -4,7 +4,7 @@ const PALETTE_ENTRIES_PER_ROW = 512;
 
 // per-gaussian transform palette lookup. requires a `transformPalette:
 // texture_2d<f32>` binding in scope; entry 0 is the identity matrix
-const paletteMatrixWGSL = /* wgsl */`
+const paletteMatrixWGSL = /* wgsl */ `
 fn paletteMatrix(index: u32) -> mat4x4f {
     if (index == 0u) {
         return mat4x4f(
@@ -25,7 +25,7 @@ fn paletteMatrix(index: u32) -> mat4x4f {
 
 // index -> texel coordinate in a row-major texture. the width expression is
 // caller-supplied because the uniform it lives in differs per shader
-const indexToUvWGSL = (name: string, width: string) => /* wgsl */`
+const indexToUvWGSL = (name: string, width: string) => /* wgsl */ `
 fn ${name}(index: u32) -> vec2i {
     return vec2i(i32(index % ${width}), i32(index / ${width}));
 }`;

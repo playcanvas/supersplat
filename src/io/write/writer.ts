@@ -46,7 +46,9 @@ class GZipWriter implements Writer {
         // close() awaits reader and surfaces its error; this handler only keeps
         // the rejection from being reported as unhandled when the caller aborts
         // instead of closing
-        reader.catch(() => {});
+        reader.catch(() => {
+            // handled by close()
+        });
 
         this.write = async (data: Uint8Array) => {
             this.cursor += data.byteLength;

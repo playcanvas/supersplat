@@ -1,24 +1,47 @@
 import { WebPCodec } from '@playcanvas/splat-transform';
-import { BufferTarget, EncodedPacket, EncodedVideoPacketSource, MkvOutputFormat, MovOutputFormat, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny';
+import {
+    BufferTarget,
+    EncodedPacket,
+    EncodedVideoPacketSource,
+    MkvOutputFormat,
+    MovOutputFormat,
+    Mp4OutputFormat,
+    Output,
+    StreamTarget,
+    WebMOutputFormat
+} from 'mediabunny';
 import { Color, path, Quat, Vec3 } from 'playcanvas';
 
 import { ElementType } from './element';
 import { EquirectRenderer } from './equirect-renderer';
-import { Events } from './events';
+import type { Events } from './events';
 import { encodePng } from './png-writer';
-import { Scene } from './scene';
+import type { Scene } from './scene';
 import { injectSphericalMetadata } from './spherical-metadata';
-import { Splat } from './splat';
+import type { Splat } from './splat';
 import { i18n } from './ui/localization';
-import { buildVideoEncoderConfig, getVideoCodecType, VideoSettings } from './video-config';
+import type { VideoSettings } from './video-config';
+import { buildVideoEncoderConfig, getVideoCodecType } from './video-config';
 
 const nullClr = new Color(0, 0, 0, 0);
 
 // Lookup maps for video output format and codec configuration
-const FORMAT_CONFIG: Record<string, { create: (streaming: boolean) => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat; extension: string }> = {
-    mp4: { create: streaming => new Mp4OutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mp4' },
+const FORMAT_CONFIG: Record<
+    string,
+    {
+        create: (streaming: boolean) => Mp4OutputFormat | MovOutputFormat | MkvOutputFormat | WebMOutputFormat;
+        extension: string;
+    }
+> = {
+    mp4: {
+        create: (streaming) => new Mp4OutputFormat({ fastStart: streaming ? false : 'in-memory' }),
+        extension: 'mp4'
+    },
     webm: { create: () => new WebMOutputFormat(), extension: 'webm' },
-    mov: { create: streaming => new MovOutputFormat({ fastStart: streaming ? false : 'in-memory' }), extension: 'mov' },
+    mov: {
+        create: (streaming) => new MovOutputFormat({ fastStart: streaming ? false : 'in-memory' }),
+        extension: 'mov'
+    },
     mkv: { create: () => new MkvOutputFormat(), extension: 'mkv' }
 };
 
@@ -31,7 +54,7 @@ type ImageSettings = {
     transparentBg: boolean;
     showDebug: boolean;
     format: 'png' | 'jpeg' | 'webp';
-    quality?: number;           // 0..1, jpeg only
+    quality?: number; // 0..1, jpeg only
     projection?: 'standard' | 'equirect';
     levelHorizon?: boolean;
 };
@@ -45,7 +68,9 @@ const isInvalidFilenameChar = (char: string) => {
 };
 
 const sanitizeFilename = (filename: string) => {
-    const sanitized = Array.from(filename, char => (isInvalidFilenameChar(char) ? '_' : char)).join('').trim();
+    const sanitized = Array.from(filename, (char) => (isInvalidFilenameChar(char) ? '_' : char))
+        .join('')
+        .trim();
     return sanitized.length > 0 ? sanitized : 'supersplat';
 };
 
@@ -67,7 +92,11 @@ const getImportedFilename = (filename: string) => {
 // sorting is submitted on the GPU immediately before each render
 const sortSplatsAndWait = (_scene: Scene, _splats: Splat[]) => Promise.resolve();
 
-const downloadFile = (data: ArrayBuffer | Uint8Array<ArrayBuffer>, filename: string, type = 'application/octet-stream') => {
+const downloadFile = (
+    data: ArrayBuffer | Uint8Array<ArrayBuffer>,
+    filename: string,
+    type = 'application/octet-stream'
+) => {
     const blob = new Blob([data], { type });
     const url = window.URL.createObjectURL(blob);
     const el = document.createElement('a');
@@ -84,7 +113,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
     // set, otherwise the first visible splat's name
     const baseFilename = () => {
         const docName = events.invoke('doc.name');
-        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+        const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
         const source = docName || (splats[0]?.name ?? 'supersplat');
         return sanitizeFilename(removeExtension(getImportedFilename(source)));
     };
@@ -109,44 +138,78 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         });
     };
 
-    events.function('render.offscreen', async (width: number, height: number): Promise<Uint8Array> => {
-        try {
-            // start rendering to offscreen buffer only
-            scene.camera.startOffscreenMode(width, height);
-            scene.camera.renderOverlays = false;
-            scene.gizmoLayer.enabled = false;
-            scene.centersLayer.enabled = false;
+    // wait for postrender, giving up on abort or after timeout ms (a hidden
+    // tab stops rendering, so the frame may never come)
+    const postRenderWithin = (signal: AbortSignal | undefined, timeout: number) => {
+        return new Promise<void>((resolve, reject) => {
+            let timer: ReturnType<typeof setTimeout> = null;
+            const done = (error?: Error) => {
+                handle.off();
+                clearTimeout(timer);
+                signal?.removeEventListener('abort', onAbort);
+                if (error) reject(error);
+                else resolve();
+            };
+            const onAbort = () => done(new DOMException('The render was cancelled.', 'AbortError'));
+            const handle = scene.events.on('postrender', () => done());
+            if (Number.isFinite(timeout)) timer = setTimeout(() => done(new Error('render_timeout')), timeout);
+            if (signal?.aborted) onAbort();
+            else signal?.addEventListener('abort', onAbort);
+        });
+    };
 
-            // render the next frame
-            scene.forceRender = true;
+    // options.signal and options.timeout bound the wait for the frame; without
+    // them it waits for the next frame however long that takes
+    events.function(
+        'render.offscreen',
+        async (
+            width: number,
+            height: number,
+            options?: { signal?: AbortSignal; timeout?: number }
+        ): Promise<Uint8Array> => {
+            try {
+                // start rendering to offscreen buffer only
+                scene.camera.startOffscreenMode(width, height);
+                scene.camera.renderOverlays = false;
+                scene.gizmoLayer.enabled = false;
+                scene.centersLayer.enabled = false;
 
-            // for render to finish
-            await postRender();
+                // render the next frame
+                scene.forceRender = true;
 
-            // cpu-side buffer to read pixels into
-            const data = new Uint8Array(width * height * 4);
+                // for render to finish
+                if (options) await postRenderWithin(options.signal, options.timeout ?? Infinity);
+                else await postRender();
 
-            const { mainTarget, workTarget } = scene.camera;
+                // cpu-side buffer to read pixels into
+                const data = new Uint8Array(width * height * 4);
 
-            scene.dataProcessor.copyRt(mainTarget, workTarget);
+                const { mainTarget, workTarget } = scene.camera;
 
-            // read the rendered frame. the read must be immediate: nothing
-            // submits the shared command encoder outside the frame, so a
-            // deferred read maps the staging buffer before the copy above has
-            // run and returns zeros.
-            await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                scene.dataProcessor.copyRt(mainTarget, workTarget);
 
-            // rows are read back top-down (0,0 at the top)
-            return data;
-        } finally {
-            scene.camera.endOffscreenMode();
-            scene.camera.renderOverlays = true;
-            scene.gizmoLayer.enabled = true;
-            scene.centersLayer.enabled = true;
-            scene.camera.camera.clearColor.set(0, 0, 0, 0);
-            scene.forceRender = true;       // repaint the viewport with normal rendering
+                // read the rendered frame. the read must be immediate: nothing
+                // submits the shared command encoder outside the frame, so a
+                // deferred read maps the staging buffer before the copy above has
+                // run and returns zeros.
+                await workTarget.colorBuffer.read(0, 0, width, height, {
+                    renderTarget: workTarget,
+                    data,
+                    immediate: true
+                });
+
+                // rows are read back top-down (0,0 at the top)
+                return data;
+            } finally {
+                scene.camera.endOffscreenMode();
+                scene.camera.renderOverlays = true;
+                scene.gizmoLayer.enabled = true;
+                scene.centersLayer.enabled = true;
+                scene.camera.camera.clearColor.set(0, 0, 0, 0);
+                scene.forceRender = true; // repaint the viewport with normal rendering
+            }
         }
-    });
+    );
 
     events.function('render.image', async (imageSettings: ImageSettings, fileStream?: FileSystemWritableFileStream) => {
         events.fire('startSpinner');
@@ -156,7 +219,8 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         let savedOrtho = false;
 
         try {
-            const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } = imageSettings;
+            const { width, height, transparentBg, showDebug, format, quality, projection, levelHorizon } =
+                imageSettings;
             const is360 = projection === 'equirect';
 
             // in 360 mode the offscreen target is a square cube face; the
@@ -199,12 +263,18 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 const far = dist + boundRadius;
                 const near = Math.max(1e-6, dist < boundRadius ? far / (1024 * 16) : dist - boundRadius);
 
-                const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter((splat) => splat.visible);
                 const qWorld = new Quat();
 
                 for (let face = 0; face < 6; face++) {
                     qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
-                    scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
+                    scene.camera.setPoseOverride({
+                        position: camPos,
+                        rotation: qWorld,
+                        fov: EquirectRenderer.faceFov,
+                        near,
+                        far
+                    });
 
                     // faces view different directions, so each render must
                     // wait for its own sort
@@ -232,7 +302,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                 // read the rendered frame (immediate: see render.offscreen)
-                await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                await workTarget.colorBuffer.read(0, 0, width, height, {
+                    renderTarget: workTarget,
+                    data,
+                    immediate: true
+                });
             }
 
             let bytes: Uint8Array<ArrayBuffer>;
@@ -250,7 +324,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     data[i] = 255;
                 }
 
-                const imageData = new ImageData(new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), width, height);
+                const imageData = new ImageData(
+                    new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
+                    width,
+                    height
+                );
                 let blob: Blob;
                 if (typeof OffscreenCanvas !== 'undefined') {
                     const canvas = new OffscreenCanvas(width, height);
@@ -271,7 +349,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
                     context.putImageData(imageData, 0, 0);
                     blob = await new Promise<Blob>((resolve, reject) => {
-                        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))), 'image/jpeg', quality ?? 0.9);
+                        canvas.toBlob(
+                            (b) => (b ? resolve(b) : reject(new Error('failed to encode jpeg'))),
+                            'image/jpeg',
+                            quality ?? 0.9
+                        );
                     });
                 }
                 bytes = new Uint8Array(await blob.arrayBuffer());
@@ -328,7 +410,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             scene.gizmoLayer.enabled = true;
             scene.centersLayer.enabled = true;
             scene.camera.clearPass.setClearColor(nullClr);
-            scene.forceRender = true;       // repaint the viewport with normal rendering
+            scene.forceRender = true; // repaint the viewport with normal rendering
 
             events.fire('stopSpinner');
         }
@@ -350,8 +432,23 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
             let output: Output | null = null;
             let muxerWrites = Promise.resolve();
 
+            // keep playback from swapping a sequence frame in between preparing and capturing one
+            events.invoke('sequence.suspendPlayback');
+
             try {
-                const { startFrame, endFrame, frameRate, width, height, bitrate, transparentBg, showDebug, format, codec: codecChoice, projection, levelHorizon } = videoSettings;
+                const {
+                    startFrame,
+                    endFrame,
+                    frameRate,
+                    width,
+                    height,
+                    transparentBg,
+                    showDebug,
+                    format,
+                    codec: codecChoice,
+                    projection,
+                    levelHorizon
+                } = videoSettings;
 
                 const is360 = projection === 'equirect';
 
@@ -360,7 +457,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // last (fastStart false) instead of streaming to disk
                 const taggable = is360 && (format === 'mp4' || format === 'mov');
 
-                const target = (fileStream && !taggable) ? new StreamTarget(fileStream) : new BufferTarget();
+                const target = fileStream && !taggable ? new StreamTarget(fileStream) : new BufferTarget();
 
                 // Configure output format and codec from lookup maps (default to mp4/h264)
                 const formatConfig = FORMAT_CONFIG[format] ?? FORMAT_CONFIG.mp4;
@@ -404,17 +501,17 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             // drives backpressure in the encode loop, and every
                             // write has settled before output.finalize().
                             muxerWrites = muxerWrites
-                            .then(async () => {
-                                if (!muxerError) {
-                                    await videoSource.add(encodedPacket, meta);
-                                }
-                            })
-                            .catch((error) => {
-                                muxerError = error instanceof Error ? error : new Error(String(error));
-                            })
-                            .finally(() => {
-                                muxerQueueSize--;
-                            });
+                                .then(async () => {
+                                    if (!muxerError) {
+                                        await videoSource.add(encodedPacket, meta);
+                                    }
+                                })
+                                .catch((error) => {
+                                    muxerError = error instanceof Error ? error : new Error(String(error));
+                                })
+                                .finally(() => {
+                                    muxerQueueSize--;
+                                });
                         },
                         error: (error) => {
                             encoderError = error;
@@ -464,25 +561,28 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // helper to sort splats and wait for completion
                 const sortAndWait = (splats: Splat[]) => sortSplatsAndWait(scene, splats);
 
-                // prepare the frame for rendering, returns the newly loaded splat if any
-                const prepareFrame = async (frameTime: number, skipSort = false): Promise<Splat | null> => {
+                // prepare the frame for rendering, returns the sequence splats whose frame changed
+                const prepareFrame = async (frameTime: number, skipSort = false): Promise<Splat[]> => {
                     // Fire timeline.time for camera animation interpolation
                     events.fire('timeline.time', frameTime);
 
-                    // Wait for PLY sequence to load the frame if present
-                    const newSplat = await events.invoke('plysequence.setFrameAsync', Math.floor(frameTime)) as Splat | null;
+                    // Wait for any sequences to load the frame
+                    const newSplats = (await events.invoke(
+                        'plysequence.setFrameAsync',
+                        Math.floor(frameTime)
+                    )) as Splat[];
 
                     // manually update the camera so position and rotation are correct
                     scene.camera.onUpdate(0);
 
                     // 360 capture re-sorts per cube face, so skip sorting here
                     if (skipSort) {
-                        return newSplat;
+                        return newSplats;
                     }
 
-                    // If a new PLY was loaded, sort and wait for completion
-                    if (newSplat) {
-                        await sortAndWait([newSplat]);
+                    // If new frames were loaded, sort and wait for completion
+                    if (newSplats.length) {
+                        await sortAndWait(newSplats);
                     } else {
                         // No new PLY - sort existing splats if camera moved
                         const pos = scene.camera.position;
@@ -491,12 +591,14 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                             last_pos.copy(pos);
                             last_forward.copy(forward);
 
-                            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                            const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(
+                                (splat) => splat.visible
+                            );
                             await sortAndWait(splats);
                         }
                     }
 
-                    return newSplat;
+                    return newSplats;
                 };
 
                 // wrap and submit the pixels currently in the data buffer
@@ -518,7 +620,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     }
                     // muxerQueueSize is decremented by the write chain settling
                     // during the await
-                    // eslint-disable-next-line no-unmodified-loop-condition
+
                     while (muxerQueueSize > MAX_QUEUE_SIZE) {
                         await muxerWrites;
                     }
@@ -548,7 +650,11 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     scene.dataProcessor.copyRt(mainTarget, workTarget, scene.overdrawRender);
 
                     // read the rendered frame (immediate: see render.offscreen)
-                    await workTarget.colorBuffer.read(0, 0, width, height, { renderTarget: workTarget, data, immediate: true });
+                    await workTarget.colorBuffer.read(0, 0, width, height, {
+                        renderTarget: workTarget,
+                        data,
+                        immediate: true
+                    });
 
                     await encodeFrame(frameTime);
                 };
@@ -584,14 +690,22 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                     const far = dist + boundRadius;
                     const near = Math.max(1e-6, dist < boundRadius ? far / (1024 * 16) : dist - boundRadius);
 
-                    const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(splat => splat.visible);
+                    const splats = (scene.getElementsByType(ElementType.splat) as Splat[]).filter(
+                        (splat) => splat.visible
+                    );
 
                     for (let face = 0; face < 6; face++) {
                         // check for cancellation
                         if (cancelled) return;
 
                         qWorld.mul2(qCapture, EquirectRenderer.faceRotations[face]);
-                        scene.camera.setPoseOverride({ position: camPos, rotation: qWorld, fov: EquirectRenderer.faceFov, near, far });
+                        scene.camera.setPoseOverride({
+                            position: camPos,
+                            rotation: qWorld,
+                            fov: EquirectRenderer.faceFov,
+                            near,
+                            far
+                        });
 
                         // faces view different directions, so each render must
                         // wait for its own sort
@@ -608,7 +722,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                         const frameIndex = Math.round(frameTime * frameRate);
                         events.fire('progressUpdate', {
                             text: i18n.t('panel.render.rendering', { ellipsis: true }),
-                            progress: 100 * (frameIndex + (face + 1) / 6) / totalFrames
+                            progress: (100 * (frameIndex + (face + 1) / 6)) / totalFrames
                         });
                     }
 
@@ -647,7 +761,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
 
                         events.fire('progressUpdate', {
                             text: i18n.t('panel.render.rendering', { ellipsis: true }),
-                            progress: 100 * frameTime / duration
+                            progress: (100 * frameTime) / duration
                         });
                     }
                 }
@@ -724,7 +838,7 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 await events.invoke('showPopup', {
                     type: 'error',
                     header: i18n.t('panel.render.failed'),
-                    message: `'${(error as any).message ?? error}'`
+                    message: `'${(error as Error).message ?? error}'`
                 });
                 return false;
             } finally {
@@ -747,8 +861,9 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 scene.centersLayer.enabled = true;
                 scene.camera.clearPass.setClearColor(nullClr);
                 scene.lockedRenderMode = false;
-                scene.forceRender = true;       // camera likely moved, finish with normal render
+                scene.forceRender = true; // camera likely moved, finish with normal render
 
+                events.invoke('sequence.resumePlayback');
                 events.fire('progressEnd');
             }
         };

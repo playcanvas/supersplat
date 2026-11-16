@@ -1,27 +1,28 @@
-import {
+import type {
     ChunkData,
     ChunkDataPool,
     ChunkField,
     ChunkLayer,
     ChunkSource,
     SHBands,
-    createChunkDataPool,
-    sortMortonInterleaved
+    SplatModel
 } from '@playcanvas/splat-transform';
+import { createChunkDataPool, sortMortonInterleaved } from '@playcanvas/splat-transform';
+import type { GraphicsDevice } from 'playcanvas';
 import {
     PIXELFORMAT_R32U,
     PIXELFORMAT_RGBA16F,
     PIXELFORMAT_RGBA32U,
     BoundingBox,
     FloatPacking,
-    GraphicsDevice,
     GSplatContainer,
     GSplatFormat,
     Quat,
     Vec3
 } from 'playcanvas';
 
-import { type BlobReadSource, PermutedChunkSource } from './io';
+import { PermutedChunkSource } from './io';
+import type { BlobReadSource } from './io';
 
 const SH_REST_COUNTS = [0, 9, 24, 45];
 
@@ -32,9 +33,10 @@ type UploadPhase = 'sort' | 'upload';
 // Yield to the event loop so pending DOM changes can be painted before a long
 // synchronous stage. A macrotask, not requestAnimationFrame: rAF never fires
 // in a hidden tab, which would stall the load until the tab is shown again.
-const yieldToPaint = () => new Promise<void>((resolve) => {
-    setTimeout(resolve, 0);
-});
+const yieldToPaint = () =>
+    new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+    });
 
 // One SH texture filled by the upload sweep: which packed coefficient words it
 // stores and its per-row component count.
@@ -53,6 +55,18 @@ const acquire = (pool: ChunkDataPool, source: ChunkSource, layer: ChunkLayer, co
     return pool.acquire(layer, source.meta.layouts[layer], count);
 };
 
+// the view.antiAlias setting: 'auto' follows each layer's trained-model tag,
+// 'on' and 'off' override it for files whose tag is missing or wrong
+type AntiAliasMode = 'auto' | 'on' | 'off';
+
+// the model a layer renders and exports as under the view.antiAlias setting.
+// 'off' only clears the antialiased tag, so other models are kept
+const effectiveModel = (model: SplatModel, antiAlias: AntiAliasMode): SplatModel => {
+    if (antiAlias === 'on') return 'antialiased';
+    if (antiAlias === 'off' && model === 'antialiased') return 'default';
+    return model;
+};
+
 class EditorSplatResource extends GSplatContainer {
     // the lazily-read static data. replaced only by rebind()
     source: ChunkSource;
@@ -61,6 +75,9 @@ class EditorSplatResource extends GSplatContainer {
     fileSources: BlobReadSource[] = [];
     readonly sourcePool: ChunkDataPool;
     readonly shBands: SHBands;
+    // how the gaussians were trained, from the file's tag: the renderer draws
+    // 'antialiased' ones with their training filter, and exports keep the tag
+    readonly model: SplatModel;
     // the state column as loaded from file. read-only after upload: the live
     // editor state belongs to the instance list, not to the static resource
     readonly initialState: Uint8Array;
@@ -79,7 +96,7 @@ class EditorSplatResource extends GSplatContainer {
 
     private constructor(device: GraphicsDevice, source: ChunkSource) {
         const { shBands } = source.meta;
-        const streams: { name: string, format: number }[] = [
+        const streams: { name: string; format: number }[] = [
             { name: 'splatColor', format: PIXELFORMAT_RGBA16F },
             { name: 'transformA', format: PIXELFORMAT_RGBA32U },
             { name: 'transformB', format: PIXELFORMAT_RGBA16F }
@@ -101,24 +118,38 @@ class EditorSplatResource extends GSplatContainer {
         super(device, source.meta.numGaussians, format);
 
         this.source = source;
-        const pooledBytes = Object.values(source.meta.layouts).reduce((sum, layout) => sum + layout.stride * source.meta.chunkSize, 0);
+        const pooledBytes = Object.values(source.meta.layouts).reduce(
+            (sum, layout) => sum + layout.stride * source.meta.chunkSize,
+            0
+        );
         this.sourcePool = createChunkDataPool({
             chunkSize: source.meta.chunkSize,
             maxPooledBytes: pooledBytes
         });
         this.shBands = shBands;
+        this.model = source.meta.model;
         this.initialState = new Uint8Array(source.meta.numGaussians);
 
         const properties = new Set([
-            'x', 'y', 'z',
-            'scale_0', 'scale_1', 'scale_2',
-            'rot_0', 'rot_1', 'rot_2', 'rot_3',
-            'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'
+            'x',
+            'y',
+            'z',
+            'scale_0',
+            'scale_1',
+            'scale_2',
+            'rot_0',
+            'rot_1',
+            'rot_2',
+            'rot_3',
+            'f_dc_0',
+            'f_dc_1',
+            'f_dc_2',
+            'opacity'
         ]);
         for (let i = 0; i < SH_REST_COUNTS[shBands]; ++i) {
             properties.add(`f_rest_${i}`);
         }
-        source.meta.extraColumns.forEach(column => properties.add(column.name));
+        source.meta.extraColumns.forEach((column) => properties.add(column.name));
         properties.add('state');
         properties.add('transform');
         this.propertyNames = properties;
@@ -134,7 +165,12 @@ class EditorSplatResource extends GSplatContainer {
     // `reorder`); the resource then reads through a PermutedChunkSource over
     // `source` so rows and texels agree. `onPhase` is told when the read sweep
     // is over and the remaining (synchronous) stages begin, for progress UI.
-    static async create(device: GraphicsDevice, source: ChunkSource, reorder = false, onPhase?: (phase: UploadPhase) => void) {
+    static async create(
+        device: GraphicsDevice,
+        source: ChunkSource,
+        reorder = false,
+        onPhase?: (phase: UploadPhase) => void
+    ) {
         const resource = new EditorSplatResource(device, source);
         try {
             await resource.upload(reorder, onPhase);
@@ -162,12 +198,18 @@ class EditorSplatResource extends GSplatContainer {
                 await source.read({ chunkIndex, ...chunks });
                 callback(chunkIndex * source.meta.chunkSize, count, chunks);
             } finally {
-                Object.values(chunks).forEach(chunk => chunk.release());
+                Object.values(chunks).forEach((chunk) => chunk.release());
             }
         }
     }
 
-    private fillTransformA(packed: Uint32Array, position: Float32Array, geometric: Float32Array, base: number, count: number) {
+    private fillTransformA(
+        packed: Uint32Array,
+        position: Float32Array,
+        geometric: Float32Array,
+        base: number,
+        count: number
+    ) {
         const floats = new Float32Array(packed.buffer);
         const quat = new Quat();
         for (let i = 0; i < count; ++i) {
@@ -197,7 +239,14 @@ class EditorSplatResource extends GSplatContainer {
         }
     }
 
-    private fillColor(packed: Uint16Array, geometric: Float32Array, color: Float32Array, colorStride: number, base: number, count: number) {
+    private fillColor(
+        packed: Uint16Array,
+        geometric: Float32Array,
+        color: Float32Array,
+        colorStride: number,
+        base: number,
+        count: number
+    ) {
         const SH_C0 = 0.28209479177387814;
         for (let i = 0; i < count; ++i) {
             const dst = (base + i) * 4;
@@ -205,7 +254,8 @@ class EditorSplatResource extends GSplatContainer {
             packed[dst] = FloatPacking.float2Half(color[col] * SH_C0 + 0.5);
             packed[dst + 1] = FloatPacking.float2Half(color[col + 1] * SH_C0 + 0.5);
             packed[dst + 2] = FloatPacking.float2Half(color[col + 2] * SH_C0 + 0.5);
-            packed[dst + 3] = FloatPacking.float2Half(1 / (1 + Math.exp(-geometric[i * 8 + 7])));
+            // true (linear) opacity, as splat-transform holds it: above 1 for merged gaussians
+            packed[dst + 3] = FloatPacking.float2Half(geometric[i * 8 + 7]);
         }
     }
 
@@ -231,9 +281,9 @@ class EditorSplatResource extends GSplatContainer {
             for (let j = 1; j < coeffs.length; ++j) max = Math.max(max, Math.abs(coeffs[j]));
             if (max === 0) continue;
             for (let j = 0; j < coeffs.length; j += 3) {
-                coeffs[j] = Math.max(0, Math.min(t11, Math.floor((coeffs[j] / max * 0.5 + 0.5) * t11 + 0.5)));
-                coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor((coeffs[j + 1] / max * 0.5 + 0.5) * t10 + 0.5)));
-                coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor((coeffs[j + 2] / max * 0.5 + 0.5) * t11 + 0.5)));
+                coeffs[j] = Math.max(0, Math.min(t11, Math.floor(((coeffs[j] / max) * 0.5 + 0.5) * t11 + 0.5)));
+                coeffs[j + 1] = Math.max(0, Math.min(t10, Math.floor(((coeffs[j + 1] / max) * 0.5 + 0.5) * t10 + 0.5)));
+                coeffs[j + 2] = Math.max(0, Math.min(t11, Math.floor(((coeffs[j + 2] / max) * 0.5 + 0.5) * t11 + 0.5)));
             }
             value[0] = max;
             const row = base + i;
@@ -245,7 +295,7 @@ class EditorSplatResource extends GSplatContainer {
                         target.packed[dst] = bits[0];
                     } else {
                         const o = (coeff - 1) * 3;
-                        target.packed[dst + c] = coeffs[o] << 21 | coeffs[o + 1] << 11 | coeffs[o + 2];
+                        target.packed[dst + c] = (coeffs[o] << 21) | (coeffs[o + 1] << 11) | coeffs[o + 2];
                     }
                 }
             }
@@ -295,28 +345,35 @@ class EditorSplatResource extends GSplatContainer {
         const { source, shBands } = this;
         const numRows = source.meta.numGaussians;
 
-        const shDefs: { name: string, firstCoeff: number, coeffCount: number, components: number }[] = [];
+        const shDefs: { name: string; firstCoeff: number; coeffCount: number; components: number }[] = [];
         if (shBands > 0) {
             shDefs.push({ name: 'splatSH_1to3', firstCoeff: 0, coeffCount: 4, components: 4 });
             if (shBands > 1) {
                 shDefs.push({ name: 'splatSH_4to7', firstCoeff: 4, coeffCount: 4, components: 4 });
                 const wide = shBands > 2;
-                shDefs.push({ name: 'splatSH_8to11', firstCoeff: 8, coeffCount: wide ? 4 : 1, components: wide ? 4 : 1 });
+                shDefs.push({
+                    name: 'splatSH_8to11',
+                    firstCoeff: 8,
+                    coeffCount: wide ? 4 : 1,
+                    components: wide ? 4 : 1
+                });
                 if (wide) {
                     shDefs.push({ name: 'splatSH_12to15', firstCoeff: 12, coeffCount: 4, components: 4 });
                 }
             }
         }
 
-        const textureNames = ['transformA', 'transformB', 'splatColor', ...shDefs.map(sh => sh.name)];
-        const textures = textureNames.map(name => this.getTexture(name));
-        const targets = textures.map((texture) => {
-            texture.releaseSourceAfterUpload = true;
-            return texture.lock() as Uint16Array | Uint32Array;
-        });
+        const textureNames = ['transformA', 'transformB', 'splatColor', ...shDefs.map((sh) => sh.name)];
+        const textures = textureNames.map((name) => this.getTexture(name));
+        // no releaseSourceAfterUpload: the fill below is async, and a frame
+        // rendering meanwhile uploads the locked levels - with the flag set the
+        // engine would release them there, discarding the rows filled after it
+        const targets = textures.map((texture) => texture.lock() as Uint16Array | Uint32Array);
         const shTargets: SHTarget[] = shDefs.map((sh, i) => ({ ...sh, packed: targets[3 + i] as Uint32Array }));
 
-        const stateField = source.meta.availableLayers.has('other') ? source.meta.layouts.other?.fields.state : undefined;
+        const stateField = source.meta.availableLayers.has('other')
+            ? source.meta.layouts.other?.fields.state
+            : undefined;
         const layers: ChunkLayer[] = ['position', 'geometric', 'color'];
         if (stateField) layers.push('other');
 
@@ -375,13 +432,13 @@ class EditorSplatResource extends GSplatContainer {
                 const inverse = new Uint32Array(numRows);
                 for (let i = 0; i < numRows; ++i) inverse[order[i]] = i;
 
-                const components = [4, 4, 4, ...shDefs.map(sh => sh.components)];
+                const components = [4, 4, 4, ...shDefs.map((sh) => sh.components)];
                 targets.forEach((target, i) => EditorSplatResource.permuteRows(target, components[i], inverse));
                 EditorSplatResource.permuteRows(this.initialState, 1, inverse);
                 this.source = new PermutedChunkSource(source, order);
             }
         } catch (err) {
-            textures.forEach(texture => texture.unlock());
+            textures.forEach((texture) => texture.unlock());
             throw err;
         }
 
@@ -391,13 +448,12 @@ class EditorSplatResource extends GSplatContainer {
         }
 
         textures.forEach((texture) => {
+            // unlocking a write lock uploads the level
             texture.unlock();
-            texture.upload();
-            // Texture.releaseSourceAfterUpload currently only releases ImageBitmap
-            // sources. These immutable typed-array levels can be discarded after
-            // the synchronous WebGPU upload; the retained ChunkSource is the
+            // These immutable typed-array levels can be discarded after the
+            // synchronous WebGPU upload; the retained ChunkSource is the
             // authoritative CPU-side copy.
-            const levels = (texture as any)._levels;
+            const levels = texture['_levels'];
             if (levels) levels[0] = null;
         });
 
@@ -446,4 +502,5 @@ class EditorSplatResource extends GSplatContainer {
     }
 }
 
-export { EditorSplatResource };
+export { EditorSplatResource, effectiveModel };
+export type { AntiAliasMode };

@@ -12,9 +12,7 @@ export {
 } from './file-systems';
 
 // Loading functions
-export {
-    defaultLodIndex,
-    loadSplatSource,
-    PermutedChunkSource,
-    validateSplatSource
-} from './loader';
+export { defaultLodIndex, loadSplatSource, PermutedChunkSource, validateSplatSource } from './loader';
+
+// GSAF animated format decoder
+export { GsafReader } from './gsaf-decoder';

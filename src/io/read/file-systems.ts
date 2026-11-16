@@ -2,13 +2,8 @@
  * File system implementations for reading splat data from various sources.
  */
 
-import {
-    BufferedReadStream,
-    ReadFileSystem,
-    ReadSource,
-    ReadStream,
-    UrlReadFileSystem
-} from '@playcanvas/splat-transform';
+import type { ReadFileSystem, ReadSource } from '@playcanvas/splat-transform';
+import { BufferedReadStream, ReadStream, UrlReadFileSystem } from '@playcanvas/splat-transform';
 
 // Read blob in 4MB chunks to balance async overhead vs memory usage
 const BLOB_CHUNK_SIZE = 4 * 1024 * 1024;
@@ -56,7 +51,7 @@ class BlobReadSource implements ReadSource {
     handle: FileSystemFileHandle | null;
 
     private blob: Blob;
-    private closed: boolean = false;
+    private closed = false;
 
     constructor(blob: Blob, handle: FileSystemFileHandle | null = null) {
         this.blob = blob;
@@ -64,7 +59,7 @@ class BlobReadSource implements ReadSource {
         this.size = blob.size;
     }
 
-    read(start: number = 0, end: number = this.size): ReadStream {
+    read(start = 0, end: number = this.size): ReadStream {
         if (this.closed) {
             throw new Error('Source has been closed');
         }
@@ -85,10 +80,13 @@ class BlobReadSource implements ReadSource {
 }
 
 // Every live source reading from the file behind `handle`.
-const sourcesOf = async (sources: Iterable<BlobReadSource>, handle: FileSystemFileHandle): Promise<BlobReadSource[]> => {
+const sourcesOf = async (
+    sources: Iterable<BlobReadSource>,
+    handle: FileSystemFileHandle
+): Promise<BlobReadSource[]> => {
     const result: BlobReadSource[] = [];
     for (const source of new Set(sources)) {
-        if (source.handle && await handle.isSameEntry(source.handle)) {
+        if (source.handle && (await handle.isSameEntry(source.handle))) {
             result.push(source);
         }
     }
@@ -100,7 +98,7 @@ const sourcesOf = async (sources: Iterable<BlobReadSource>, handle: FileSystemFi
  * Used for drag & drop and file picker scenarios.
  */
 class BlobReadFileSystem implements ReadFileSystem {
-    private files: Map<string, { blob: Blob, handle: FileSystemFileHandle | null }> = new Map();
+    private files = new Map<string, { blob: Blob; handle: FileSystemFileHandle | null }>();
 
     // every source handed out, so the owner knows which files are in use
     readonly sources: BlobReadSource[] = [];
@@ -148,7 +146,10 @@ const hasLoadProgress = (fs: ReadFileSystem): fs is LoadProgressFileSystem => 'o
 // way) reports once, at 100%. Capping pulls to get finer steps was measured at
 // ~0.1 s per GB on local files, so the bar isn't worth it.
 class CountingReadStream extends ReadStream {
-    constructor(private inner: ReadStream, private onBytes: (n: number) => void) {
+    constructor(
+        private inner: ReadStream,
+        private onBytes: (n: number) => void
+    ) {
         super(inner.expectedSize);
     }
 
@@ -244,10 +245,4 @@ class MappedReadFileSystem implements LoadProgressFileSystem {
     }
 }
 
-export {
-    BlobReadSource,
-    MappedReadFileSystem,
-    hasLoadProgress,
-    sourcesOf,
-    type LoadProgressFileSystem
-};
+export { BlobReadSource, MappedReadFileSystem, hasLoadProgress, sourcesOf, type LoadProgressFileSystem };

@@ -1208,11 +1208,11 @@ class ProjectedSplatRenderer {
         // the 20% back this frame; the transform handler disables that pass
         // for the length of a drag
         this.material.setParameter('selectionUnderlay', this.scene.underlay.enabled ? 1 : 0);
-        // the markers switch (tab) shows the unselected gaussians raw: drawn
-        // regardless of the mode's flag, untinted, without their markers. A
-        // colour preview draws both groups so the grade can be seen
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
-        this.material.setParameter('showSelectedGaussians', events.invoke('view.gaussians') || pending ? 1 : 0);
+        // the fill hides only in the markers-only view; a colour preview draws
+        // both groups so the grade can be seen
+        const showGaussians = events.invoke('view.gaussians') || pending ? 1 : 0;
+        this.material.setParameter('showGaussians', showGaussians);
+        this.material.setParameter('showSelectedGaussians', showGaussians);
         this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
         this.material.setParameter('ringMask', ringsMask);
         this.material.setParameter('visible', this.visibleBits);
@@ -1221,14 +1221,13 @@ class ProjectedSplatRenderer {
         // tint blends the selected gaussians' fill toward the selection colour;
         // the vertex shader applies it inside the selection entry range
         // (ringsBase / ringsCount), which stands in for the projector's
-        // per-placement selectionEnabled. The unselected fill is never tinted
+        // per-placement selectionEnabled
         this.material.setParameter(
             'selectedColor',
             events.invoke('view.selectionColor') && !pending
                 ? [selectedColor.r, selectedColor.g, selectedColor.b, selectedSplat?.selectionAlpha ?? 1]
                 : [0, 0, 0, 0]
         );
-        this.material.setParameter('unselectedColor', [0, 0, 0, 0]);
         // the unselected markers take the flat colour or the gaussians' own,
         // one switch per marker; selected markers always the selection colour.
         // The ring blends start from the splat's own colour, so they stay
@@ -1292,7 +1291,6 @@ class ProjectedSplatRenderer {
             centers.setParameter('visible', this.visibleBits);
             centers.setParameter('visibleOnly', filterVisible ? 1 : 0);
             centers.setParameter('colorBlend', events.invoke('view.tintCenters') ? 1 : 0);
-            centers.setParameter('selectionBlend', 1);
             centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);
             centers.setParameter('unselectedClr', [
                 unselectedColor.r,

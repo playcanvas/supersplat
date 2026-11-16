@@ -105,7 +105,6 @@
     "panel.settings.fov.tooltip": "相机的视野角（度）。",
     "panel.settings.fov-dolly.tooltip": "更改视野角时移动相机以保持构图，而不是缩放。",
     "panel.settings.reset": "恢复默认设置",
-    "panel.appearance": "外观",
     "mode-toolbar.centers": "中心",
     "mode-toolbar.centers.tooltip": "在每个高斯的中心显示一个点。按中心点选择。",
     "mode-toolbar.rings": "圆环",

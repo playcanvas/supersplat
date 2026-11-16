@@ -81,7 +81,7 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
     ): Descriptor => ({
         key,
         setCommand,
-        group: 'appearance',
+        group: 'preferences',
         urlPath: key,
         getDefault: () => {
             const c = getDefault();
@@ -288,10 +288,9 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
         }
     ];
 
-    // 3.0-3.7 stored the appearance as flat keys per footprint mode, and an
-    // interim build as two per-mode settings objects. Derive what the global
-    // switches can take from either; the rest is dropped, since keys without a
-    // descriptor never survive a load
+    // 3.0-3.7 stored the appearance as flat keys per footprint mode. Derive
+    // what the global switches can take from them; the rest is dropped, since
+    // keys without a descriptor never survive a load
     const migrate = (stored: Record<string, unknown>) => {
         if (stored['view.mode'] === undefined && typeof stored['selection.footprint'] === 'number') {
             stored['view.mode'] = stored['selection.footprint'] > 0 ? 'rings' : 'centers';
@@ -305,14 +304,9 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
                 stored[key] = (stored[legacy] as number) >= 0.5;
             }
         }
-        const modeSettings = stored[`view.${stored['view.mode'] === 'rings' ? 'rings' : 'centers'}Settings`];
-        if (typeof modeSettings === 'object' && modeSettings !== null) {
-            for (const key of ['selectionColor', 'outlineSelection']) {
-                const value = (modeSettings as Record<string, unknown>)[key];
-                if (stored[`view.${key}`] === undefined && typeof value === 'boolean') {
-                    stored[`view.${key}`] = value;
-                }
-            }
+        // hiding the gaussians under the markers became the markers-only view
+        if (stored['view.markersOnly'] === undefined && stored['view.gaussians'] === false) {
+            stored['view.markersOnly'] = true;
         }
     };
 

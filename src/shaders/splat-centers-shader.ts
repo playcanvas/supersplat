@@ -28,7 +28,6 @@ uniform drawMask: u32;
 // x-ray off: an unselected centre draws only if its gaussian is selectable
 uniform visibleOnly: u32;
 uniform colorBlend: f32;
-uniform selectionBlend: f32;
 uniform selectedClr: vec4f;
 uniform unselectedClr: vec4f;
 
@@ -89,13 +88,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     // an unselected centre blends from the gaussian's own colour (as cached,
     // so graded) toward the flat unselected colour by colorBlend; a selected
-    // one toward the selection colour by selectionBlend
+    // one takes the selection colour
     let rgbBits = a.z;
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
     let selected = (flags & 1u) != 0u;
     let tint = select(uniform.unselectedClr.rgb, uniform.selectedClr.rgb, selected);
-    let blend = select(uniform.colorBlend, uniform.selectionBlend, selected);
+    let blend = select(uniform.colorBlend, 1.0, selected);
     output.overlayColor = vec4f(mix(color, tint, blend), 1.0);
     return output;
 }

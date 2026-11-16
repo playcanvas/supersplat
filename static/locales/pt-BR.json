@@ -105,7 +105,6 @@
     "panel.settings.fov.tooltip": "Campo de visão da câmera, em graus.",
     "panel.settings.fov-dolly.tooltip": "Mudar o FOV move a câmera para manter o enquadramento, em vez de dar zoom.",
     "panel.settings.reset": "Redefinir padrões",
-    "panel.appearance": "Aparência",
     "mode-toolbar.centers": "Centros",
     "mode-toolbar.centers.tooltip": "Um ponto no centro de cada gaussiana. Seleciona pelo centro.",
     "mode-toolbar.rings": "Anéis",

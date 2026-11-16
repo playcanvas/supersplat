@@ -105,7 +105,6 @@
     "panel.settings.fov.tooltip": "Camera field of view in degrees.",
     "panel.settings.fov-dolly.tooltip": "FOV changes move the camera to keep the framing instead of zooming.",
     "panel.settings.reset": "Reset to Defaults",
-    "panel.appearance": "Appearance",
     "mode-toolbar.centers": "Centers",
     "mode-toolbar.centers.tooltip": "A dot at every gaussian center. Selects by center point.",
     "mode-toolbar.rings": "Rings",

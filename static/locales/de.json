@@ -105,7 +105,6 @@
     "panel.settings.fov.tooltip": "Sichtfeld der Kamera in Grad.",
     "panel.settings.fov-dolly.tooltip": "FoV-Änderungen bewegen die Kamera, um den Bildausschnitt zu halten, statt zu zoomen.",
     "panel.settings.reset": "Auf Standard zurücksetzen",
-    "panel.appearance": "Erscheinungsbild",
     "mode-toolbar.centers": "Zentren",
     "mode-toolbar.centers.tooltip": "Ein Punkt an jedem Gaussian-Zentrum. Auswahl nach Zentrum.",
     "mode-toolbar.rings": "Ringe",

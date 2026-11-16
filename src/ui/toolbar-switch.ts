@@ -83,11 +83,7 @@ const createSwitch = <T>(
     // relayout (first display) places the options
     new ResizeObserver(place).observe(container.dom);
 
-    // the option a press landed on, for a toolbar that handles presses itself
-    const optionAt = (target: Node) => options[buttons.findIndex((button) => button.dom.contains(target))];
-
-    return { container, buttons, setValue, optionAt };
+    return { container, buttons, setValue };
 };
 
 export { createSwitch };
-export type { SwitchOption };

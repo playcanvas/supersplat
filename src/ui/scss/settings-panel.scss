@@ -39,13 +39,13 @@
     }
 
     // section labels sit a step below the panel title
-    .options-panel-section {
+    & > .options-panel-section {
         & > .panel-header-label {
             font-size: 11px;
         }
     }
 
-    .settings-panel-row {
+    & > .settings-panel-row {
         display: flex;
         flex-direction: row;
         align-items: center;
@@ -58,12 +58,6 @@
 
         &.options-panel-row-clickable {
             cursor: pointer;
-        }
-
-        // setting has no effect right now (the markers switch hides what it
-        // controls); still editable
-        &.overridden {
-            opacity: 0.4;
         }
 
         // the label carries the row's tooltip, so it spans the row's full
@@ -131,11 +125,11 @@
         }
     }
 
-    .settings-panel-row.options-panel-row-indent {
+    & > .settings-panel-row.options-panel-row-indent {
         padding-left: 24px;
     }
 
-    .settings-panel-row.options-panel-icon-row {
+    & > .settings-panel-row.options-panel-icon-row {
         justify-content: center;
         gap: 4px;
         height: 28px;
@@ -177,12 +171,6 @@
                     svg {
                         color: $clr-active;
                     }
-                }
-
-                // setting has no effect right now (hidden by the edit view
-                // switch); still clickable
-                &.overridden {
-                    opacity: 0.4;
                 }
             }
 

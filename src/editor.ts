@@ -1012,16 +1012,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // preference application sets the mode, both modes' settings and the
-    // markers switch explicitly: the user-facing side effects below (a mode
-    // switch or an unselected marker toggle showing the markers) must stay
-    // out of its way
-    let prefsSuspendDepth = 0;
+    // preference application sets the mode and the markers switch explicitly:
+    // the user-facing side effect below (a mode switch showing the markers)
+    // must stay out of its way
+    let prefsSuspended = 0;
     events.on('preferences.suspend', () => {
-        prefsSuspendDepth++;
+        prefsSuspended++;
     });
     events.on('preferences.resume', () => {
-        prefsSuspendDepth = Math.max(0, prefsSuspendDepth - 1);
+        prefsSuspended = Math.max(0, prefsSuspended - 1);
     });
 
     // markers switch (tab): while off, unselected gaussians render raw - no
@@ -1047,7 +1046,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     });
 
     // screen-space picks take the visible surface (true) or everything through
-    // all depths (false). The right toolbar's x-ray switch is this, inverted.
+    // all depths (false). The mode strip's X-Ray toggle is this, inverted.
     // Global: it is a property of the viewport, not of the mode
     let useDepth = false;
 
@@ -1092,10 +1091,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     flag('selectionColor', false);
     flag('outlineSelection', false);
 
-    events.on('view.toggleMarkersOnly', () => {
-        events.fire('view.setMarkersOnly', !events.invoke('view.markersOnly'));
-    });
-
     // the mode: which marker every gaussian gets, and what geometry counts
     // for a screen-space pick. The marker flags the renderer and the API read
     // follow it, and the fill hides only in the markers-only view
@@ -1116,7 +1111,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         events.fire('view.mode', mode);
         events.fire('selection.footprint', mode === 'rings' ? 1 : 0);
         // choosing a mode is asking to see its markers
-        if (prefsSuspendDepth === 0) {
+        if (prefsSuspended === 0) {
             setEditView(true);
         }
     };

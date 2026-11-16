@@ -105,7 +105,6 @@
     "panel.settings.fov.tooltip": "Поле зрения камеры в градусах.",
     "panel.settings.fov-dolly.tooltip": "При изменении FOV камера сдвигается, сохраняя кадрирование, а не зумирует.",
     "panel.settings.reset": "Сбросить настройки",
-    "panel.appearance": "Внешний вид",
     "mode-toolbar.centers": "Центры",
     "mode-toolbar.centers.tooltip": "Точка в центре каждой гауссианы. Выбор по центру.",
     "mode-toolbar.rings": "Кольца",

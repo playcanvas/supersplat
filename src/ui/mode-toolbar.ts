@@ -67,12 +67,7 @@ class ModeToolbar extends Container {
         // inverted when the row's wording is the flag's opposite); a slider
         // row edits a view value in place. The rows pull the live value when
         // the flyout opens and follow the notify events while it is open
-        const switchRow = (
-            localeKey: string,
-            name: string,
-            inverted = false,
-            visible: () => boolean = () => true
-        ): MenuItem => {
+        const switchRow = (localeKey: string, name: string, inverted = false): MenuItem => {
             const toggle = new BooleanInput({ type: 'toggle', class: 'mode-toolbar-menu-switch', value: false });
             // the row handles the press, so the switch only shows the state
             toggle.dom.style.pointerEvents = 'none';
@@ -86,7 +81,7 @@ class ModeToolbar extends Container {
                 keepOpen: true,
                 isVisible: () => {
                     update();
-                    return visible();
+                    return true;
                 },
                 onSelect: () => events.fire(`view.set${capitalize(name)}`, !events.invoke(`view.${name}`))
             };
@@ -117,9 +112,9 @@ class ModeToolbar extends Container {
         };
 
         // press and hold opens a button's flyout below it; a short press runs
-        // the button's own action, told where the press landed. Pressing
+        // the button's own action. Pressing
         // again while the flyout is open closes it
-        const holdToOpen = (button: Element, popup: MenuPanel, shortPress: (target: Node) => void) => {
+        const holdToOpen = (button: Element, popup: MenuPanel, shortPress: () => void) => {
             button.class.add('toolbar-flyout');
             popup.class.add('mode-toolbar-menu');
             this.append(popup);
@@ -161,7 +156,7 @@ class ModeToolbar extends Container {
                 if (timer !== -1) {
                     cancelHold();
                     if (!suppress) {
-                        shortPress(event.target as Node);
+                        shortPress();
                     }
                 }
             });
@@ -169,7 +164,7 @@ class ModeToolbar extends Container {
             // keyboard activation arrives as a click with detail 0
             button.dom.addEventListener('click', (event: MouseEvent) => {
                 if (event.detail === 0) {
-                    shortPress(event.target as Node);
+                    shortPress();
                 }
             });
 
@@ -189,8 +184,8 @@ class ModeToolbar extends Container {
             );
         };
 
-        // the mode: one two-option switch. Presses are handled by the flyout
-        // logic below, which selects the option the press landed on
+        // the mode: one two-option switch. Each option handles its own presses
+        // below, so a hold can open that option's flyout
         const modeSwitch = createSwitch<ViewMode>(
             'horizontal',
             [

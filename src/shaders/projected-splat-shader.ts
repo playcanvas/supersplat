@@ -27,7 +27,6 @@ uniform pickOp: i32;
 uniform pickFootprint: f32;
 uniform ringColor: vec4f;
 uniform selectedRingColor: vec4f;
-uniform unselectedColor: vec4f;
 uniform selectedColor: vec4f;
 uniform ringSize: f32;
 uniform ringMask: u32;
@@ -147,14 +146,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
     var gaussianRgb = color;
-    if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 2u) == 0u) {
-        // unselected and selected gaussians tint independently, each from the
-        // splat's own colour toward its group's colour
-        if ((flags & 1u) != 0u) {
-            gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
-        } else {
-            gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
-        }
+    // a selected gaussian tints from the splat's own colour toward the
+    // selection colour; the unselected fill is never tinted
+    if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 3u) == 1u) {
+        gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
     }
     // ring band colours, likewise from the untinted base: an unselected ring
     // toward the flat unselected colour, a selected one toward the selection colour

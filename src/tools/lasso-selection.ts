@@ -103,6 +103,12 @@ class LassoSelection {
 
         const pointermove = (e: PointerEvent) => {
             if (dragId !== undefined) {
+                // a mouse moving with no button held missed its release: this
+                // move ends the stroke (see brush-selection)
+                if (e.pointerId === dragId && e.pointerType === 'mouse' && e.buttons === 0) {
+                    pointerup(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -151,6 +157,7 @@ class LassoSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
+            parent.addEventListener('lostpointercapture', pointercancel);
         };
 
         this.deactivate = () => {
@@ -164,6 +171,7 @@ class LassoSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
+            parent.removeEventListener('lostpointercapture', pointercancel);
         };
     }
 }

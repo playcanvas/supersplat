@@ -68,6 +68,12 @@ class EyedropperSelection {
 
         const pointermove = (event: PointerEvent) => {
             if (event.pointerId === pointerId) {
+                // a mouse moving with no button held missed its release: this
+                // move ends the press (see brush-selection)
+                if (event.pointerType === 'mouse' && event.buttons === 0) {
+                    pointerup(event);
+                    return;
+                }
                 event.preventDefault();
                 event.stopPropagation();
             }
@@ -99,6 +105,7 @@ class EyedropperSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
+            parent.addEventListener('lostpointercapture', pointercancel);
         };
 
         this.deactivate = () => {
@@ -109,6 +116,7 @@ class EyedropperSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
+            parent.removeEventListener('lostpointercapture', pointercancel);
         };
     }
 }

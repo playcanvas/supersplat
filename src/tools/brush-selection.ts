@@ -106,6 +106,14 @@ class BrushSelection {
 
         const pointermove = (e: PointerEvent) => {
             if (dragId !== undefined) {
+                // a mouse moving with no button held missed its release (it
+                // landed outside the window, or the capture was lost), which
+                // would leave the stroke painting until the tool is switched:
+                // this move ends it
+                if (e.pointerId === dragId && e.pointerType === 'mouse' && e.buttons === 0) {
+                    pointerup(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -174,6 +182,7 @@ class BrushSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
+            parent.addEventListener('lostpointercapture', pointercancel);
             parent.addEventListener('wheel', wheel);
         };
 
@@ -188,6 +197,7 @@ class BrushSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
+            parent.removeEventListener('lostpointercapture', pointercancel);
             parent.removeEventListener('wheel', wheel);
         };
 

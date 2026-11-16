@@ -53,6 +53,12 @@ class RectSelection {
 
         const pointermove = (e: PointerEvent) => {
             if (e.pointerId === dragId) {
+                // a mouse moving with no button held missed its release: this
+                // move ends the drag (see brush-selection)
+                if (e.pointerType === 'mouse' && e.buttons === 0) {
+                    pointerup(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -117,6 +123,7 @@ class RectSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
+            parent.addEventListener('lostpointercapture', pointercancel);
         };
 
         this.deactivate = () => {
@@ -128,6 +135,7 @@ class RectSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
+            parent.removeEventListener('lostpointercapture', pointercancel);
         };
     }
 

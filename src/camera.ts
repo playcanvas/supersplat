@@ -149,6 +149,12 @@ class Camera extends Element {
     mainPass: RenderPassForward;
     splatPass: RenderPassForward;
     splatIdPass: RenderPassForward;
+    // an edited frame's extra splat pass into the id target, its scatter and
+    // the clear that follows, so the real splat pass draws rings from this
+    // frame's visibility bits (ProjectedSplatRenderer.visibilityPrepassWanted)
+    splatIdPrePass: RenderPassForward;
+    visibilityPrePass: FramePass;
+    preClearPass: RenderPass;
     stochasticSplatPass: RenderPassForward;
     stochasticSplatIdPass: RenderPassForward;
     warpSplatPass: RenderPassForward;
@@ -419,6 +425,11 @@ class Camera extends Element {
         this.depthReducePass = new FramePass(device);
         this.depthReducePass.name = 'depthReduce';
         this.depthReducePass.execute = () => scene.projectedSplatRenderer.afterSplatPass();
+        this.splatIdPrePass = new RenderPassForward(device, app.scene, camera);
+        this.preClearPass = new RenderPass(device);
+        this.visibilityPrePass = new FramePass(device);
+        this.visibilityPrePass.name = 'visibilityPre';
+        this.visibilityPrePass.execute = () => scene.projectedSplatRenderer.prepassVisibility();
         this.finalPass = new SimpleRenderPass(
             device,
             new ShaderQuad(device, vertexShader, fragmentShader, 'final-blit'),
@@ -541,6 +552,9 @@ class Camera extends Element {
         this.mainPass?.destroy();
         this.splatPass?.destroy();
         this.splatIdPass?.destroy();
+        this.splatIdPrePass?.destroy();
+        this.visibilityPrePass?.destroy();
+        this.preClearPass?.destroy();
         this.stochasticSplatPass?.destroy();
         this.stochasticSplatIdPass?.destroy();
         this.warpSplatPass?.destroy();
@@ -692,6 +706,13 @@ class Camera extends Element {
             this.splatIdPass.init(this.splatIdTarget);
             this.splatIdPass.addLayer(scene.splatLayer, false, false);
             this.splatIdPass.addLayer(scene.splatLayer, true, false);
+            this.splatIdPrePass.init(this.splatIdTarget);
+            this.splatIdPrePass.addLayer(scene.splatLayer, false, false);
+            this.splatIdPrePass.addLayer(scene.splatLayer, true, false);
+            this.preClearPass.init(this.splatIdTarget);
+            this.preClearPass.setClearColor(new Color(0, 0, 0, 0));
+            this.preClearPass.setClearDepth(1);
+            this.preClearPass.setClearStencil(0);
 
             this.stochasticSplatPass.init(this.stochasticTarget);
             this.stochasticSplatPass.addLayer(scene.splatLayer, false, false);
@@ -720,6 +741,9 @@ class Camera extends Element {
             // assign render passes to camera
             this.camera.framePasses = [
                 this.clearPass,
+                this.splatIdPrePass,
+                this.visibilityPrePass,
+                this.preClearPass,
                 this.stochasticClearPass,
                 this.mainPass,
                 this.splatPass,
@@ -863,6 +887,10 @@ class Camera extends Element {
         this.visibilityIds = ids && !warpedRender;
         this.splatPass.enabled = !movingRender && !ids;
         this.splatIdPass.enabled = !movingRender && ids;
+        const pre = this.splatIdPass.enabled && this.scene.projectedSplatRenderer.visibilityPrepassWanted();
+        this.splatIdPrePass.enabled = pre;
+        this.visibilityPrePass.enabled = pre;
+        this.preClearPass.enabled = pre;
         this.stochasticClearPass.enabled = movingRender;
         this.stochasticSplatPass.enabled = movingRender && !warpedRender && !ids;
         this.stochasticSplatIdPass.enabled = movingRender && !warpedRender && ids;

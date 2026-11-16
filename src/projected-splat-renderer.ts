@@ -244,6 +244,12 @@ class ProjectedSplatRenderer {
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
     private visibilityRepaint = false;
+    // this frame's bits were computed by the pre-pass, so the splat pass
+    // read current ones and the post-pass scatter can be skipped
+    private visibilityFresh = false;
+    // a layer's gaussians changed since the last frame (an edit, not a forced
+    // repaint): the next frame computes its bits before the splat pass
+    private contentEdited = false;
     private readonly visibilityView = new Mat4();
     private visibilityCompute: Compute | null = null;
     private visibilityShader: Shader | null = null;
@@ -274,6 +280,13 @@ class ProjectedSplatRenderer {
         this.sorter = new ComputeRadixSort(this.device, { indirect: true });
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
         this.visibleBits = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+
+        // the edits that change which gaussians own pixels (see visibilityPrepassWanted)
+        for (const name of ['splat.stateChanged', 'splat.positionsChanged']) {
+            scene.events.on(name, () => {
+                this.contentEdited = true;
+            });
+        }
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -1304,6 +1317,9 @@ class ProjectedSplatRenderer {
             this.frameFilterVisible = filterVisible && ringsCount > 0;
             this.frameRingsFiltered = this.frameFilterVisible && (ringsMask & 1) !== 0;
             this.frameTail = showCenters;
+            this.visibilityFresh = false;
+            // Camera read it for this frame's pre-pass before this
+            this.contentEdited = false;
         }
         this.submissionCpuMs = performance.now() - start;
     }
@@ -1321,6 +1337,27 @@ class ProjectedSplatRenderer {
         );
     }
 
+    // Whether this frame should compute the bits before the splat pass as well
+    // (Camera's pre-pass: an extra splat pass into the id target, scattered
+    // and cleared before the real one). Rings are drawn by the splat pass, so
+    // they otherwise read the previous frame's bits, and a frame that edited
+    // the scene would show the gaussians an edit exposed without their rings
+    // until the next frame - a visible flash after a delete. Camera moves
+    // keep the cheaper one-frame lag and settle with a repaint
+    visibilityPrepassWanted() {
+        return this.visibilityWanted() && !!this.scene.events.invoke('view.rings') && this.contentEdited;
+    }
+
+    // Camera's pre-pass compute: the bits from the extra splat pass
+    prepassVisibility() {
+        if (!this.frameFilterVisible || !this.scatterBits()) {
+            return;
+        }
+        this.visibilityView.copy(this.viewProjection);
+        this.visibilityRepaint = false;
+        this.visibilityFresh = true;
+    }
+
     // Camera's compute pass between the splat and gizmo passes
     afterSplatPass() {
         this.scatterVisibility();
@@ -1329,16 +1366,34 @@ class ProjectedSplatRenderer {
 
     // Scatter the splat pass's id attachment into visibleBits. The centres
     // draw after this pass, so they read this frame's bits; rings are drawn by
-    // the splat pass itself, so they read the previous frame's. A frame whose
-    // camera moved, or that edited the scene, is followed by one repaint so the
-    // settled image shows this camera's set - once, since the repaint itself
-    // changes nothing
+    // the splat pass itself, so they read the previous frame's unless the
+    // pre-pass ran. A frame whose camera moved is followed by one repaint so
+    // the settled image shows this camera's set - once, since the repaint
+    // itself changes nothing
     private scatterVisibility() {
-        const { scene, device } = this;
-        const idTexture = scene.camera.visibilityBuffer;
-        if (!this.frameFilterVisible || !idTexture) {
+        const { scene } = this;
+        if (!this.frameFilterVisible || this.visibilityFresh || !this.scatterBits()) {
             this.visibilityRepaint = false;
             return;
+        }
+
+        const moved = !this.visibilityView.equals(this.viewProjection);
+        this.visibilityView.copy(this.viewProjection);
+        if (this.frameRingsFiltered && (moved || (scene.editedRender && !this.visibilityRepaint))) {
+            this.visibilityRepaint = true;
+            scene.forceRender = true;
+        } else {
+            this.visibilityRepaint = false;
+        }
+    }
+
+    // clear the bits and scatter the id attachment into them; false if there
+    // is no attachment to read
+    private scatterBits() {
+        const { scene, device } = this;
+        const idTexture = scene.camera.visibilityBuffer;
+        if (!idTexture) {
+            return false;
         }
         this.visibleBits.clear();
         const compute = this.getVisibilityCompute();
@@ -1367,15 +1422,7 @@ class ProjectedSplatRenderer {
             tail.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
             device.computeDispatch([tail], 'ProjectedSplatVisibilityTail');
         }
-
-        const moved = !this.visibilityView.equals(this.viewProjection);
-        this.visibilityView.copy(this.viewProjection);
-        if (this.frameRingsFiltered && (moved || (scene.editedRender && !this.visibilityRepaint))) {
-            this.visibilityRepaint = true;
-            scene.forceRender = true;
-        } else {
-            this.visibilityRepaint = false;
-        }
+        return true;
     }
 
     private getVisibilityCompute() {

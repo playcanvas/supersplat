@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import { CommandQueue } from './.build/src/command-queue.js';
 import { EditHistory } from './.build/src/edit-history.js';
+import { MultiOp } from './.build/src/edit-ops.js';
 import { EditorError } from './.build/src/editor-command.js';
 import { Events } from './.build/src/events.js';
 import { runSelectionGesture } from './.build/src/selection-gesture.js';
@@ -280,6 +281,14 @@ const checks = {
         }), /no canvas/);
         await queue.enqueue(() => log.push('next'));
         assert.deepEqual(log, ['next']);
+    },
+
+    async 'MultiOp undoes its ops in reverse order'() {
+        const log = [];
+        const op = new MultiOp([makeOp(log, 'a'), makeOp(log, 'b'), makeOp(log, 'c')]);
+        await op.do();
+        await op.undo();
+        assert.deepEqual(log, ['do:a', 'do:b', 'do:c', 'undo:c', 'undo:b', 'undo:a']);
     }
 };
 

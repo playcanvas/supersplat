@@ -616,9 +616,10 @@ class MultiOp {
         }
     }
 
+    // undo in reverse, so each op sees the state its do() left behind
     async undo() {
-        for (const op of this.ops) {
-            await op.undo();
+        for (let i = this.ops.length - 1; i >= 0; i--) {
+            await this.ops[i].undo();
         }
     }
 

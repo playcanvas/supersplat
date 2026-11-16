@@ -110,7 +110,8 @@ const checks = {
             assert.deepEqual(notices, [0, 1]);
             notices.length = 0;
             await api.history.undo();
-            assert.deepEqual(notices, [0, 1]);
+            // undo walks the layers back in reverse
+            assert.deepEqual(notices, [1, 0]);
         } finally {
             layers.forEach(layer => layer.instances.destroy());
         }

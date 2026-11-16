@@ -111,7 +111,7 @@ class PointerController {
                 // Only release if this is the button that was initially pressed.
                 // pointercancel carries button -1, so it releases whatever is held
                 if (event.button === pressedButton || event.type === 'pointercancel') {
-                    // MMB tap (no significant movement) -> focus on cursor point (orbit only; fly uses MMB for zoom)
+                    // MMB tap (no significant movement) -> focus on cursor point (orbit only)
                     if (
                         pressedButton === 1 &&
                         camera.controlMode === 'orbit' &&
@@ -155,11 +155,21 @@ class PointerController {
                 y = event.offsetY;
 
                 if (camera.controlMode === 'fly') {
-                    // Fly mode: left-drag to look around, middle to zoom, right works same as orbit
+                    // Fly mode: left-drag to look around; middle and right work as
+                    // in orbit mode, with look in place of orbit
                     if (pressedButton === 0) {
                         look(dx, dy);
                     } else if (pressedButton === 1) {
-                        zoom(dy * -0.02);
+                        // middle button (Blender-style): look, Shift -> pan, Ctrl -> zoom
+                        const mod = event.shiftKey ? 'pan' : event.ctrlKey ? 'zoom' : 'look';
+
+                        if (mod === 'look') {
+                            look(dx, dy);
+                        } else if (mod === 'zoom') {
+                            zoom(dy * -0.02);
+                        } else {
+                            pan(x, y, dx, dy);
+                        }
                     } else if (pressedButton === 2) {
                         // Right button: same behavior as orbit mode
                         const mod =

@@ -104,10 +104,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         output.position = discardPosition;
         return output;
     }
-    // with x-ray off the selected layer's quads write the id attachment, so they
-    // rasterize even with their fill hidden and cover what the pick's quads
-    // cover (see ProjectedSplatRenderer.scatterVisibility)
-    let writesId = uniform.visibleOnly != 0u
+    // with x-ray off the selected layer's unlocked quads write the id
+    // attachment, so they rasterize even with their fill hidden and cover what
+    // the pick's quads cover (see ProjectedSplatRenderer.scatterVisibility).
+    // Locked splats are not drawn by the pick, so they own no pixels
+    let writesId = uniform.visibleOnly != 0u && (flags & 2u) == 0u
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount;
     #ifndef PICK_PASS
         // with the gaussian display off for this splat's group (unselected or
@@ -310,8 +311,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // the id attachment wherever a visible-surface pick would count them,
         // which is every fragment of the footprint ellipse, however faint (the
         // pick shader's id branch has no alpha test). Drawn back to front, the
-        // frontmost footprint ends up owning the pixel, as it does in the pick
-        let writeId = uniform.visibleOnly != 0u && rings;
+        // frontmost footprint ends up owning the pixel, as it does in the pick.
+        // Locked splats are not drawn by the pick, so they own no pixels
+        let writeId = uniform.visibleOnly != 0u && rings && (gaussianFlags & 2u) == 0u;
         if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)
             && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
@@ -350,12 +352,16 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         let h = hashU32((quad.x * 1973u) ^ (quad.y * 9277u) ^ ((gaussianId + 1u) * 26699u));
         let stratum = ((pix.y & 1u) * 2u + (pix.x & 1u)) ^ (h & 3u);
         let rnd = (f32(stratum) + f32(h >> 8u) * (1.0 / 16777216.0)) * 0.25;
-        if (rnd >= alpha) {
+        // a hidden fill still owns its pixels for the id attachment (the pick
+        // has no alpha test): its fragments stay, as transparent samples that
+        // the resolve treats as empty, so the depth test can pick the frontmost
+        let ownerOnly = writeId && !showGaussian;
+        if (rnd >= alpha && !ownerOnly) {
             discard;
         }
         // Opaque coverage in the dedicated RGBA8 splat target; empty pixels
         // remain transparent for the resolve to composite over the world pass.
-        output.color = vec4f(color, 1.0);
+        output.color = select(vec4f(color, 1.0), vec4f(0.0), ownerOnly);
         output.color1 = vec4f(0.0);
         // the kept sample is the pixel's visibility sample: the depth test
         // leaves the frontmost one owning the id attachment

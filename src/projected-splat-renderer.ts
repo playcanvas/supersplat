@@ -281,12 +281,21 @@ class ProjectedSplatRenderer {
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
         this.visibleBits = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
 
-        // the edits that change which gaussians own pixels (see visibilityPrepassWanted)
-        for (const name of ['splat.stateChanged', 'splat.positionsChanged']) {
-            scene.events.on(name, () => {
+        // the edits that change which gaussians own pixels (see
+        // visibilityPrepassWanted): a layer's gaussians moving, or its live or
+        // locked count changing. A selection change also reports a state change
+        // but owns nothing new, so it is told apart by the counts
+        const owners = new WeakMap<Splat, [number, number]>();
+        scene.events.on('splat.stateChanged', (splat: Splat) => {
+            const last = owners.get(splat);
+            if (!last || last[0] !== splat.numSplats || last[1] !== splat.numLocked) {
+                owners.set(splat, [splat.numSplats, splat.numLocked]);
                 this.contentEdited = true;
-            });
-        }
+            }
+        });
+        scene.events.on('splat.positionsChanged', () => {
+            this.contentEdited = true;
+        });
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',

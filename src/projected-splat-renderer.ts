@@ -73,7 +73,7 @@ const SORT_KEY_BITS = 20;
 
 // the id pass's inputs (see updateIdPass): the view-projection, the target
 // size and the draw settings that decide which footprints it rasterises
-const ID_KEY_SIZE = 27;
+const ID_KEY_SIZE = 28;
 
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
@@ -929,6 +929,9 @@ class ProjectedSplatRenderer {
         if (this.capacity === 0 || !this.sortKeys || !this.compactEntries || !this.cacheA || !this.cacheB) {
             this.centersEntity.enabled = false;
             this.frameStochastic = false;
+            // nothing to draw, so no id pass is owed (updateIdPass never runs)
+            this.idValid = false;
+            this.idPassOwed = false;
             return;
         }
 
@@ -1362,6 +1365,10 @@ class ProjectedSplatRenderer {
             key[25] = minPixelSize;
             key[26] =
                 selectedSplat && effectiveModel(selectedSplat.resource.model, antiAlias) === 'antialiased' ? 1 : 0;
+            // the colour panel's previewed transparency scales the selected
+            // layer's opacity, and a gaussian previewed to zero drops out (the
+            // pick previews it too); the other grade terms leave ownership be
+            key[27] = pending && !this.scene.viewOverride ? this.previewTerms.transparency : 1;
             this.updateIdPass();
         }
         this.submissionCpuMs = performance.now() - start;

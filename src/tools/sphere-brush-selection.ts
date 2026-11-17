@@ -248,7 +248,6 @@ class SphereBrushSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
-            parent.addEventListener('lostpointercapture', pointercancel);
             parent.addEventListener('wheel', wheel);
         };
 
@@ -263,7 +262,6 @@ class SphereBrushSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
-            parent.removeEventListener('lostpointercapture', pointercancel);
             parent.removeEventListener('wheel', wheel);
         };
 

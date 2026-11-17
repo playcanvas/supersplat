@@ -123,7 +123,6 @@ class RectSelection {
             parent.addEventListener('pointermove', pointermove);
             parent.addEventListener('pointerup', pointerup);
             parent.addEventListener('pointercancel', pointercancel);
-            parent.addEventListener('lostpointercapture', pointercancel);
         };
 
         this.deactivate = () => {
@@ -135,7 +134,6 @@ class RectSelection {
             parent.removeEventListener('pointermove', pointermove);
             parent.removeEventListener('pointerup', pointerup);
             parent.removeEventListener('pointercancel', pointercancel);
-            parent.removeEventListener('lostpointercapture', pointercancel);
         };
     }
 

@@ -841,8 +841,10 @@ class Camera extends Element {
             this.warpSplatPass.addLayer(scene.splatLayer, false, false);
             this.warpSplatPass.addLayer(scene.splatLayer, true, false);
         }
-        // the id pass runs on every frame that wants the visibility bits,
-        // sorted or stochastic (the experimental warp path never does)
+        // the id pass is armed on every frame that wants the visibility bits,
+        // sorted or stochastic (the experimental warp path never does); the
+        // projected renderer turns it off again on frames where the bits
+        // would not change (ProjectedSplatRenderer.updateIdPass)
         const { movingRender, warpedRender } = this.scene;
         this.visibilityIds = this.scene.projectedSplatRenderer.visibilityWanted() && !warpedRender;
         if (this.visibilityIds) {

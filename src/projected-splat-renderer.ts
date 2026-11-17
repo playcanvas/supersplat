@@ -71,6 +71,10 @@ const ENTRY_ALIGNMENT = 256;
 // bits are always zero and sorting more than this cannot change the ordering
 const SORT_KEY_BITS = 20;
 
+// the id pass's inputs (see updateIdPass): the view-projection, the target
+// size and the draw settings that decide which footprints it rasterises
+const ID_KEY_SIZE = 25;
+
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
 // a frame's span reports several frames after the threshold that produced it,
@@ -245,6 +249,19 @@ class ProjectedSplatRenderer {
     private idPassDepthFunc: number = FUNC_LESS;
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
+    // The id pass runs only when its bits could differ from the last ones
+    // it produced (updateIdPass): the view, the target, the drawn set or a
+    // layer's gaussians changed. While the camera keeps moving it is skipped
+    // and the markers hold the bits from where the move began; the frame the
+    // camera settles on is owed to the scene, which renders it
+    idPassOwed = false;
+    private idValid = false;
+    private readonly idKey = new Float64Array(ID_KEY_SIZE);
+    private readonly frameIdKey = new Float64Array(ID_KEY_SIZE);
+    private idTexture: Texture | null = null;
+    private contentVersion = 0;
+    private idContentVersion = -1;
+    private prevCameraChanged = false;
     private visibilityCompute: Compute | null = null;
     private visibilityShader: Shader | null = null;
     private visibilityBindGroupFormat: BindGroupFormat | null = null;
@@ -274,6 +291,20 @@ class ProjectedSplatRenderer {
         this.sorter = new ComputeRadixSort(this.device, { indirect: true });
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
         this.visibleBits = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+
+        // the edits that can change which gaussians own pixels: their state
+        // (removal, locks, the selection), positions, opacity, a layer's
+        // visibility
+        for (const name of [
+            'splat.stateChanged',
+            'splat.positionsChanged',
+            'splat.colorsChanged',
+            'splat.visibility'
+        ]) {
+            scene.events.on(name, () => {
+                this.contentVersion++;
+            });
+        }
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -876,6 +907,7 @@ class ProjectedSplatRenderer {
                 Math.max(1, Math.ceil(count / 32)) * 4,
                 BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
             );
+            this.idValid = false;
             this.motionContribution = 0;
         }
 
@@ -1222,7 +1254,8 @@ class ProjectedSplatRenderer {
         const showGaussians = events.invoke('view.gaussians') || pending ? 1 : 0;
         this.material.setParameter('showGaussians', showGaussians);
         this.material.setParameter('showSelectedGaussians', showGaussians);
-        this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
+        const ringSize = showRings ? events.invoke('view.ringSize') * 0.01 : 0;
+        this.material.setParameter('ringSize', ringSize);
         this.material.setParameter('ringMask', ringsMask);
         this.material.setParameter('visible', this.visibleBits);
         this.material.setParameter('visibleOnly', filterVisible ? 1 : 0);
@@ -1312,8 +1345,59 @@ class ProjectedSplatRenderer {
         if (!forPick) {
             this.frameFilterVisible = filterVisible && ringsCount > 0;
             this.frameTail = showCenters;
+            const key = this.frameIdKey;
+            key.set(this.viewProjection.data);
+            key[16] = targetSize.width;
+            key[17] = targetSize.height;
+            key[18] = ringsBase;
+            key[19] = ringsCount;
+            key[20] = ringsMask;
+            key[21] = ringSize;
+            key[22] = radialSort ? 1 : 0;
+            key[23] = this.stochastic ? 1 : 0;
+            key[24] = showCenters ? 1 : 0;
+            this.updateIdPass();
         }
         this.submissionCpuMs = performance.now() - start;
+    }
+
+    // Whether this frame runs the id pass (Camera enables it whenever x-ray
+    // off wants the bits; this turns it off when they would not change): the
+    // first frame of a camera move runs it, the frames that continue the move
+    // skip it, and the frame the camera settles on runs it again
+    private updateIdPass() {
+        const { scene } = this;
+        const camera = scene.camera;
+        const moving = scene.cameraChanged && this.prevCameraChanged;
+        this.prevCameraChanged = scene.cameraChanged;
+        if (!camera.visibilityIds || !this.frameFilterVisible) {
+            this.idValid = false;
+            this.idPassOwed = false;
+            camera.idClearPass.enabled = false;
+            camera.idPass.enabled = false;
+            camera.visibilityPass.enabled = false;
+            return;
+        }
+        let changed =
+            !this.idValid ||
+            camera.visibilityBuffer !== this.idTexture ||
+            this.contentVersion !== this.idContentVersion;
+        for (let i = 0; i < ID_KEY_SIZE && !changed; i++) {
+            changed = this.frameIdKey[i] !== this.idKey[i];
+        }
+        const run = changed && !moving;
+        camera.idClearPass.enabled = run;
+        camera.idPass.enabled = run;
+        camera.visibilityPass.enabled = run;
+        if (run) {
+            this.idValid = true;
+            this.idKey.set(this.frameIdKey);
+            this.idTexture = camera.visibilityBuffer;
+            this.idContentVersion = this.contentVersion;
+            this.idPassOwed = false;
+        } else if (changed) {
+            this.idPassOwed = true;
+        }
     }
 
     // whether this frame should run the id pass: x-ray off, with the markers

@@ -116,11 +116,21 @@ const registerTimelineEvents = (events: Events) => {
     let animHandle: EventHandle = null;
 
     const play = () => {
-        let time = frame;
+        // with loop off, playing from the last frame starts over from the first
+        let time = !loop && frame >= frames - 1 ? 0 : frame;
 
         // handle application update tick
         animHandle = events.on('update', (dt: number) => {
-            time = (time + dt * frameRate) % frames;
+            time += dt * frameRate;
+            if (loop) {
+                time %= frames;
+            } else if (time >= frames - 1) {
+                // with loop off, stop on the last frame instead of wrapping to the first
+                setFrame(frames - 1);
+                events.fire('timeline.time', frames - 1);
+                setPlaying(false);
+                return;
+            }
             setFrame(Math.floor(time));
             events.fire('timeline.time', time);
         });

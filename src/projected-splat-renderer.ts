@@ -232,32 +232,19 @@ class ProjectedSplatRenderer {
     private depthReduceBindGroupFormat: BindGroupFormat | null = null;
     private depthReduceSubgroups = false;
     // the visibility bits (scatterVisibility): one bit per cache entry, set
-    // where a gaussian of the selected layer owns a pixel of the splat pass's
-    // id attachment, which is the gaussian a visible-surface drag there would
-    // select. With x-ray off the unselected markers draw for those gaussians
-    // alone, so the markers show what a drag could select
+    // where a gaussian of the selected layer owns a pixel of the id pass's
+    // target, which is the gaussian a visible-surface drag there would select.
+    // With x-ray off the unselected markers draw for those gaussians alone, so
+    // the markers show what a drag could select. The id pass runs before the
+    // splat pass, so every marker draws from this frame's bits
     private visibleBits: StorageBuffer;
-    // this frame's: whether the bits are being written, and whether rings
-    // read them (staged by render for scatterVisibility)
+    // this frame's: whether the bits are being written (staged by render for
+    // scatterVisibility)
     private frameFilterVisible = false;
-    private frameRingsFiltered = false;
+    // the splat material's depth test, kept while the id pass swaps it
+    private idPassDepthFunc: number = FUNC_LESS;
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
-    // the layer whose gaussians the bits describe: another layer's entries
-    // were never written, so switching layers invalidates them
-    private visibilityLayer: Splat | null = null;
-    private visibilityRepaint = false;
-    // the bits describe the current scene from the camera in visibilityView;
-    // false until the first scatter, after a reallocation, or while the pass
-    // was off, so the next filtered frame knows to settle with a repaint
-    private visibilityValid = false;
-    // this frame's bits were computed by the pre-pass, so the splat pass
-    // read current ones and the post-pass scatter can be skipped
-    private visibilityFresh = false;
-    // a layer's gaussians changed since the last frame (an edit, not a forced
-    // repaint): the next frame computes its bits before the splat pass
-    private contentEdited = false;
-    private readonly visibilityView = new Mat4();
     private visibilityCompute: Compute | null = null;
     private visibilityShader: Shader | null = null;
     private visibilityBindGroupFormat: BindGroupFormat | null = null;
@@ -287,22 +274,6 @@ class ProjectedSplatRenderer {
         this.sorter = new ComputeRadixSort(this.device, { indirect: true });
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
         this.visibleBits = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
-
-        // the edits that change which gaussians own pixels (see
-        // visibilityPrepassWanted): a layer's gaussians moving, or its live or
-        // locked count changing. A selection change also reports a state change
-        // but owns nothing new, so it is told apart by the counts
-        const owners = new WeakMap<Splat, [number, number]>();
-        scene.events.on('splat.stateChanged', (splat: Splat) => {
-            const last = owners.get(splat);
-            if (!last || last[0] !== splat.numSplats || last[1] !== splat.numLocked) {
-                owners.set(splat, [splat.numSplats, splat.numLocked]);
-                this.contentEdited = true;
-            }
-        });
-        scene.events.on('splat.positionsChanged', () => {
-            this.contentEdited = true;
-        });
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -905,7 +876,6 @@ class ProjectedSplatRenderer {
                 Math.max(1, Math.ceil(count / 32)) * 4,
                 BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
             );
-            this.visibilityValid = false;
             this.motionContribution = 0;
         }
 
@@ -987,13 +957,15 @@ class ProjectedSplatRenderer {
         const ringsMask = (showUnselectedRings ? 1 : 0) | (showSelectedRings ? 2 : 0);
         const showRings = ringsMask !== 0;
         // x-ray off: the unselected markers draw only for the gaussians a drag
-        // could select from this camera (scatterVisibility, after the splat pass). The
-        // selected markers are never filtered, so only the unselected group
-        // decides whether the pass is needed
+        // could select from this camera (scatterVisibility, after the id pass).
+        // The selected markers are never filtered, so only the unselected group
+        // decides whether the pass is needed. A frame without the id pass (the
+        // warp path) draws them all rather than filter by stale bits
         const filterVisible =
             !!events.invoke('selection.useDepth') &&
             editView &&
             !!selectedSplat &&
+            camera.visibilityIds &&
             ((centersMask | ringsMask) & 1) !== 0;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
@@ -1054,6 +1026,14 @@ class ProjectedSplatRenderer {
             const bitsRange = toFloatBits(radialSort ? sortFar * sortFar : sortFar) - sortKeyMinBits;
             sortKeyScale = bitsRange > 0 ? ((1 << SORT_KEY_BITS) - 1) / bitsRange : 0;
         }
+
+        // the id pass orders footprints by the sort's value (see the splat shader)
+        this.material.setParameter('idDepthParams', [
+            radialSort ? 1 : 0,
+            projection[0],
+            projection[5],
+            1 / (radialSort ? sortFar * sortFar : sortFar)
+        ]);
 
         let ringsBase = 0;
         let ringsCount = 0;
@@ -1328,27 +1308,16 @@ class ProjectedSplatRenderer {
                 unselectedColor.a
             ]);
         }
-        // staged for scatterVisibility, which runs after the splat pass
+        // staged for scatterVisibility, which runs after the id pass
         if (!forPick) {
-            // a stochastic frame writes no ids: it filters by the last sorted
-            // frame's bits and scatters nothing
-            this.frameFilterVisible = filterVisible && camera.visibilityIds && ringsCount > 0;
-            this.frameRingsFiltered = this.frameFilterVisible && (ringsMask & 1) !== 0;
+            this.frameFilterVisible = filterVisible && ringsCount > 0;
             this.frameTail = showCenters;
-            this.visibilityFresh = false;
-            // Camera read it for this frame's pre-pass before this
-            this.contentEdited = false;
-            if ((selectedSplat ?? null) !== this.visibilityLayer) {
-                this.visibilityLayer = selectedSplat ?? null;
-                this.visibilityValid = false;
-            }
         }
         this.submissionCpuMs = performance.now() - start;
     }
 
-    // whether this frame's splat pass should write the id attachment: x-ray
-    // off, with the markers up and the selected layer drawing unselected ones.
-    // Camera asks before the frame, to render into the id targets
+    // whether this frame should run the id pass: x-ray off, with the markers
+    // up and a layer selected. Camera asks before the frame
     visibilityWanted() {
         const { events, camera } = this.scene;
         return (
@@ -1359,73 +1328,42 @@ class ProjectedSplatRenderer {
         );
     }
 
-    // Whether this frame should compute the bits before the splat pass as well
-    // (Camera's pre-pass: an extra splat pass into the id target, scattered
-    // and cleared before the real one). Rings are drawn by the splat pass, so
-    // they otherwise read the previous frame's bits. That is wrong, and the
-    // frame is followed by a repaint, when the scene was edited (the gaussians
-    // a delete exposed would flash in without their rings) or when the bits
-    // were not kept up (x-ray was on, or the frames were stochastic, so x-ray
-    // off or a settle would filter by bits from another view). Both compute
-    // the bits first, rendering one correct frame. Sorted camera moves keep
-    // the cheaper one-frame lag and settle with a repaint
-    visibilityPrepassWanted() {
-        return (
-            this.visibilityWanted() &&
-            !!this.scene.events.invoke('view.rings') &&
-            (this.contentEdited || !this.visibilityValid)
-        );
+    // the id pass draws the splat material as its opaque, depth-writing id
+    // variant (the splat shader's ID_PASS), restored after the pass. The test
+    // is strict so that of two footprints at equal depth the first drawn, the
+    // nearer in the front-to-back order, keeps the pixel
+    beginIdPass() {
+        this.idPassDepthFunc = this.material.depthFunc;
+        this.material.setDefine('ID_PASS', '');
+        this.material.blendType = BLEND_NONE;
+        this.material.depthWrite = true;
+        this.material.depthFunc = FUNC_LESS;
+        this.material.update();
     }
 
-    // Camera's pre-pass compute: the bits from the extra splat pass
-    prepassVisibility() {
-        if (!this.frameFilterVisible || !this.scatterBits()) {
-            return;
+    endIdPass() {
+        this.material.setDefine('ID_PASS', undefined);
+        this.material.blendType = this.stochastic ? BLEND_NONE : BLEND_PREMULTIPLIED;
+        this.material.depthWrite = this.stochastic;
+        this.material.depthFunc = this.idPassDepthFunc;
+        this.material.update();
+    }
+
+    // Camera's compute pass after the id pass: scatter its target into the
+    // bits, which the splat pass's rings and the centres then read
+    scatterVisibility() {
+        if (this.frameFilterVisible) {
+            this.scatterBits();
         }
-        this.visibilityView.copy(this.viewProjection);
-        this.visibilityValid = true;
-        this.visibilityRepaint = false;
-        this.visibilityFresh = true;
     }
 
     // Camera's compute pass between the splat and gizmo passes
     afterSplatPass() {
-        this.scatterVisibility();
         this.reduceDepth();
     }
 
-    // Scatter the splat pass's id attachment into visibleBits. The centres
-    // draw after this pass, so they read this frame's bits; rings are drawn by
-    // the splat pass itself, so they read the previous frame's unless the
-    // pre-pass ran. A frame whose bits were stale for its rings - the camera
-    // moved, a layer moved or changed - is followed by one repaint so the
-    // settled image shows the current set; once, since the repaint itself
-    // changes nothing. A forced repaint that changed nothing (a UI toggle, a
-    // selection) schedules none
-    private scatterVisibility() {
-        const { scene } = this;
-        if (!this.frameFilterVisible || this.visibilityFresh || !this.scatterBits()) {
-            this.visibilityRepaint = false;
-            // bits the pre-pass just wrote stay valid; bits the pass is not
-            // writing do not
-            this.visibilityValid = this.visibilityValid && this.visibilityFresh;
-            return;
-        }
-
-        const moved = !this.visibilityView.equals(this.viewProjection);
-        const stale = moved || !this.visibilityValid || (scene.elementsChanged && !this.visibilityRepaint);
-        this.visibilityView.copy(this.viewProjection);
-        this.visibilityValid = true;
-        if (this.frameRingsFiltered && stale) {
-            this.visibilityRepaint = true;
-            scene.forceRender = true;
-        } else {
-            this.visibilityRepaint = false;
-        }
-    }
-
-    // clear the bits and scatter the id attachment into them; false if there
-    // is no attachment to read
+    // clear the bits and scatter the id pass's target into them; false if
+    // there is no target to read
     private scatterBits() {
         const { scene, device } = this;
         const idTexture = scene.camera.visibilityBuffer;

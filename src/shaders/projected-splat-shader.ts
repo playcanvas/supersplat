@@ -38,6 +38,9 @@ uniform showSelectedGaussians: u32;
 uniform warpStrength: f32;
 // x-ray off: an unselected ring draws only if its gaussian is selectable
 uniform visibleOnly: u32;
+// the id pass's depth, ordering footprints as the sort does: (radial, the
+// projection's x and y scales, one over the sort value's far end)
+uniform idDepthParams: vec4f;
 
 varying gaussianUV: vec2f;
 // the two resolved colours - gaussian fill and ring band - travel as six halves
@@ -78,7 +81,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     // the ordered list carries cache entry indices, so gaussian ids mean the
     // same on both paths
-    let entry = sortedIndices[order];
+    #ifdef ID_PASS
+        // the id pass draws front to back, so the depth test rejects hidden
+        // footprints before they shade
+        let entry = sortedIndices[splatCount[0] - 1u - order];
+    #else
+        let entry = sortedIndices[order];
+    #endif
     #ifdef PICK_PASS
         if (entry < uniform.pickBase || entry >= uniform.pickBase + uniform.pickCount) {
             output.position = discardPosition;
@@ -104,22 +113,27 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         output.position = discardPosition;
         return output;
     }
-    // with x-ray off the selected layer's unlocked quads write the id
-    // attachment, so they rasterize even with their fill hidden and cover what
-    // the pick's quads cover (see ProjectedSplatRenderer.scatterVisibility).
-    // Locked splats are not drawn by the pick, so they own no pixels
-    let writesId = uniform.visibleOnly != 0u && (flags & 2u) == 0u
-        && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount;
+    #ifdef ID_PASS
+        // the id pass draws the quads the pick would: the selected layer's
+        // unlocked gaussians, whatever their fill shows. Locked splats are not
+        // drawn by the pick, so they own no pixels
+        if ((flags & 2u) != 0u || entry < uniform.ringsBase || entry >= uniform.ringsBase + uniform.ringsCount) {
+            output.position = discardPosition;
+            return output;
+        }
+    #endif
     #ifndef PICK_PASS
+      #ifndef ID_PASS
         // with the gaussian display off for this splat's group (unselected or
         // selected), quads whose fragments could not contribute anything skip
         // rasterization entirely instead of blending transparent pixels - only
         // ring bands and the selection outline still need them
         let drawn = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u, (flags & 1u) != 0u);
-        if (!drawn && !ringEligible && !writesId) {
+        if (!drawn && !ringEligible) {
             output.position = discardPosition;
             return output;
         }
+      #endif
     #endif
     #ifdef PICK_PASS
         if ((uniform.pickOp == 0 && flags != 0u)
@@ -165,12 +179,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         // pass 1 so surface estimation always sees the true footprint
         axis1 *= max(uniform.pickFootprint, 1.0 / max(length(axis1), 1e-6));
         axis2 *= max(uniform.pickFootprint, 1.0 / max(length(axis2), 1e-6));
-    #else
-        // a quad that writes the id attachment covers what the pick's would
-        if (writesId) {
-            axis1 *= max(1.0, 1.0 / max(length(axis1), 1e-6));
-            axis2 *= max(1.0, 1.0 / max(length(axis2), 1e-6));
-        }
+    #elif defined(ID_PASS)
+        // the id pass's quads cover what the pick's would
+        axis1 *= max(1.0, 1.0 / max(length(axis1), 1e-6));
+        axis2 *= max(1.0, 1.0 / max(length(axis2), 1e-6));
     #endif
 
     let corner = vertex_position.xy;
@@ -185,6 +197,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
                 output.position = vec4f((warpedCenter + warpedOffset) * w, clip.z, w);
             }
         #endif
+    #endif
+    #ifdef ID_PASS
+        // the frontmost footprint is the one the sort draws last, so the id
+        // pass's depth is the sort's value, not the clip depth: the distance
+        // to the camera when the sort is radial (squared, as the projector
+        // keys it), else the view depth. Constant over the quad, so the depth
+        // test still rejects hidden footprints before they shade
+        let lateral = ndc / uniform.idDepthParams.yz;
+        let sortValue = select(depth, depth * depth * (1.0 + dot(lateral, lateral)), uniform.idDepthParams.x != 0.0);
+        output.position.z = clamp(sortValue * uniform.idDepthParams.w, 0.0, 1.0) * output.position.w;
     #endif
     output.gaussianUV = corner;
     let fill = prepareOutputFromGamma(gaussianRgb, clip.w);
@@ -235,14 +257,13 @@ fn overlayVisible(entry: u32, flags: u32) -> bool {
     return uniform.visibleOnly == 0u || (flags & 1u) != 0u || (visible[entry >> 5u] & (1u << (entry & 31u))) != 0u;
 }
 
-// the id attachment (color2, rgba16f): the gaussian's cache entry plus one as
-// three 11-bit integers, exact in half floats, with alpha 1, which the pass's
-// premultiplied blend writes in place of whatever was there; zero with alpha 0
-// leaves it alone. The visibility compute scatters the result into the
-// visible bits
-fn idOutput(write: bool) -> vec4f {
+// the id pass's output (rgba8): the gaussian's cache entry plus one, a byte a
+// channel; zero is the clear, where no footprint reached the pixel. The pass
+// is opaque, so the alpha byte carries the id too. The visibility compute
+// scatters the result into the visible bits
+fn idOutput() -> vec4f {
     let id1 = gaussianId + 1u;
-    return select(vec4f(0.0), vec4f(f32(id1 & 2047u), f32((id1 >> 11u) & 2047u), f32(id1 >> 22u), 1.0), write);
+    return vec4f(vec4u(id1, id1 >> 8u, id1 >> 16u, id1 >> 24u) & vec4u(255u)) / 255.0;
 }
 
 const EXP4 = exp(-4.0);
@@ -288,10 +309,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
-        // a pick frame can render through the id target: every output must be
-        // written, or WebGPU rejects the pipeline and the pick draws nothing
-        output.color1 = vec4f(0.0);
-        output.color2 = vec4f(0.0);
+    #elif defined(ID_PASS)
+        // every fragment of the footprint ellipse, however faint, as the pick
+        // counts it (its id branch has no alpha test). Opaque and depth
+        // tested, so the frontmost footprint owns the pixel whatever the order
+        output.color = idOutput();
     #else
       #ifdef OVERDRAW
         // overdraw view: every fragment past the ellipse discard is one unit of
@@ -300,7 +322,6 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // per-pixel fragment count for the final blit's heat ramp
         output.color = vec4f(1.0, 0.0, 0.0, 0.0);
         output.color1 = vec4f(0.0);
-        output.color2 = vec4f(0.0);
       #else
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
@@ -312,13 +333,6 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        // x-ray off: the selected layer's fragments report their gaussian to
-        // the id attachment wherever a visible-surface pick would count them,
-        // which is every fragment of the footprint ellipse, however faint (the
-        // pick shader's id branch has no alpha test). Drawn back to front, the
-        // frontmost footprint ends up owning the pixel, as it does in the pick.
-        // Locked splats are not drawn by the pick, so they own no pixels
-        let writeId = uniform.visibleOnly != 0u && rings && (gaussianFlags & 2u) == 0u;
         if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)
             && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
@@ -364,11 +378,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // remain transparent for the resolve to composite over the world pass.
         output.color = vec4f(color, 1.0);
         output.color1 = vec4f(0.0);
-        // stochastic frames never render into the id target (Camera): a
-        // dithered sample set would hand nearly every gaussian a pixel
-        output.color2 = vec4f(0.0);
       #else
-        output.color2 = idOutput(writeId);
         if (uniform.outlineMode != 0u) {
             output.color = vec4f(color * alpha, alpha);
             output.color1 = vec4f(0.0, 0.0, 0.0, select(0.0, norm, selected));

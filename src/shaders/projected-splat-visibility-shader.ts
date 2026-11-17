@@ -1,5 +1,5 @@
-// Scatters the splat pass's id attachment into one bit per cache entry. The
-// pass writes, for the selected layer alone, the frontmost gaussian whose
+// Scatters the id pass's target into one bit per cache entry. The pass
+// writes, for the selected layer alone, the frontmost gaussian whose
 // footprint covers the pixel - the gaussian a visible-surface drag there would
 // select (see ProjectedSplatRenderer) - as its cache entry plus one; zero is
 // the clear, where no footprint reached the pixel. A gaussian owning any pixel
@@ -13,10 +13,10 @@ struct VisibilityUniforms {
     pad0: u32
 }
 
-// the splat shader's idOutput: entry + 1 as three 11-bit halves, 0 where none
+// the splat shader's idOutput: entry + 1 a byte a channel, 0 where none
 fn decodeId(texel: vec4f) -> u32 {
-    let parts = vec3u(round(texel.xyz));
-    return parts.x | (parts.y << 11u) | (parts.z << 22u);
+    let bytes = vec4u(round(texel * 255.0));
+    return bytes.x | (bytes.y << 8u) | (bytes.z << 16u) | (bytes.w << 24u);
 }
 
 @group(0) @binding(0) var idTexture: texture_2d<f32>;
@@ -69,8 +69,8 @@ fn cacheUv(entry: u32) -> vec2i {
 }
 
 fn decodeId(texel: vec4f) -> u32 {
-    let parts = vec3u(round(texel.xyz));
-    return parts.x | (parts.y << 11u) | (parts.z << 22u);
+    let bytes = vec4u(round(texel * 255.0));
+    return bytes.x | (bytes.y << 8u) | (bytes.z << 16u) | (bytes.w << 24u);
 }
 
 @compute @workgroup_size(256)

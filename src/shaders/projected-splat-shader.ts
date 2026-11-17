@@ -288,6 +288,10 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
+        // a pick frame can render through the id target: every output must be
+        // written, or WebGPU rejects the pipeline and the pick draws nothing
+        output.color1 = vec4f(0.0);
+        output.color2 = vec4f(0.0);
     #else
       #ifdef OVERDRAW
         // overdraw view: every fragment past the ellipse discard is one unit of

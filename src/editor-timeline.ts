@@ -157,7 +157,12 @@ const createEditorTimeline = (
                 // between frames: evaluate so a manually moved camera returns to the path
                 if (c.frame !== undefined || (before.playing && c.playing === false))
                     track().evaluate(events.invoke('timeline.frame'));
-                if (c.playing ?? before.playing) events.fire('timeline.setPlaying', true);
+                // resuming at the end of a non-looping timeline would start it over;
+                // playback ends there, so stay stopped unless playing was asked for
+                const atEnd =
+                    !events.invoke('timeline.loop') &&
+                    events.invoke('timeline.frame') >= events.invoke('timeline.frames') - 1;
+                if (c.playing ?? (before.playing && !atEnd)) events.fire('timeline.setPlaying', true);
                 const after = state();
                 const fields = ['frames', 'frameRate', 'smoothness', 'loop', 'frame', 'playing'] as const;
                 return await settle(fields.filter((f) => c[f] !== undefined && before[f] !== after[f]).length);

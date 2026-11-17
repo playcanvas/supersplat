@@ -735,7 +735,9 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             frames: integer('Timeline length in frames.', 1, 10000),
             frameRate: { type: 'integer', enum: [1, 6, 12, 24, 30, 60], description: 'Frames per second.' },
             smoothness: number('Camera path smoothness: 0 is linear, 1 smoothest.', 0, 1),
-            loop: boolean('Loop the camera path; otherwise the first and last keys hold.'),
+            loop: boolean(
+                'Loop playback and the camera path. Otherwise the first and last keys hold, playback stops on the last frame, and playing from the last frame starts over.'
+            ),
             frame: integer('Playhead frame, below frames.', 0, 9999),
             playing: boolean('Start or pause playback.')
         },

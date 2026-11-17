@@ -1362,12 +1362,19 @@ class ProjectedSplatRenderer {
     // Whether this frame should compute the bits before the splat pass as well
     // (Camera's pre-pass: an extra splat pass into the id target, scattered
     // and cleared before the real one). Rings are drawn by the splat pass, so
-    // they otherwise read the previous frame's bits, and a frame that edited
-    // the scene would show the gaussians an edit exposed without their rings
-    // until the next frame - a visible flash after a delete. Camera moves
-    // keep the cheaper one-frame lag and settle with a repaint
+    // they otherwise read the previous frame's bits. That is wrong, and the
+    // frame is followed by a repaint, when the scene was edited (the gaussians
+    // a delete exposed would flash in without their rings) or when the bits
+    // were not kept up (x-ray was on, or the frames were stochastic, so x-ray
+    // off or a settle would filter by bits from another view). Both compute
+    // the bits first, rendering one correct frame. Sorted camera moves keep
+    // the cheaper one-frame lag and settle with a repaint
     visibilityPrepassWanted() {
-        return this.visibilityWanted() && !!this.scene.events.invoke('view.rings') && this.contentEdited;
+        return (
+            this.visibilityWanted() &&
+            !!this.scene.events.invoke('view.rings') &&
+            (this.contentEdited || !this.visibilityValid)
+        );
     }
 
     // Camera's pre-pass compute: the bits from the extra splat pass
@@ -1391,10 +1398,10 @@ class ProjectedSplatRenderer {
     // draw after this pass, so they read this frame's bits; rings are drawn by
     // the splat pass itself, so they read the previous frame's unless the
     // pre-pass ran. A frame whose bits were stale for its rings - the camera
-    // moved, a layer moved or changed, the pass just came on - is followed by
-    // one repaint so the settled image shows the current set; once, since the
-    // repaint itself changes nothing. A forced repaint that changed nothing
-    // (a UI toggle, a selection) schedules none
+    // moved, a layer moved or changed - is followed by one repaint so the
+    // settled image shows the current set; once, since the repaint itself
+    // changes nothing. A forced repaint that changed nothing (a UI toggle, a
+    // selection) schedules none
     private scatterVisibility() {
         const { scene } = this;
         if (!this.frameFilterVisible || this.visibilityFresh || !this.scatterBits()) {

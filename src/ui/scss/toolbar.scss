@@ -153,6 +153,12 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
     background-clip: padding-box;
     background-color: transparent;
 
+    // the icons draw in the middle of a 38px canvas: keep it whole rather
+    // than shrink it into the knob's inset
+    svg {
+        flex-shrink: 0;
+    }
+
     &.pcui-button:not(.pcui-disabled, .pcui-readonly) {
         &:focus,
         &:active {
@@ -263,10 +269,12 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
     background-color: $bcg-primary;
 }
 
+// a horizontal toolbar's controls carry 1px side margins, so the two
+// orientations leave the same 10px between controls across a separator
 .toolbar-horizontal > .toolbar-separator {
     width: 2px;
     height: $toolbar-size;
-    margin: 0px 10px;
+    margin: 0px 3px;
 }
 
 .toolbar-vertical > .toolbar-separator {

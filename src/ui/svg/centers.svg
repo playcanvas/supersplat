@@ -1,3 +1,7 @@
-<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2.70711 6.70711C2.31658 6.31658 2.31658 5.68342 2.70711 5.29289L5.29301 2.70699C5.68353 2.31647 6.3167 2.31647 6.70722 2.70699L9.29312 5.29289C9.68365 5.68342 9.68365 6.31658 9.29312 6.70711L6.70722 9.29301C6.3167 9.68353 5.68353 9.68353 5.29301 9.29301L2.70711 6.70711Z" fill="currentColor"/>
+<svg width="18" height="18" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="3" cy="3" r="1.5" fill="currentColor"/>
+    <circle cx="9" cy="2.5" r="1.5" fill="currentColor"/>
+    <circle cx="6" cy="6.5" r="1.5" fill="currentColor"/>
+    <circle cx="2.5" cy="9.5" r="1.5" fill="currentColor"/>
+    <circle cx="9.5" cy="9" r="1.5" fill="currentColor"/>
 </svg>

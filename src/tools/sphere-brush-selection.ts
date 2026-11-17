@@ -163,6 +163,12 @@ class SphereBrushSelection {
 
         const pointermove = (e: PointerEvent) => {
             if (dragId !== undefined) {
+                // a mouse moving with no button held missed its release: this
+                // move ends the stroke (see brush-selection)
+                if (e.pointerId === dragId && e.pointerType === 'mouse' && e.buttons === 0) {
+                    pointerup(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
             }

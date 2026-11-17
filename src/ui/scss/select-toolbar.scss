@@ -1,13 +1,16 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
+@use 'toolbar.scss';
 
 .select-toolbar {
     position: absolute;
     left: 50%;
-    bottom: 100px;
-    height: 54px;
+    // floating just above the bottom toolbar
+    bottom: $edge + $bottom-toolbar-height + 22px;
+    height: $bottom-toolbar-height;
     transform: translate(-50%, 0);
     padding: 0px 8px;
-    border-radius: 8px;
+    border-radius: $toolbar-radius;
 
     background-color: $bcg-primary;
 
@@ -19,34 +22,13 @@
 
     // icon apply buttons (set/add/remove/intersect)
     .select-toolbar-op {
-        width: 38px;
-        height: 38px;
-        margin: 0px 1px;
-        padding: 0px;
-        border-radius: 2px;
-
-        svg {
-            color: $clr-default;
-        }
+        @extend %toolbar-bare;
     }
 
-    // gizmo mode buttons mirror the bottom toolbar's tool buttons
+    // gizmo mode buttons are the bottom toolbar's tool buttons, in a
+    // .toolbar-well
     .select-toolbar-mode {
-        width: 38px;
-        height: 38px;
-        margin: 0px 1px;
-        padding: 0px;
-        border-radius: 2px;
-
-        &::before {
-            font-size: 16px !important;
-            line-height: 100%;
-        }
-
-        &.active {
-            color: $clr-active;
-            background-color: $clr-hilight !important;
-        }
+        @extend %toolbar-tool;
     }
 
     .select-toolbar-separator {

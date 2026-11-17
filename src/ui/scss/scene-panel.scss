@@ -1,14 +1,18 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
+
+// below the menu bar, with a little more air than the panel gap
+$scene-panel-top: $edge + $menu-height + 28px;
 
 #scene-panel {
-    top: 102px;
-    left: 24px;
+    top: $scene-panel-top;
+    left: $edge;
     width: 320px;
 
     // the panel grows when the colors section expands; never let it run past
     // the viewport - scroll instead. Safe here because nothing inside opens a
     // popup that needs to escape the panel bounds
-    max-height: calc(100vh - 126px);
+    max-height: calc(100vh - #{$scene-panel-top + $panel-gap});
     overflow-y: auto;
 }
 

@@ -1,122 +1,19 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 
+// the shell only; its controls are toolbar.scss's
 #bottom-toolbar {
     position: absolute;
     left: 50%;
-    bottom: 24px;
-    height: 54px;
+    bottom: $edge;
+    height: $bottom-toolbar-height;
     transform: translate(-50%, 0);
     padding: 0px 8px;
-    border-radius: 8px;
+    border-radius: $toolbar-radius;
 
     background-color: $bcg-dark;
 
     display: flex;
     flex-direction: row;
     align-items: center;
-}
-
-.bottom-toolbar-button, .bottom-toolbar-tool, .bottom-toolbar-toggle {
-    width: 38px;
-    height: 38px;
-    margin: 0px 1px;
-    padding: 0px;
-    border: 0px;
-    border-radius: 2px;
-
-    &::before {
-        font-size: 16px !important;
-        line-height: 100%;
-    }
-
-    svg {
-        color: $clr-default;
-    }
-}
-
-.bottom-toolbar-separator {
-    width: 2px;
-    height: 38px;
-    margin: 0px 10px;
-    background-color: $bcg-primary;
-}
-
-.bottom-toolbar-selection-mode-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    margin: 0px 1px;
-    padding: 0;
-    border: 0;
-    border-radius: 2px;
-    background-color: $bcg-primary;
-
-    svg {
-        width: 20px;
-        height: 20px;
-        color: $clr-default;
-    }
-}
-
-.bottom-toolbar-button {
-    svg {
-        color: $clr-default;
-    }
-}
-
-.bottom-toolbar-tool {
-    background-color: $bcg-primary;
-
-    svg {
-        color: $clr-default
-    }
-
-    &.active {
-        color: $clr-active;
-        background-color: $clr-hilight !important;
-
-        svg {
-            color: $clr-active;
-        }
-    }
-
-    &.disabled {
-        background-color: $bcg-dark;
-
-        svg {
-            color: $clr-disabled;
-        }
-    }
-}
-
-// tool group buttons carry a corner triangle, the usual flyout marker,
-// so users know press-and-hold reveals more tools
-.bottom-toolbar-group {
-    position: relative;
-
-    &::after {
-        content: '';
-        position: absolute;
-        right: 3px;
-        bottom: 3px;
-        border-style: solid;
-        border-width: 0 0 5px 5px;
-        border-color: transparent transparent $clr-default transparent;
-    }
-
-    &.active::after {
-        border-color: transparent transparent $clr-active transparent;
-    }
-}
-
-.bottom-toolbar-toggle.active {
-    &::before {
-        color: $clr-hilight;
-    }
-
-    svg {
-        color: $clr-hilight;
-    }
 }

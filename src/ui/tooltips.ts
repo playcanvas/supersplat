@@ -11,6 +11,8 @@ type TooltipText = string | (() => string);
 class Tooltips extends Container {
     register: (target: Element, text: TooltipText, direction?: Direction) => void;
     unregister: (target: Element) => void;
+    // hide the tooltip now, for a control that opens something where it shows
+    hide: () => void;
     destroy: () => void;
 
     constructor(args: ContainerArgs = {}) {
@@ -22,15 +24,30 @@ class Tooltips extends Container {
 
         super(args);
 
+        // a tooltip is one line, or a name line over a description when its
+        // text holds a newline
+        const title = new Label({
+            class: 'tooltips-title'
+        });
+
         const text = new Label({
             class: 'tooltips-content'
         });
 
+        this.append(title);
         this.append(text);
 
         const targets = new Map<Element, { dom: HTMLElement; enter: () => void; leave: () => void }>();
         const style = this.dom.style;
         let timer = 0;
+
+        this.hide = () => {
+            if (timer >= 0) {
+                clearTimeout(timer);
+                timer = -1;
+            }
+            style.display = 'none';
+        };
 
         this.register = (target: Element, textString: TooltipText, direction: Direction = 'bottom') => {
             const activate = () => {
@@ -65,7 +82,11 @@ class Tooltips extends Container {
                         break;
                 }
 
-                text.text = typeof textString === 'function' ? textString() : textString;
+                const full = typeof textString === 'function' ? textString() : textString;
+                const newline = full.indexOf('\n');
+                title.hidden = newline === -1;
+                title.text = newline === -1 ? '' : full.slice(0, newline);
+                text.text = newline === -1 ? full : full.slice(newline + 1);
                 // inline-block so max-width / wrapping in SCSS apply (inline
                 // would stay one long line).
                 style.display = 'inline-block';

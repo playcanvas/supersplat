@@ -100,9 +100,12 @@ class BoxSelection {
             hidden: true
         });
 
-        selectToolbar.append(translateButton);
-        selectToolbar.append(rotateButton);
-        selectToolbar.append(scaleButton);
+        // the gizmo modes share a well, as the bottom toolbar's tools do
+        const modes = new Container({ class: 'toolbar-well' });
+        modes.append(translateButton);
+        modes.append(rotateButton);
+        modes.append(scaleButton);
+        selectToolbar.append(modes);
         selectToolbar.append(new Element({ class: 'select-toolbar-separator' }));
         selectToolbar.append(setButton);
         selectToolbar.append(addButton);

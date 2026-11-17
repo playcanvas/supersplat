@@ -132,6 +132,11 @@ class Scene {
     // occlusion cull skips a frame whose previous depth no longer describes
     // the scene (see ProjectedSplatRenderer.render)
     editedRender = false;
+    // the part of editedRender that is not a forced repaint: an element other
+    // than the camera changed (a layer moved, was shown or hidden, was graded)
+    elementsChanged = false;
+    // the camera changed this frame (moved, turned, zoomed or resized)
+    cameraChanged = false;
 
     // 'auto' stochastic mode follows the timing of the last rendered sorted
     // frame: engaged (stochastic-during-movement) while that frame's GPU span
@@ -584,7 +589,9 @@ class Scene {
         const interacting = this.forceInteracting || all.size > 0;
         // per-gaussian edits reach here only through forceRender; layer moves,
         // visibility and grade changes through the state diff
-        this.editedRender = this.forceRender || [...all].some((type) => type !== ElementType.camera);
+        this.elementsChanged = [...all].some((type) => type !== ElementType.camera);
+        this.cameraChanged = all.has(ElementType.camera);
+        this.editedRender = this.forceRender || this.elementsChanged;
         const stochastic = this.events.invoke('view.stochastic');
 
         // 'movement' takes the fast no-sort stochastic path only while actively
@@ -629,6 +636,10 @@ class Scene {
             } else if (this.pendingResolve) {
                 // scene just settled → render the single clean resolve frame
                 this.pendingResolve = false;
+                this.app.renderNextFrame = true;
+            } else if (this.projectedSplatRenderer.idPassOwed) {
+                // the camera or a layer settled after moving with the id pass skipped:
+                // one frame brings the x-ray-off markers up to date
                 this.app.renderNextFrame = true;
             }
         }

@@ -1,0 +1,383 @@
+@use 'colors.scss' as *;
+
+// The toolbars' shared vocabulary. Each toolbar's own stylesheet only places
+// its shell; everything a user presses is one of these, so the three
+// toolbars (bottom, right, mode strip) stay alike:
+//
+//   .toolbar-button   an action: a grey button that darkens on hover and
+//                     more while pressed
+//   .toolbar-tool     one of an exclusive set: tools sit in a .toolbar-well,
+//                     the active one an orange knob inset in it, the hovered
+//                     one a tinted knob
+//   .toolbar-toggle   an on/off switch: no background, orange glyph when on,
+//                     darkening on hover and while pressed
+//   .toolbar-panel    opens a panel beside the toolbar: a grey button with a
+//                     bar on the panel's side, orange while the panel is open
+//   .toolbar-switch   an exclusive pair as one control: a dark well with a
+//                     knob that slides to the chosen option, whose glyph is
+//                     white while the other's is dim (toolbar-switch.ts),
+//                     horizontal or vertical. No orange, so a chosen mode
+//                     reads apart from an active tool and an on toggle
+//   .toolbar-separator
+//   .toolbar-flyout   press-and-hold reveals more: a corner triangle
+//
+// Hovering brightens a glyph to white and pressing shrinks and dims it, on
+// every control. Controls are 38px squares. .toolbar-horizontal / -vertical
+// on a toolbar orient its separators
+
+$toolbar-size: 38px;
+$switch-radius: 8px;
+$well-radius: 8px;
+$fade: 0.1s ease-out;
+$fade-out: 0.06s ease-out;
+
+$bcg-button-hover: #2c2c2c;
+$bcg-tool-well: #232323;
+$bcg-tool-hover: rgba($clr-hilight, 0.3);
+$bcg-bare-hover: rgba(0, 0, 0, 0.15);
+$bcg-bare-pressed: rgba(0, 0, 0, 0.4);
+
+// PCUI's button lights hover and focus with an orange glow; the controls
+// replace it. A state applies to a live control only. Hover and press snap
+// on and fade out quickly: a fade in leaves every control a sweep crosses
+// half lit, which flickers, and a delay before it feels laggy
+%toolbar-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: $toolbar-size;
+    height: $toolbar-size;
+    margin: 0px 1px;
+    padding: 0px;
+    border: 0px;
+    border-radius: 2px;
+    transition: background-color $fade-out;
+
+    &::before {
+        font-size: 16px !important;
+        line-height: 100%;
+        transition:
+            color $fade-out,
+            transform $fade;
+    }
+
+    svg {
+        color: $clr-default;
+        transition:
+            color $fade-out,
+            transform $fade;
+    }
+
+    &.pcui-button:not(.pcui-disabled, .pcui-readonly) {
+        &:hover,
+        &:focus,
+        &:active {
+            box-shadow: none;
+        }
+
+        &:hover:not(:active) {
+            transition: none;
+
+            &::before,
+            svg {
+                transition: transform $fade;
+            }
+        }
+
+        &:active {
+            transition: none;
+
+            &::before,
+            svg {
+                transform: scale(0.92);
+                color: $clr-default;
+                transition: none;
+            }
+        }
+    }
+}
+
+// the hover glyph, for controls whose glyph has no state colour of its own;
+// a pressed control shows the press instead
+@mixin hover-glyph {
+    &.pcui-button:not(.pcui-disabled, .pcui-readonly):hover:not(:active) {
+        &::before,
+        svg {
+            color: $clr-active;
+        }
+    }
+}
+
+// a grey button: an action, or the button opening a panel
+%toolbar-grey-button {
+    @extend %toolbar-control;
+    @include hover-glyph;
+    background-color: $bcg-primary;
+
+    &.pcui-button:not(.pcui-disabled, .pcui-readonly) {
+        &:focus {
+            background-color: $bcg-primary;
+        }
+
+        &:hover {
+            background-color: $bcg-button-hover;
+        }
+
+        &:active {
+            background-color: $bcg-darker;
+        }
+    }
+}
+
+.toolbar-button {
+    @extend %toolbar-grey-button;
+}
+
+// the tools of a group share one well. A tool's knob is its padding box,
+// inset 2px in the well by a transparent border
+.toolbar-well {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    margin: 0px 1px;
+    border-radius: $well-radius;
+    background-color: $bcg-tool-well;
+}
+
+%toolbar-tool {
+    @extend %toolbar-control;
+    margin: 0px;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+    border-radius: $well-radius;
+    background-clip: padding-box;
+    background-color: transparent;
+
+    // the icons draw in the middle of a 38px canvas: keep it whole rather
+    // than shrink it into the knob's inset
+    svg {
+        flex-shrink: 0;
+    }
+
+    &.pcui-button:not(.pcui-disabled, .pcui-readonly) {
+        &:focus,
+        &:active {
+            background-color: transparent;
+        }
+
+        &:not(.active):hover {
+            background-color: $bcg-tool-hover;
+        }
+
+        &:not(.active):hover:not(:active) svg {
+            color: $clr-active;
+        }
+    }
+
+    &.active {
+        color: $clr-active;
+        background-color: $clr-hilight !important;
+
+        svg {
+            color: $clr-active;
+        }
+    }
+
+    &.disabled svg {
+        color: $clr-disabled;
+    }
+}
+
+.toolbar-tool {
+    @extend %toolbar-tool;
+}
+
+// a control with no background of its own: a toggle, or a bare action
+%toolbar-bare {
+    @extend %toolbar-control;
+    background-color: transparent;
+
+    &.pcui-button:not(.pcui-disabled, .pcui-readonly) {
+        &:focus {
+            background-color: transparent;
+        }
+
+        &:not(.active):hover:not(:active) {
+            &::before,
+            svg {
+                color: $clr-active;
+            }
+        }
+
+        &:hover {
+            background-color: $bcg-bare-hover;
+        }
+
+        &:active {
+            background-color: $bcg-bare-pressed;
+        }
+    }
+}
+
+.toolbar-toggle {
+    @extend %toolbar-bare;
+
+    &.active {
+        &::before {
+            color: $clr-hilight;
+        }
+
+        svg {
+            color: $clr-hilight;
+        }
+    }
+}
+
+// the bar is its own element rather than a shadow or border, so the hover
+// and disabled states (which replace the button's shadow) leave it alone
+.toolbar-panel {
+    @extend %toolbar-grey-button;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        bottom: 0px;
+        width: 2px;
+        background-color: $bcg-lighter;
+    }
+
+    &.active {
+        &::after {
+            background-color: $clr-hilight;
+        }
+
+        &::before {
+            color: $clr-active;
+        }
+
+        svg {
+            color: $clr-active;
+        }
+    }
+}
+
+.toolbar-separator {
+    flex-shrink: 0;
+    background-color: $bcg-primary;
+}
+
+// a horizontal toolbar's controls carry 1px side margins, so the two
+// orientations leave the same 10px between controls across a separator
+.toolbar-horizontal > .toolbar-separator {
+    width: 2px;
+    height: $toolbar-size;
+    margin: 0px 3px;
+}
+
+.toolbar-vertical > .toolbar-separator {
+    width: $toolbar-size;
+    height: 2px;
+    margin: 4px 0px;
+}
+
+// the switch: the highlight is positioned from script over the active option.
+// It keeps its outer corners and meets the other option with a straight edge,
+// so the two read as one control. The knob is the toolbar's own grey sitting
+// 2px inside the darkest well, with a rim of well showing round it. The chosen
+// glyph is white, as on an active tool; the other is dimmed
+.toolbar-switch {
+    position: relative;
+    display: flex;
+    margin: 0px 1px;
+    border-radius: $switch-radius;
+    background-color: $bcg-darkest;
+    overflow: hidden;
+
+    .toolbar-switch-thumb {
+        position: absolute;
+        border-radius: $switch-radius;
+        background-color: $bcg-dark;
+        border: 2px solid $bcg-darkest;
+        box-sizing: border-box;
+        background-clip: padding-box;
+        pointer-events: none;
+
+        // the first placement is instant; later ones slide
+        &.toolbar-switch-animated {
+            transition:
+                left 0.15s ease-out,
+                top 0.15s ease-out,
+                width 0.15s ease-out,
+                height 0.15s ease-out,
+                border-radius 0.15s ease-out;
+        }
+    }
+
+    .toolbar-switch-option {
+        @extend %toolbar-control;
+        position: relative;
+        margin: 0px;
+        border-radius: 0px;
+        background-color: transparent !important;
+
+        svg {
+            color: $clr-disabled;
+            transition:
+                color 0.15s ease-out,
+                transform $fade;
+        }
+
+        &.pcui-button:not(.pcui-disabled, .pcui-readonly):not(.active):hover:not(:active) svg {
+            color: $clr-default;
+        }
+
+        &.active svg {
+            color: $clr-active;
+        }
+    }
+}
+
+.toolbar-switch-horizontal {
+    flex-direction: row;
+
+    &.toolbar-switch-first .toolbar-switch-thumb {
+        border-radius: $switch-radius 0px 0px $switch-radius;
+    }
+
+    &.toolbar-switch-second .toolbar-switch-thumb {
+        border-radius: 0px $switch-radius $switch-radius 0px;
+    }
+}
+
+.toolbar-switch-vertical {
+    flex-direction: column;
+
+    &.toolbar-switch-first .toolbar-switch-thumb {
+        border-radius: $switch-radius $switch-radius 0px 0px;
+    }
+
+    &.toolbar-switch-second .toolbar-switch-thumb {
+        border-radius: 0px 0px $switch-radius $switch-radius;
+    }
+}
+
+.toolbar-flyout {
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        border-style: solid;
+        border-width: 0 0 5px 5px;
+        border-color: transparent transparent $clr-default transparent;
+    }
+
+    &.active::after {
+        border-color: transparent transparent $clr-active transparent;
+    }
+}

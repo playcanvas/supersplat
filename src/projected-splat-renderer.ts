@@ -56,6 +56,7 @@ import { projectedSplatDepthReduce } from './shaders/projected-splat-depth-reduc
 import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args-shader';
 import { projectedSplatProjector } from './shaders/projected-splat-projector-shader';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
+import { projectedSplatVisibility, projectedSplatVisibilityTail } from './shaders/projected-splat-visibility-shader';
 import {
     fragmentShader as centersFragmentShader,
     vertexShader as centersVertexShader
@@ -69,6 +70,10 @@ const ENTRY_ALIGNMENT = 256;
 // significant bits in a sort key: sortKeys stores (~depth) >> 12, so the top 12
 // bits are always zero and sorting more than this cannot change the ordering
 const SORT_KEY_BITS = 20;
+
+// the id pass's inputs (see updateIdPass): the view-projection, the target
+// size and the draw settings that decide which footprints it rasterises
+const ID_KEY_SIZE = 28;
 
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
@@ -230,6 +235,39 @@ class ProjectedSplatRenderer {
     private depthReduceShader: Shader | null = null;
     private depthReduceBindGroupFormat: BindGroupFormat | null = null;
     private depthReduceSubgroups = false;
+    // the visibility bits (scatterVisibility): one bit per cache entry, set
+    // where a gaussian of the selected layer owns a pixel of the id pass's
+    // target, which is the gaussian a visible-surface drag there would select.
+    // With x-ray off the unselected markers draw for those gaussians alone, so
+    // the markers show what a drag could select. The id pass runs before the
+    // splat pass, so every marker draws from this frame's bits
+    private visibleBits: StorageBuffer;
+    // this frame's: whether the bits are being written (staged by render for
+    // scatterVisibility)
+    private frameFilterVisible = false;
+    // the splat material's depth test, kept while the id pass swaps it
+    private idPassDepthFunc: number = FUNC_LESS;
+    // whether the compact list carries the size-culled tail (the centres draw it)
+    private frameTail = false;
+    // The id pass runs only when its bits could differ from the last ones
+    // it produced (updateIdPass): the view, the target, the drawn set or a
+    // layer's gaussians changed. While the camera or a layer keeps moving it
+    // is skipped and the markers hold the bits from where the move began; the
+    // frame the scene settles on is owed to the scene, which renders it
+    idPassOwed = false;
+    private idValid = false;
+    private readonly idKey = new Float64Array(ID_KEY_SIZE);
+    private readonly frameIdKey = new Float64Array(ID_KEY_SIZE);
+    private idTexture: Texture | null = null;
+    private contentVersion = 0;
+    private idContentVersion = -1;
+    private prevMoved = false;
+    private visibilityCompute: Compute | null = null;
+    private visibilityShader: Shader | null = null;
+    private visibilityBindGroupFormat: BindGroupFormat | null = null;
+    private visibilityTailCompute: Compute | null = null;
+    private visibilityTailShader: Shader | null = null;
+    private visibilityTailBindGroupFormat: BindGroupFormat | null = null;
     private readonly occlusionBlocks = new Vec2();
     private prevValid = false;
     private readonly prevViewProjection = new Mat4();
@@ -252,6 +290,22 @@ class ProjectedSplatRenderer {
         // renderer issues is an indirect dispatch
         this.sorter = new ComputeRadixSort(this.device, { indirect: true });
         this.splatCounter = new StorageBuffer(this.device, 8, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+        this.visibleBits = new StorageBuffer(this.device, 4, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+
+        // the edits that can change which gaussians own pixels: their state
+        // (removal, locks, the selection), positions, opacity, a layer's
+        // visibility or transform
+        for (const name of [
+            'splat.stateChanged',
+            'splat.positionsChanged',
+            'splat.colorsChanged',
+            'splat.visibility',
+            'splat.moved'
+        ]) {
+            scene.events.on(name, () => {
+                this.contentVersion++;
+            });
+        }
 
         this.material = new ShaderMaterial({
             uniqueName: 'ProjectedSplatMaterial',
@@ -260,7 +314,7 @@ class ProjectedSplatRenderer {
             },
             vertexWGSL: vertexShader,
             fragmentWGSL: fragmentShader,
-            fragmentOutputTypes: ['vec4', 'vec4']
+            fragmentOutputTypes: ['vec4', 'vec4', 'vec4']
         });
         this.material.blendType = BLEND_PREMULTIPLIED;
         this.material.cull = CULLFACE_NONE;
@@ -277,7 +331,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('showGaussians', 1);
         this.material.setParameter('showSelectedGaussians', 0);
         this.material.setParameter('ringSize', 0);
-        this.material.setParameter('ringSelectionOnly', 0);
+        this.material.setParameter('ringMask', 0);
         this.material.setParameter('ringColor', [0, 0, 0, 0]);
         this.material.setParameter('selectedRingColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
@@ -848,6 +902,13 @@ class ProjectedSplatRenderer {
                 );
                 this.sorter.capacity = count;
             }
+            this.visibleBits.destroy();
+            this.visibleBits = new StorageBuffer(
+                this.device,
+                Math.max(1, Math.ceil(count / 32)) * 4,
+                BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST
+            );
+            this.idValid = false;
             this.motionContribution = 0;
         }
 
@@ -868,6 +929,9 @@ class ProjectedSplatRenderer {
         if (this.capacity === 0 || !this.sortKeys || !this.compactEntries || !this.cacheA || !this.cacheB) {
             this.centersEntity.enabled = false;
             this.frameStochastic = false;
+            // nothing to draw, so no id pass is owed (updateIdPass never runs)
+            this.idValid = false;
+            this.idPassOwed = false;
             return;
         }
 
@@ -905,13 +969,15 @@ class ProjectedSplatRenderer {
         const minPixelSize = forPick ? 0 : ((events.invoke('view.minPixelSize') as number) ?? 0);
 
         // the centres overlay draws the selected layer's centres from this
-        // frame's projection: all of them in the edit view with centres on,
-        // otherwise the selection's alone
+        // frame's projection: the unselected ones while the markers (tab) are
+        // up with centres on, the selected ones with selection centres on.
+        // Each overlay takes a group mask: bit 0 unselected, bit 1 selected
         const editView = events.invoke('view.editView');
         const centerSize = events.invoke('view.centerSize') as number;
-        const showAllCenters = events.invoke('view.centers') && editView;
-        const showSelectedCenters =
-            events.invoke('view.selectionCenters') && (selectedSplat?.instances.numSelected ?? 0) > 0;
+        const numSelected = selectedSplat?.instances.numSelected ?? 0;
+        const showUnselectedCenters = events.invoke('view.centers') && editView;
+        const showSelectedCenters = events.invoke('view.selectionCenters') && numSelected > 0;
+        const centersMask = (showUnselectedCenters ? 1 : 0) | (showSelectedCenters ? 2 : 0);
         // centres draw opaque over the overdraw view's fragment counts, so a
         // selection would blank the heat map under its dots: skip them there
         const showCenters =
@@ -919,14 +985,24 @@ class ProjectedSplatRenderer {
             camera.renderOverlays &&
             centerSize > 0 &&
             !this.scene.overdrawRender &&
-            (showAllCenters || showSelectedCenters);
-        // rings likewise: every ring in the edit view with rings on, otherwise
-        // the selection's alone. Decided here because the projector exempts
-        // ringed splats from the contribution cull
-        const showAllRings = events.invoke('view.rings') && editView;
-        const showSelectedRings =
-            events.invoke('view.selectionRings') && (selectedSplat?.instances.numSelected ?? 0) > 0;
-        const showRings = showAllRings || showSelectedRings;
+            centersMask !== 0;
+        // rings likewise. Decided here because the projector exempts ringed
+        // splats from the contribution cull
+        const showUnselectedRings = events.invoke('view.rings') && editView;
+        const showSelectedRings = events.invoke('view.selectionRings') && numSelected > 0;
+        const ringsMask = (showUnselectedRings ? 1 : 0) | (showSelectedRings ? 2 : 0);
+        const showRings = ringsMask !== 0;
+        // x-ray off: the unselected markers draw only for the gaussians a drag
+        // could select from this camera (scatterVisibility, after the id pass).
+        // The selected markers are never filtered, so only the unselected group
+        // decides whether the pass is needed. A frame without the id pass (the
+        // warp path) draws them all rather than filter by stale bits
+        const filterVisible =
+            !!events.invoke('selection.useDepth') &&
+            editView &&
+            !!selectedSplat &&
+            camera.visibilityIds &&
+            ((centersMask | ringsMask) & 1) !== 0;
 
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
@@ -986,6 +1062,14 @@ class ProjectedSplatRenderer {
             const bitsRange = toFloatBits(radialSort ? sortFar * sortFar : sortFar) - sortKeyMinBits;
             sortKeyScale = bitsRange > 0 ? ((1 << SORT_KEY_BITS) - 1) / bitsRange : 0;
         }
+
+        // a radial sort's order for the id pass's depth (see the splat shader)
+        this.material.setParameter('idDepthParams', [
+            radialSort ? 1 : 0,
+            projection[0],
+            projection[5],
+            radialSort ? 1 / (sortFar * sortFar) : 0
+        ]);
 
         let ringsBase = 0;
         let ringsCount = 0;
@@ -1079,15 +1163,8 @@ class ProjectedSplatRenderer {
             compute.setParameter('keepCulled', showCenters && selectedSplat === splat ? 1 : 0);
             compute.setParameter('minContribution', this.stochastic ? this.motionContribution : 0);
             // rings draw from the survivor list, so the projector never culls a
-            // splat whose ring would show: the whole layer in rings mode, the
-            // selection alone with selection rings
-            let keepRings = 0;
-            if (selectionEnabled && showAllRings) {
-                keepRings = 2;
-            } else if (selectionEnabled && showSelectedRings) {
-                keepRings = 1;
-            }
-            compute.setParameter('keepRings', keepRings);
+            // splat whose ring would show: the groups with rings on, as a mask
+            compute.setParameter('keepRings', selectionEnabled ? ringsMask : 0);
             // render_view's analysis views
             const viewOverride = this.scene.viewOverride;
             compute.setParameter('viewMode', viewOverride ? VIEW_MODES[viewOverride.mode] : 0);
@@ -1176,50 +1253,42 @@ class ProjectedSplatRenderer {
         // the 20% back this frame; the transform handler disables that pass
         // for the length of a drag
         this.material.setParameter('selectionUnderlay', this.scene.underlay.enabled ? 1 : 0);
-        // the edit view switch (tab) shows the raw scene: gaussians render
-        // regardless of the profile flag and the non-selection rings hide
-        this.material.setParameter('showGaussians', events.invoke('view.gaussians') || !editView || pending ? 1 : 0);
-        this.material.setParameter('showSelectedGaussians', events.invoke('view.selectionColor') && !pending ? 1 : 0);
-        this.material.setParameter('ringSize', showRings ? events.invoke('view.ringSize') * 0.01 : 0);
-        this.material.setParameter('ringSelectionOnly', showAllRings ? 0 : 1);
-        // the colour alphas carry blend weights, not opacity. The gaussian
-        // tints blend the fill from the splat's own colour toward the flat
-        // unselected colour, then toward the selection colour; the vertex
-        // shader applies them inside the selection entry range (ringsBase /
-        // ringsCount), which stands in for the projector's per-placement
-        // selectionEnabled
+        // the fill hides only in the markers-only view; a colour preview draws
+        // both groups so the grade can be seen
+        const showGaussians = events.invoke('view.gaussians') || pending ? 1 : 0;
+        this.material.setParameter('showGaussians', showGaussians);
+        this.material.setParameter('showSelectedGaussians', showGaussians);
+        const ringSize = showRings ? events.invoke('view.ringSize') * 0.01 : 0;
+        this.material.setParameter('ringSize', ringSize);
+        this.material.setParameter('ringMask', ringsMask);
+        this.material.setParameter('visible', this.visibleBits);
+        this.material.setParameter('visibleOnly', filterVisible ? 1 : 0);
+        // the colour alphas carry blend weights, not opacity. The selection
+        // tint blends the selected gaussians' fill toward the selection colour;
+        // the vertex shader applies it inside the selection entry range
+        // (ringsBase / ringsCount), which stands in for the projector's
+        // per-placement selectionEnabled
         this.material.setParameter(
             'selectedColor',
             events.invoke('view.selectionColor') && !pending
-                ? [
-                      selectedColor.r,
-                      selectedColor.g,
-                      selectedColor.b,
-                      events.invoke('view.splatsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
-                  ]
+                ? [selectedColor.r, selectedColor.g, selectedColor.b, selectedSplat?.selectionAlpha ?? 1]
                 : [0, 0, 0, 0]
         );
-        this.material.setParameter(
-            'unselectedColor',
-            !pending
-                ? [unselectedColor.r, unselectedColor.g, unselectedColor.b, events.invoke('view.splatsColorBlend')]
-                : [0, 0, 0, 0]
-        );
-        // the ring blends start from the splat's own colour too, so they stay
+        // the unselected markers take the flat colour or the gaussians' own,
+        // one switch per marker; selected markers always the selection colour.
+        // The ring blends start from the splat's own colour, so they stay
         // independent of the gaussian tints
         this.material.setParameter('ringColor', [
             unselectedColor.r,
             unselectedColor.g,
             unselectedColor.b,
-            events.invoke('view.ringsColorBlend')
+            events.invoke('view.tintRings') ? 1 : 0
         ]);
         this.material.setParameter('selectedRingColor', [
             selectedColor.r,
             selectedColor.g,
             selectedColor.b,
-            events.invoke('view.selectionRings')
-                ? events.invoke('view.ringsSelectionBlend') * (selectedSplat?.selectionAlpha ?? 1)
-                : 0
+            events.invoke('view.selectionRings') ? (selectedSplat?.selectionAlpha ?? 1) : 0
         ]);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
@@ -1264,10 +1333,10 @@ class ProjectedSplatRenderer {
             centers.setParameter('centersBase', ringsBase);
             centers.setParameter('centersCount', ringsCount);
             centers.setParameter('centerSize', centerSize * window.devicePixelRatio);
-            centers.setParameter('selectionOnly', showAllCenters ? 0 : 1);
-            centers.setParameter('selectionCenters', events.invoke('view.selectionCenters') ? 1 : 0);
-            centers.setParameter('colorBlend', events.invoke('view.centersColorBlend'));
-            centers.setParameter('selectionBlend', events.invoke('view.centersSelectionBlend'));
+            centers.setParameter('drawMask', centersMask);
+            centers.setParameter('visible', this.visibleBits);
+            centers.setParameter('visibleOnly', filterVisible ? 1 : 0);
+            centers.setParameter('colorBlend', events.invoke('view.tintCenters') ? 1 : 0);
             centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);
             centers.setParameter('unselectedClr', [
                 unselectedColor.r,
@@ -1276,7 +1345,217 @@ class ProjectedSplatRenderer {
                 unselectedColor.a
             ]);
         }
+        // staged for scatterVisibility, which runs after the id pass
+        if (!forPick) {
+            this.frameFilterVisible = filterVisible && ringsCount > 0;
+            this.frameTail = showCenters;
+            const key = this.frameIdKey;
+            key.set(this.viewProjection.data);
+            key[16] = targetSize.width;
+            key[17] = targetSize.height;
+            key[18] = ringsBase;
+            key[19] = ringsCount;
+            key[20] = ringsMask;
+            key[21] = ringSize;
+            key[22] = radialSort ? 1 : 0;
+            key[23] = this.stochastic ? 1 : 0;
+            key[24] = showCenters ? 1 : 0;
+            // the size cull and the anti-aliased dilation decide which
+            // footprints reach the id pass, and how large
+            key[25] = minPixelSize;
+            key[26] =
+                selectedSplat && effectiveModel(selectedSplat.resource.model, antiAlias) === 'antialiased' ? 1 : 0;
+            // the colour panel's previewed transparency scales the selected
+            // layer's opacity, and a gaussian previewed to zero drops out (the
+            // pick previews it too); the other grade terms leave ownership be
+            key[27] = pending && !this.scene.viewOverride ? this.previewTerms.transparency : 1;
+            this.updateIdPass();
+        }
         this.submissionCpuMs = performance.now() - start;
+    }
+
+    // Whether this frame runs the id pass (Camera enables it whenever x-ray
+    // off wants the bits; this turns it off when they would not change): the
+    // first frame of a move runs it, the frames that continue the move skip
+    // it, and the frame the scene settles on runs it again. A move is the
+    // camera's or a layer's (a gizmo drag, say)
+    private updateIdPass() {
+        const { scene } = this;
+        const camera = scene.camera;
+        const moved = scene.cameraChanged || scene.elementsChanged;
+        const moving = moved && this.prevMoved;
+        this.prevMoved = moved;
+        if (!camera.visibilityIds || !this.frameFilterVisible) {
+            this.idValid = false;
+            this.idPassOwed = false;
+            camera.idClearPass.enabled = false;
+            camera.idPass.enabled = false;
+            camera.visibilityPass.enabled = false;
+            return;
+        }
+        let changed =
+            !this.idValid ||
+            camera.visibilityBuffer !== this.idTexture ||
+            this.contentVersion !== this.idContentVersion;
+        for (let i = 0; i < ID_KEY_SIZE && !changed; i++) {
+            changed = this.frameIdKey[i] !== this.idKey[i];
+        }
+        const run = changed && !moving;
+        camera.idClearPass.enabled = run;
+        camera.idPass.enabled = run;
+        camera.visibilityPass.enabled = run;
+        if (run) {
+            this.idValid = true;
+            this.idKey.set(this.frameIdKey);
+            this.idTexture = camera.visibilityBuffer;
+            this.idContentVersion = this.contentVersion;
+        }
+        // owed only while the bits are stale: a move that returns to the
+        // cached view clears the debt with no pass
+        this.idPassOwed = changed && !run;
+    }
+
+    // whether this frame should run the id pass: x-ray off, with the markers
+    // up and a layer selected. Camera asks before the frame
+    visibilityWanted() {
+        const { events, camera } = this.scene;
+        return (
+            camera.renderOverlays &&
+            !!events.invoke('selection') &&
+            !!events.invoke('selection.useDepth') &&
+            !!events.invoke('view.editView')
+        );
+    }
+
+    // the id pass draws the splat material as its opaque, depth-writing id
+    // variant (the splat shader's ID_PASS), restored after the pass. The test
+    // is strict so that of two footprints at equal depth the first drawn, the
+    // nearer in the front-to-back order, keeps the pixel
+    beginIdPass() {
+        this.idPassDepthFunc = this.material.depthFunc;
+        this.material.setDefine('ID_PASS', '');
+        this.material.blendType = BLEND_NONE;
+        this.material.depthWrite = true;
+        this.material.depthFunc = FUNC_LESS;
+        this.material.update();
+    }
+
+    endIdPass() {
+        this.material.setDefine('ID_PASS', undefined);
+        this.material.blendType = this.stochastic ? BLEND_NONE : BLEND_PREMULTIPLIED;
+        this.material.depthWrite = this.stochastic;
+        this.material.depthFunc = this.idPassDepthFunc;
+        this.material.update();
+    }
+
+    // Camera's compute pass after the id pass: scatter its target into the
+    // bits, which the splat pass's rings and the centres then read
+    scatterVisibility() {
+        if (this.frameFilterVisible) {
+            this.scatterBits();
+        }
+    }
+
+    // Camera's compute pass between the splat and gizmo passes
+    afterSplatPass() {
+        this.reduceDepth();
+    }
+
+    // clear the bits and scatter the id pass's target into them; false if
+    // there is no target to read
+    private scatterBits() {
+        const { scene, device } = this;
+        const idTexture = scene.camera.visibilityBuffer;
+        if (!idTexture) {
+            return false;
+        }
+        this.visibleBits.clear();
+        const compute = this.getVisibilityCompute();
+        compute.setParameter('idTexture', idTexture);
+        compute.setParameter('visible', this.visibleBits);
+        compute.setParameter('width', idTexture.width);
+        compute.setParameter('height', idTexture.height);
+        compute.setParameter('capacity', this.capacity);
+        compute.setParameter('pad0', 0);
+        compute.setupDispatch(Math.ceil(idTexture.width / 8), Math.ceil(idTexture.height / 8));
+        device.computeDispatch([compute], 'ProjectedSplatVisibility');
+
+        // the size-culled tail, which the splat pass never drew
+        if (this.frameTail && this.compactEntries && this.cacheA) {
+            const tail = this.getVisibilityTailCompute();
+            tail.setParameter('compactEntries', this.compactEntries);
+            tail.setParameter('splatCounter', this.splatCounter);
+            tail.setParameter('cacheA', this.cacheA);
+            tail.setParameter('idTexture', idTexture);
+            tail.setParameter('visible', this.visibleBits);
+            tail.setParameter('width', idTexture.width);
+            tail.setParameter('height', idTexture.height);
+            tail.setParameter('capacity', this.capacity);
+            tail.setParameter('cacheWidth', this.cacheWidth);
+            Compute.calcDispatchSize(Math.ceil(this.capacity / WORKGROUP_SIZE), this.dispatchSize);
+            tail.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+            device.computeDispatch([tail], 'ProjectedSplatVisibilityTail');
+        }
+        return true;
+    }
+
+    private getVisibilityCompute() {
+        if (!this.visibilityCompute) {
+            const uniformBufferFormat = new UniformBufferFormat(this.device, [
+                new UniformFormat('width', UNIFORMTYPE_UINT),
+                new UniformFormat('height', UNIFORMTYPE_UINT),
+                new UniformFormat('capacity', UNIFORMTYPE_UINT),
+                new UniformFormat('pad0', UNIFORMTYPE_UINT)
+            ]);
+            const bindGroupFormat = new BindGroupFormat(this.device, [
+                new BindTextureFormat('idTexture', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
+                new BindStorageBufferFormat('visible', SHADERSTAGE_COMPUTE),
+                new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+            ]);
+            this.visibilityShader = new Shader(this.device, {
+                name: 'ProjectedSplatVisibility',
+                shaderLanguage: SHADERLANGUAGE_WGSL,
+                cshader: projectedSplatVisibility,
+                computeBindGroupFormat: bindGroupFormat,
+                computeUniformBufferFormats: { uniforms: uniformBufferFormat }
+            });
+            this.visibilityBindGroupFormat = bindGroupFormat;
+            this.visibilityCompute = new Compute(this.device, this.visibilityShader, 'ProjectedSplatVisibility');
+        }
+        return this.visibilityCompute;
+    }
+
+    private getVisibilityTailCompute() {
+        if (!this.visibilityTailCompute) {
+            const uniformBufferFormat = new UniformBufferFormat(this.device, [
+                new UniformFormat('width', UNIFORMTYPE_UINT),
+                new UniformFormat('height', UNIFORMTYPE_UINT),
+                new UniformFormat('capacity', UNIFORMTYPE_UINT),
+                new UniformFormat('cacheWidth', UNIFORMTYPE_UINT)
+            ]);
+            const bindGroupFormat = new BindGroupFormat(this.device, [
+                new BindStorageBufferFormat('compactEntries', SHADERSTAGE_COMPUTE, true),
+                new BindStorageBufferFormat('splatCounter', SHADERSTAGE_COMPUTE, true),
+                new BindTextureFormat('cacheA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+                new BindTextureFormat('idTexture', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
+                new BindStorageBufferFormat('visible', SHADERSTAGE_COMPUTE),
+                new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+            ]);
+            this.visibilityTailShader = new Shader(this.device, {
+                name: 'ProjectedSplatVisibilityTail',
+                shaderLanguage: SHADERLANGUAGE_WGSL,
+                cshader: projectedSplatVisibilityTail,
+                computeBindGroupFormat: bindGroupFormat,
+                computeUniformBufferFormats: { uniforms: uniformBufferFormat }
+            });
+            this.visibilityTailBindGroupFormat = bindGroupFormat;
+            this.visibilityTailCompute = new Compute(
+                this.device,
+                this.visibilityTailShader,
+                'ProjectedSplatVisibilityTail'
+            );
+        }
+        return this.visibilityTailCompute;
     }
 
     get stats(): ProjectedRendererStats {
@@ -1334,6 +1613,13 @@ class ProjectedSplatRenderer {
         this.depthReduceCompute?.destroy();
         this.depthReduceShader?.destroy();
         this.depthReduceBindGroupFormat?.destroy();
+        this.visibleBits.destroy();
+        this.visibilityCompute?.destroy();
+        this.visibilityShader?.destroy();
+        this.visibilityBindGroupFormat?.destroy();
+        this.visibilityTailCompute?.destroy();
+        this.visibilityTailShader?.destroy();
+        this.visibilityTailBindGroupFormat?.destroy();
         this.footprintCompute?.destroy();
         this.footprintShader?.destroy();
         this.footprintBindGroupFormat?.destroy();

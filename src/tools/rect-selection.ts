@@ -20,6 +20,9 @@ class RectSelection {
         const end = { x: 0, y: 0 };
         let dragId: number | undefined;
         let dragMoved = false;
+        // the selection of a finished drag is still settling: the rect stays
+        // up and a new drag waits for it
+        let finishing = false;
 
         const updateRect = () => {
             const x = Math.min(start.x, end.x);
@@ -34,7 +37,7 @@ class RectSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (dragId === undefined && !finishing && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -53,6 +56,12 @@ class RectSelection {
 
         const pointermove = (e: PointerEvent) => {
             if (e.pointerId === dragId) {
+                // a mouse moving with no button held missed its release: this
+                // move ends the drag (see brush-selection)
+                if (e.pointerType === 'mouse' && e.buttons === 0) {
+                    pointerup(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -64,13 +73,17 @@ class RectSelection {
             }
         };
 
-        const dragEnd = () => {
+        const releaseDrag = () => {
             // a touch that has lifted, or was cancelled, no longer holds the
             // capture and releasing it throws
             if (parent.hasPointerCapture(dragId)) {
                 parent.releasePointerCapture(dragId);
             }
             dragId = undefined;
+        };
+
+        const dragEnd = () => {
+            releaseDrag();
             svg.classList.add('hidden');
         };
 
@@ -85,21 +98,33 @@ class RectSelection {
                 const w = parent.clientWidth;
                 const h = parent.clientHeight;
 
-                if (dragMoved) {
-                    // rect select - wait for selection to complete before hiding rect
-                    await events.invoke('select.rect', opFromModifiers(e), {
-                        start: { x: clamp01(Math.min(start.x, end.x) / w), y: clamp01(Math.min(start.y, end.y) / h) },
-                        end: { x: clamp01(Math.max(start.x, end.x) / w), y: clamp01(Math.max(start.y, end.y) / h) }
-                    });
-                } else {
-                    // pick - wait for selection to complete before hiding rect
-                    await events.invoke('select.point', opFromModifiers(e), {
-                        x: e.offsetX / parent.clientWidth,
-                        y: e.offsetY / parent.clientHeight
-                    });
-                }
+                // the drag ends here, not once its selection settles: a
+                // buttonless move in between would end it again (see
+                // pointermove) and submit the selection twice
+                releaseDrag();
+                finishing = true;
 
-                dragEnd();
+                try {
+                    if (dragMoved) {
+                        // rect select - wait for selection to complete before hiding rect
+                        await events.invoke('select.rect', opFromModifiers(e), {
+                            start: {
+                                x: clamp01(Math.min(start.x, end.x) / w),
+                                y: clamp01(Math.min(start.y, end.y) / h)
+                            },
+                            end: { x: clamp01(Math.max(start.x, end.x) / w), y: clamp01(Math.max(start.y, end.y) / h) }
+                        });
+                    } else {
+                        // pick - wait for selection to complete before hiding rect
+                        await events.invoke('select.point', opFromModifiers(e), {
+                            x: e.offsetX / parent.clientWidth,
+                            y: e.offsetY / parent.clientHeight
+                        });
+                    }
+                } finally {
+                    finishing = false;
+                    svg.classList.add('hidden');
+                }
             }
         };
 

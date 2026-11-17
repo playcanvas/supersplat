@@ -4,12 +4,12 @@ import type { Events } from '../events';
 import type { ShortcutManager } from '../shortcut-manager';
 
 import { i18n } from './localization';
-import appearanceSvg from './svg/appearance.svg';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import flyCameraSvg from './svg/fly-camera.svg';
 import orbitCameraSvg from './svg/orbit-camera.svg';
 import overlaysSvg from './svg/overlays.svg';
+import { createSwitch } from './toolbar-switch';
 import type { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -21,7 +21,8 @@ class RightToolbar extends Container {
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
-            id: 'right-toolbar'
+            id: 'right-toolbar',
+            class: 'toolbar-vertical'
         };
 
         super(args);
@@ -30,52 +31,44 @@ class RightToolbar extends Container {
             event.stopPropagation();
         });
 
-        const appearance = new Button({
-            id: 'right-toolbar-appearance',
-            class: 'right-toolbar-toggle'
+        const overlays = new Button({
+            id: 'right-toolbar-overlays',
+            class: 'toolbar-panel'
         });
 
-        const orbitMode = new Button({
-            id: 'right-toolbar-orbit-mode',
-            class: ['right-toolbar-toggle', 'active']
-        });
-
-        const flyMode = new Button({
-            id: 'right-toolbar-fly-mode',
-            class: 'right-toolbar-toggle'
-        });
+        // the camera mode: one two-option switch
+        const cameraSwitch = createSwitch<'orbit' | 'fly'>(
+            'vertical',
+            [
+                { id: 'right-toolbar-orbit-mode', value: 'orbit', svg: orbitCameraSvg },
+                { id: 'right-toolbar-fly-mode', value: 'fly', svg: flyCameraSvg }
+            ],
+            (mode) => events.fire('camera.setControlMode', mode)
+        );
+        const [orbitMode, flyMode] = cameraSwitch.buttons;
 
         const cameraFrameSelection = new Button({
             id: 'right-toolbar-frame-selection',
-            class: 'right-toolbar-button'
+            class: 'toolbar-button'
         });
 
         const cameraReset = new Button({
             id: 'right-toolbar-camera-origin',
-            class: 'right-toolbar-button'
-        });
-
-        const overlays = new Button({
-            id: 'right-toolbar-overlays',
-            class: 'right-toolbar-toggle'
+            class: 'toolbar-button'
         });
 
         const settings = new Button({
             id: 'right-toolbar-settings',
-            class: 'right-toolbar-toggle',
+            class: 'toolbar-panel',
             icon: 'E283'
         });
 
-        appearance.dom.appendChild(createSvg(appearanceSvg));
-        orbitMode.dom.appendChild(createSvg(orbitCameraSvg));
-        flyMode.dom.appendChild(createSvg(flyCameraSvg));
+        overlays.dom.appendChild(createSvg(overlaysSvg));
         cameraFrameSelection.dom.appendChild(createSvg(cameraFrameSelectionSvg));
         cameraReset.dom.appendChild(createSvg(cameraResetSvg));
-        overlays.dom.appendChild(createSvg(overlaysSvg));
 
         // icon-only buttons: keep accessible names in sync with the language
         const buttonLabels: [Button, string][] = [
-            [appearance, 'panel.appearance'],
             [overlays, 'panel.overlays'],
             [orbitMode, 'tooltip.right-toolbar.orbit-camera'],
             [flyMode, 'tooltip.right-toolbar.fly-camera'],
@@ -87,15 +80,13 @@ class RightToolbar extends Container {
             i18n.onChange(() => button.dom.setAttribute('aria-label', i18n.t(key)), button);
         });
 
-        this.append(appearance);
         this.append(overlays);
-        this.append(new Element({ class: 'right-toolbar-separator' }));
-        this.append(orbitMode);
-        this.append(flyMode);
-        this.append(new Element({ class: 'right-toolbar-separator' }));
+        this.append(new Element({ class: 'toolbar-separator' }));
+        this.append(cameraSwitch.container);
+        this.append(new Element({ class: 'toolbar-separator' }));
         this.append(cameraFrameSelection);
         this.append(cameraReset);
-        this.append(new Element({ class: 'right-toolbar-separator' }));
+        this.append(new Element({ class: 'toolbar-separator' }));
         this.append(settings);
 
         // Helper to compose localized tooltip text with shortcut
@@ -111,7 +102,7 @@ class RightToolbar extends Container {
             return text;
         };
 
-        tooltips.register(appearance, tooltip('panel.appearance'), 'left');
+        tooltips.register(overlays, tooltip('panel.overlays'), 'left');
         tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(
@@ -120,35 +111,25 @@ class RightToolbar extends Container {
             'left'
         );
         tooltips.register(cameraReset, tooltip('tooltip.right-toolbar.reset-camera', 'camera.reset'), 'left');
-        tooltips.register(overlays, tooltip('panel.overlays'), 'left');
         tooltips.register(settings, tooltip('panel.settings'), 'left');
 
         // add event handlers
 
-        appearance.on('click', () => events.fire('appearancePanel.toggleVisible'));
-        orbitMode.on('click', () => events.fire('camera.setControlMode', 'orbit'));
-        flyMode.on('click', () => events.fire('camera.setControlMode', 'fly'));
+        overlays.on('click', () => events.fire('overlaysPanel.toggleVisible'));
         cameraFrameSelection.on('click', () => events.fire('camera.focus'));
         cameraReset.on('click', () => events.fire('camera.reset'));
-        overlays.on('click', () => events.fire('overlaysPanel.toggleVisible'));
         settings.on('click', () => events.fire('settingsPanel.toggleVisible'));
 
-        events.on('appearancePanel.visible', (visible: boolean) => {
-            appearance.class[visible ? 'add' : 'remove']('active');
-        });
+        const setActive = (button: Button, active: boolean) => {
+            button.class[active ? 'add' : 'remove']('active');
+            button.dom.setAttribute('aria-pressed', String(active));
+        };
 
-        events.on('camera.controlMode', (mode: 'orbit' | 'fly') => {
-            orbitMode.class[mode === 'orbit' ? 'add' : 'remove']('active');
-            flyMode.class[mode === 'fly' ? 'add' : 'remove']('active');
-        });
+        cameraSwitch.setValue('orbit');
 
-        events.on('overlaysPanel.visible', (visible: boolean) => {
-            overlays.class[visible ? 'add' : 'remove']('active');
-        });
-
-        events.on('settingsPanel.visible', (visible: boolean) => {
-            settings.class[visible ? 'add' : 'remove']('active');
-        });
+        events.on('overlaysPanel.visible', (visible: boolean) => setActive(overlays, visible));
+        events.on('camera.controlMode', (mode: 'orbit' | 'fly') => cameraSwitch.setValue(mode));
+        events.on('settingsPanel.visible', (visible: boolean) => setActive(settings, visible));
     }
 }
 

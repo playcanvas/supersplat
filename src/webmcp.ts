@@ -681,12 +681,17 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             showGrid: boolean('Show grid.'),
             shBands: integer('Rendered SH bands.', 0, 3),
             tonemapping: enumeration(['linear', 'neutral', 'aces', 'aces2', 'filmic', 'hejl'], 'Tone mapping.'),
-            showGaussians: boolean('Show splats.'),
-            showCenters: boolean('Show centres.'),
-            showRings: boolean('Show footprints.'),
-            selectionColor: boolean('Tint selection.'),
-            selectionCenters: boolean('Show selection centres.'),
-            selectionRings: boolean('Show selection rings.')
+            mode: enumeration(
+                ['centers', 'rings'],
+                'Editing mode: centers marks and selects by centre point, rings by footprint.'
+            ),
+            showMarkers: boolean('Show the markers of unselected splats (the Tab switch).'),
+            markersOnly: boolean('Hide the splat fill while the markers are shown.'),
+            xray: boolean(
+                'Select through all depths. Off, picks take the visible surface and the markers show only selectable splats.'
+            ),
+            selectionColor: boolean('Tint the selected splats with the selection colour.'),
+            outlineSelection: boolean('Outline the selection.')
         },
         [],
         (
@@ -695,12 +700,12 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
                 showGrid?: boolean;
                 shBands?: number;
                 tonemapping?: string;
-                showGaussians?: boolean;
-                showCenters?: boolean;
-                showRings?: boolean;
+                mode?: 'centers' | 'rings';
+                showMarkers?: boolean;
+                markersOnly?: boolean;
+                xray?: boolean;
                 selectionColor?: boolean;
-                selectionCenters?: boolean;
-                selectionRings?: boolean;
+                outlineSelection?: boolean;
             },
             o
         ) => {

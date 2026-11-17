@@ -35,7 +35,7 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'select.invert': { keys: ['i'], ctrl: 'required' },
     'select.delete': { keys: ['Delete', 'Backspace'] },
     'selection.toggleUseDepth': { keys: ['n'] },
-    'selection.toggleFootprint': { keys: ['m'] },
+    'view.toggleMode': { keys: ['m'] },
     'view.toggleEditView': { keys: ['Tab'] },
 
     // Tools

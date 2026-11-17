@@ -8,7 +8,6 @@ import type { ImportGroup } from '../import-analysis';
 import type { BlobReadSource } from '../io';
 
 import { AboutPopup } from './about-popup';
-import { AppearancePanel } from './appearance-panel';
 import { BottomToolbar } from './bottom-toolbar';
 import { CameraInfoOverlay } from './camera-info-overlay';
 import { ClipboardMenu } from './clipboard-menu';
@@ -18,6 +17,7 @@ import { ImageSettingsDialog } from './image-settings-dialog';
 import { ImportReviewDialog } from './import-review-dialog';
 import { i18n } from './localization';
 import { Menu } from './menu';
+import { ModeToolbar } from './mode-toolbar';
 import { OverdrawLegend } from './overdraw-legend';
 import { OverlaysPanel } from './overlays-panel';
 import { PerfOverlay } from './perf-overlay';
@@ -124,10 +124,10 @@ class EditorUI {
         const clipboardMenu = new ClipboardMenu();
         const scenePanel = new ScenePanel(events, tooltips, clipboardMenu);
         const settingsPanel = new SettingsPanel(events, tooltips);
-        const appearancePanel = new AppearancePanel(events, tooltips);
         const overlaysPanel = new OverlaysPanel(events, tooltips);
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
+        const modeToolbar = new ModeToolbar(events, tooltips);
         const menu = new Menu(events);
         const cameraInfoOverlay = new CameraInfoOverlay(events, tooltips);
         const perfOverlay = new PerfOverlay(events);
@@ -144,12 +144,12 @@ class EditorUI {
         canvasContainer.append(scenePanel);
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
+        canvasContainer.append(modeToolbar);
         canvasContainer.append(menu);
 
         // the option popups come after the toolbars so their select dropdowns,
         // which can extend past the panel bounds, paint above them
         canvasContainer.append(settingsPanel);
-        canvasContainer.append(appearancePanel);
         canvasContainer.append(overlaysPanel);
 
         // view axes container

@@ -12,6 +12,9 @@ attribute vertex_position: vec3f;
 // over the survivor count, so the cpu never knows it
 var<storage, read> sortedIndices: array<u32>;
 var<storage, read> splatCount: array<u32>;
+// one bit per cache entry: the gaussians a visible-surface drag could select
+// from this camera (the visibility pass, see ProjectedSplatRenderer)
+var<storage, read> visible: array<u32>;
 var cacheA: texture_2d<u32>;
 var cacheB: texture_2d<u32>;
 
@@ -24,16 +27,20 @@ uniform pickOp: i32;
 uniform pickFootprint: f32;
 uniform ringColor: vec4f;
 uniform selectedRingColor: vec4f;
-uniform unselectedColor: vec4f;
 uniform selectedColor: vec4f;
 uniform ringSize: f32;
-uniform ringSelectionOnly: u32;
+uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform outlineMode: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform warpStrength: f32;
+// x-ray off: an unselected ring draws only if its gaussian is selectable
+uniform visibleOnly: u32;
+// the id pass's radial depth: (radial, the projection's x and y scales, one
+// over the squared distance's far end)
+uniform idDepthParams: vec4f;
 
 varying gaussianUV: vec2f;
 // the two resolved colours - gaussian fill and ring band - travel as six halves
@@ -54,6 +61,11 @@ ${overlayEligibleWGSL}
 ${splatAlphaWGSL}
 ${stochasticWarpWGSL}
 
+// selected markers always draw: they show what is selected, not what could be
+fn overlayVisible(entry: u32, flags: u32) -> bool {
+    return uniform.visibleOnly == 0u || (flags & 1u) != 0u || (visible[entry >> 5u] & (1u << (entry & 31u))) != 0u;
+}
+
 const discardPosition = vec4f(0.0, 0.0, 2.0, 1.0);
 
 @vertex
@@ -69,7 +81,13 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
     // the ordered list carries cache entry indices, so gaussian ids mean the
     // same on both paths
-    let entry = sortedIndices[order];
+    #ifdef ID_PASS
+        // the id pass draws front to back, so the depth test rejects hidden
+        // footprints before they shade
+        let entry = sortedIndices[splatCount[0] - 1u - order];
+    #else
+        let entry = sortedIndices[order];
+    #endif
     #ifdef PICK_PASS
         if (entry < uniform.pickBase || entry >= uniform.pickBase + uniform.pickCount) {
             output.position = discardPosition;
@@ -88,23 +106,41 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // (mirroring the fragment shader's eligibility test) so it renders and picks
     // there. Everywhere else skip it as before, so an invisible splat can't
     // steal frontmost picks or burn fill
-    let ringEligible = uniform.ringSize > 0.0
+    let ringShown = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && overlayEligible(flags, uniform.ringSelectionOnly != 0u);
+        && overlayEligible(flags, uniform.ringMask);
+    #ifdef ID_PASS
+        // the id pass computes the visibility bits, so it cannot read them: a
+        // splat it skipped for a missing bit would never earn one
+        let ringEligible = ringShown;
+    #else
+        let ringEligible = ringShown && overlayVisible(entry, flags);
+    #endif
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
     }
-    #ifndef PICK_PASS
-        // with gaussian display off (e.g. a centers-only view), quads whose
-        // fragments could not contribute anything skip rasterization entirely
-        // instead of blending transparent pixels - only ring bands, the
-        // selected-gaussian display and the selection outline still need them
-        if (uniform.showGaussians == 0u && !ringEligible
-            && !((flags & 1u) != 0u && (uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u))) {
+    #ifdef ID_PASS
+        // the id pass draws the quads the pick would: the selected layer's
+        // unlocked gaussians, whatever their fill shows. Locked splats are not
+        // drawn by the pick, so they own no pixels
+        if ((flags & 2u) != 0u || entry < uniform.ringsBase || entry >= uniform.ringsBase + uniform.ringsCount) {
             output.position = discardPosition;
             return output;
         }
+    #endif
+    #ifndef PICK_PASS
+      #ifndef ID_PASS
+        // with the gaussian display off for this splat's group (unselected or
+        // selected), quads whose fragments could not contribute anything skip
+        // rasterization entirely instead of blending transparent pixels - only
+        // ring bands and the selection outline still need them
+        let drawn = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u || uniform.outlineMode != 0u, (flags & 1u) != 0u);
+        if (!drawn && !ringEligible) {
+            output.position = discardPosition;
+            return output;
+        }
+      #endif
     #endif
     #ifdef PICK_PASS
         if ((uniform.pickOp == 0 && flags != 0u)
@@ -132,16 +168,15 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
     var gaussianRgb = color;
-    if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 2u) == 0u) {
-        gaussianRgb = mix(gaussianRgb, uniform.unselectedColor.rgb, uniform.unselectedColor.a);
-        if ((flags & 1u) != 0u) {
-            gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
-        }
+    // a selected gaussian tints from the splat's own colour toward the
+    // selection colour; the unselected fill is never tinted
+    if (entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount && (flags & 3u) == 1u) {
+        gaussianRgb = mix(gaussianRgb, uniform.selectedColor.rgb, uniform.selectedColor.a);
     }
-    // ring band colours, resolved here from the untinted base: gaussian colour
-    // -> flat unselected colour -> selection colour
+    // ring band colours, likewise from the untinted base: an unselected ring
+    // toward the flat unselected colour, a selected one toward the selection colour
     let ringRgb = mix(color, uniform.ringColor.rgb, uniform.ringColor.a);
-    let selectedRingRgb = mix(ringRgb, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
+    let selectedRingRgb = mix(color, uniform.selectedRingColor.rgb, uniform.selectedRingColor.a);
 
     var axis1 = unpack2x16float(a.w);
     var axis2 = unpack2x16float(b).x * normalize(vec2f(axis1.y, -axis1.x));
@@ -151,6 +186,10 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         // pass 1 so surface estimation always sees the true footprint
         axis1 *= max(uniform.pickFootprint, 1.0 / max(length(axis1), 1e-6));
         axis2 *= max(uniform.pickFootprint, 1.0 / max(length(axis2), 1e-6));
+    #elif defined(ID_PASS)
+        // the id pass's quads cover what the pick's would
+        axis1 *= max(1.0, 1.0 / max(length(axis1), 1e-6));
+        axis2 *= max(1.0, 1.0 / max(length(axis2), 1e-6));
     #endif
 
     let corner = vertex_position.xy;
@@ -165,6 +204,20 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
                 output.position = vec4f((warpedCenter + warpedOffset) * w, clip.z, w);
             }
         #endif
+    #endif
+    #ifdef ID_PASS
+        // the frontmost footprint is the one the sort draws last, so the id
+        // pass's depth follows the sort. A radial sort orders by distance to
+        // the camera (squared, as the projector keys it), which replaces the
+        // clip depth; otherwise the clip depth already orders view depth over
+        // the near-far interval, an orthographic camera's negative depths
+        // included. Constant over the quad, so the depth test still rejects
+        // hidden footprints before they shade
+        if (uniform.idDepthParams.x != 0.0) {
+            let lateral = ndc / uniform.idDepthParams.yz;
+            let distance2 = depth * depth * (1.0 + dot(lateral, lateral));
+            output.position.z = clamp(distance2 * uniform.idDepthParams.w, 0.0, 1.0) * output.position.w;
+        }
     #endif
     output.gaussianUV = corner;
     let fill = prepareOutputFromGamma(gaussianRgb, clip.w);
@@ -199,14 +252,30 @@ uniform selectionUnderlay: u32;
 uniform showGaussians: u32;
 uniform showSelectedGaussians: u32;
 uniform ringSize: f32;
-uniform ringSelectionOnly: u32;
+uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
+uniform visibleOnly: u32;
+
+var<storage, read> visible: array<u32>;
 
 ${overlayEligibleWGSL}
 ${splatAlphaWGSL}
+
+fn overlayVisible(entry: u32, flags: u32) -> bool {
+    return uniform.visibleOnly == 0u || (flags & 1u) != 0u || (visible[entry >> 5u] & (1u << (entry & 31u))) != 0u;
+}
+
+// the id pass's output (rgba8): the gaussian's cache entry plus one, a byte a
+// channel; zero is the clear, where no footprint reached the pixel. The pass
+// is opaque, so the alpha byte carries the id too. The visibility compute
+// scatters the result into the visible bits
+fn idOutput() -> vec4f {
+    let id1 = gaussianId + 1u;
+    return vec4f(vec4u(id1, id1 >> 8u, id1 >> 16u, id1 >> 24u) & vec4u(255u)) / 255.0;
+}
 
 const EXP4 = exp(-4.0);
 const INV_EXP4 = 1.0 / (1.0 - EXP4);
@@ -251,6 +320,11 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
+    #elif defined(ID_PASS)
+        // every fragment of the footprint ellipse, however faint, as the pick
+        // counts it (its id branch has no alpha test). Opaque and depth
+        // tested, so the frontmost footprint owns the pixel whatever the order
+        output.color = idOutput();
     #else
       #ifdef OVERDRAW
         // overdraw view: every fragment past the ellipse discard is one unit of
@@ -262,7 +336,7 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
       #else
         let selected = (gaussianFlags & 1u) != 0u;
         let norm = normExp(radius);
-        let showGaussian = uniform.showGaussians != 0u || (selected && uniform.showSelectedGaussians != 0u);
+        let showGaussian = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u, selected);
         var alpha = select(0.0, splatAlpha(radius, opacity), showGaussian);
         let packedMid = unpack2x16float(packedColor1);
         var color = vec3f(unpack2x16float(packedColor0), packedMid.x);
@@ -270,7 +344,8 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         // cache entry index in the forward pass, where pickBase is 0). Their
         // alpha is composed with the independently-controlled gaussian fill.
         let rings = gaussianId >= uniform.ringsBase && gaussianId < uniform.ringsBase + uniform.ringsCount;
-        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringSelectionOnly != 0u)) {
+        if (rings && uniform.ringSize > 0.0 && overlayEligible(gaussianFlags, uniform.ringMask)
+            && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
                 alpha = 0.6;

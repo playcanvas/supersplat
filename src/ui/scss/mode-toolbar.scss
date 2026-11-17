@@ -1,0 +1,71 @@
+@use 'colors.scss' as *;
+@use 'layout.scss' as *;
+
+// the mode strip: an icon toolbar in the header row, the menu bar's height,
+// against the view cube in the top-right corner. Its controls are
+// toolbar.scss's
+#mode-toolbar {
+    position: absolute;
+    right: $view-cube-size;
+    top: $edge;
+    height: $top-toolbar-height;
+    padding: 0px 5px;
+    border-radius: $toolbar-radius;
+
+    background-color: $bcg-dark;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+// the flyouts hold settings rows, so they take the Preferences panel's tones
+// and row metrics rather than the menus' darker ones
+#mode-toolbar .mode-toolbar-menu {
+    z-index: 1;
+    background-color: $bcg-primary;
+
+    .menu-row {
+        min-width: 300px;
+        height: 28px;
+        padding: 2px 10px;
+        gap: 8px;
+
+        &:hover:not(.pcui-disabled) {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+    }
+
+    // no row has an icon; drop the slot so the labels start at the edge
+    .menu-row-icon {
+        display: none;
+    }
+
+    .mode-toolbar-menu-slider {
+        flex: 0 0 187px;
+        width: 187px;
+        margin: 0;
+
+        .pcui-slider-handle {
+            background-color: $clr-default;
+            border-radius: 3px;
+        }
+    }
+
+    .mode-toolbar-menu-switch {
+        margin: 0;
+        background-color: $bcg-dark;
+
+        &::after {
+            background-color: $clr-default;
+        }
+
+        &.pcui-boolean-input-ticked {
+            background-color: $clr-hilight;
+
+            &::after {
+                background-color: $clr-active;
+            }
+        }
+    }
+}

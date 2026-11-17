@@ -16,6 +16,8 @@ type MenuItem = {
     isEnabled?: () => boolean | Promise<boolean>;
     isVisible?: () => boolean | Promise<boolean>;
     onSelect?: () => unknown;
+    // a switch row: selecting it leaves the menu open
+    keepOpen?: boolean;
 };
 
 const offsetParent = (elem: HTMLElement): HTMLElement => {
@@ -218,7 +220,9 @@ class MenuPanel extends Container {
                             // On desktop, submenus are handled by hover, so don't close the root panel
                         } else if (menuItem.onSelect) {
                             // Regular menu item: execute action and close menu
-                            this.rootPanel.hidden = true;
+                            if (!menuItem.keepOpen) {
+                                this.rootPanel.hidden = true;
+                            }
                             menuItem.onSelect();
                         }
                     }

@@ -1,10 +1,12 @@
 @use 'colors.scss' as *;
+@use 'layout.scss' as *;
 
-// shared shell for the appearance, overlays and settings popups
+// shared shell for the overlays and settings popups
 .options-panel {
     top: 50%;
     transform: translate(0, -50%);
-    right: 102px;
+    // beside the right toolbar, which opens them
+    right: $edge + $side-toolbar-width + $panel-gap;
     width: 320px;
     flex-direction: column;
     padding-bottom: 8px;
@@ -169,12 +171,6 @@
                     svg {
                         color: $clr-active;
                     }
-                }
-
-                // setting has no effect right now (hidden by the edit view
-                // switch); still clickable
-                &.overridden {
-                    opacity: 0.4;
                 }
             }
 

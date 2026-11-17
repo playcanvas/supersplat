@@ -143,8 +143,8 @@ struct ProjectorUniforms {
     // minimum alpha mass of a projected gaussian, in pixels; 0 = off
     minContribution: f32,
     // splats exempt from the contribution and occlusion culls because their
-    // ring would draw: 0 none, 1 the selected ones, 2 the whole layer
-    // (overlayEligible decides)
+    // ring would draw: a group mask, bit 0 the unselected splats, bit 1 the
+    // selected ones (overlayEligible decides)
     keepRings: u32,
     // the previous stochastic frame, for the occlusion cull: its view and
     // view-projection, its clip-z mapping (a, b, isOrtho - the render shader's
@@ -412,7 +412,7 @@ fn main(
 
     // splats whose ring would draw are exempt from the motion culls below:
     // rings draw from the survivor list
-    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings == 1u);
+    let ringKept = uniforms.keepRings != 0u && overlayEligible(state, uniforms.keepRings);
 
     // occlusion cull on stochastic frames. The previous stochastic frame's
     // depth buffer samples the visibility function: each pixel kept the

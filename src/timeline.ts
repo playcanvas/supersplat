@@ -116,13 +116,23 @@ const registerTimelineEvents = (events: Events) => {
     let animHandle: EventHandle = null;
 
     const play = () => {
+        // with loop off, playing from the last frame starts over from the first
+        if (!loop && frame >= frames - 1) {
+            setFrame(0);
+        }
         let time = frame;
 
         // handle application update tick
         animHandle = events.on('update', (dt: number) => {
-            time = (time + dt * frameRate) % frames;
+            time += dt * frameRate;
+            // with loop off, stop on the last frame instead of wrapping to the first
+            const end = !loop && time >= frames - 1;
+            time = loop ? time % frames : Math.min(time, frames - 1);
             setFrame(Math.floor(time));
             events.fire('timeline.time', time);
+            if (end) {
+                setPlaying(false);
+            }
         });
     };
 
@@ -135,6 +145,10 @@ const registerTimelineEvents = (events: Events) => {
     let playing = false;
 
     const setPlaying = (value: boolean) => {
+        // a single frame without looping has nothing to play
+        if (value && !loop && frames <= 1) {
+            return;
+        }
         if (value !== playing) {
             playing = value;
             events.fire('timeline.playing', playing);

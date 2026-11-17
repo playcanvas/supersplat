@@ -29,6 +29,7 @@ $toolbar-size: 38px;
 $switch-radius: 8px;
 $well-radius: 8px;
 $fade: 0.1s ease-out;
+$fade-out: 0.06s ease-out;
 
 $bcg-button-hover: #2c2c2c;
 $bcg-tool-well: #232323;
@@ -36,9 +37,10 @@ $bcg-tool-hover: rgba($clr-hilight, 0.3);
 $bcg-bare-hover: rgba(0, 0, 0, 0.15);
 $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
 
-// PCUI's button lights hover and focus with an orange glow and swaps the
-// background without a fade; the controls replace both. A state applies to
-// a live control only, and pressing snaps on where releasing fades out
+// PCUI's button lights hover and focus with an orange glow; the controls
+// replace it. A state applies to a live control only. Hover and press snap
+// on and fade out quickly: a fade in leaves every control a sweep crosses
+// half lit, which flickers, and a delay before it feels laggy
 %toolbar-control {
     display: flex;
     align-items: center;
@@ -49,20 +51,20 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
     padding: 0px;
     border: 0px;
     border-radius: 2px;
-    transition: background-color $fade;
+    transition: background-color $fade-out;
 
     &::before {
         font-size: 16px !important;
         line-height: 100%;
         transition:
-            color $fade,
+            color $fade-out,
             transform $fade;
     }
 
     svg {
         color: $clr-default;
         transition:
-            color $fade,
+            color $fade-out,
             transform $fade;
     }
 
@@ -73,12 +75,21 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
             box-shadow: none;
         }
 
+        &:hover:not(:active) {
+            transition: none;
+
+            &::before,
+            svg {
+                transition: transform $fade;
+            }
+        }
+
         &:active {
             transition: none;
 
             &::before,
             svg {
-                transform: scale(0.9);
+                transform: scale(0.92);
                 color: $clr-default;
                 transition: none;
             }

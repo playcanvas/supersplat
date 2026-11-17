@@ -1027,12 +1027,12 @@ class ProjectedSplatRenderer {
             sortKeyScale = bitsRange > 0 ? ((1 << SORT_KEY_BITS) - 1) / bitsRange : 0;
         }
 
-        // the id pass orders footprints by the sort's value (see the splat shader)
+        // a radial sort's order for the id pass's depth (see the splat shader)
         this.material.setParameter('idDepthParams', [
             radialSort ? 1 : 0,
             projection[0],
             projection[5],
-            1 / (radialSort ? sortFar * sortFar : sortFar)
+            radialSort ? 1 / (sortFar * sortFar) : 0
         ]);
 
         let ringsBase = 0;

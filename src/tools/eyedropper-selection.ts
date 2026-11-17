@@ -13,6 +13,9 @@ class EyedropperSelection {
 
     constructor(events: Events, parent: HTMLElement, canvasContainer: Container) {
         let pointerId: number | null = null;
+        // the colour match of a finished press is still settling, and a new
+        // press waits for it
+        let finishing = false;
         let threshold = 0.2;
 
         const selectToolbar = new Container({
@@ -58,7 +61,11 @@ class EyedropperSelection {
         });
 
         const pointerdown = (event: PointerEvent) => {
-            if (pointerId === null && (event.pointerType === 'mouse' ? event.button === 0 : event.isPrimary)) {
+            if (
+                pointerId === null &&
+                !finishing &&
+                (event.pointerType === 'mouse' ? event.button === 0 : event.isPrimary)
+            ) {
                 event.preventDefault();
                 event.stopPropagation();
                 pointerId = event.pointerId;
@@ -84,9 +91,22 @@ class EyedropperSelection {
                 event.preventDefault();
                 event.stopPropagation();
 
-                await events.invoke('select.colorMatch', opFromModifiers(event), toNormalizedPoint(event), threshold);
-
+                // the press ends here, not once its match settles: a buttonless
+                // move in between would end it again (see pointermove) and
+                // sample a second colour
                 resetPointer();
+                finishing = true;
+
+                try {
+                    await events.invoke(
+                        'select.colorMatch',
+                        opFromModifiers(event),
+                        toNormalizedPoint(event),
+                        threshold
+                    );
+                } finally {
+                    finishing = false;
+                }
             }
         };
 

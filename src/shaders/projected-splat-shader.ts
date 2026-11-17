@@ -38,8 +38,8 @@ uniform showSelectedGaussians: u32;
 uniform warpStrength: f32;
 // x-ray off: an unselected ring draws only if its gaussian is selectable
 uniform visibleOnly: u32;
-// the id pass's depth, ordering footprints as the sort does: (radial, the
-// projection's x and y scales, one over the sort value's far end)
+// the id pass's radial depth: (radial, the projection's x and y scales, one
+// over the squared distance's far end)
 uniform idDepthParams: vec4f;
 
 varying gaussianUV: vec2f;
@@ -106,9 +106,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     // (mirroring the fragment shader's eligibility test) so it renders and picks
     // there. Everywhere else skip it as before, so an invisible splat can't
     // steal frontmost picks or burn fill
-    let ringEligible = uniform.ringSize > 0.0
+    let ringShown = uniform.ringSize > 0.0
         && entry >= uniform.ringsBase && entry < uniform.ringsBase + uniform.ringsCount
-        && overlayEligible(flags, uniform.ringMask) && overlayVisible(entry, flags);
+        && overlayEligible(flags, uniform.ringMask);
+    #ifdef ID_PASS
+        // the id pass computes the visibility bits, so it cannot read them: a
+        // splat it skipped for a missing bit would never earn one
+        let ringEligible = ringShown;
+    #else
+        let ringEligible = ringShown && overlayVisible(entry, flags);
+    #endif
     if (alpha == 0.0 && !ringEligible) {
         output.position = discardPosition;
         return output;
@@ -200,13 +207,17 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     #endif
     #ifdef ID_PASS
         // the frontmost footprint is the one the sort draws last, so the id
-        // pass's depth is the sort's value, not the clip depth: the distance
-        // to the camera when the sort is radial (squared, as the projector
-        // keys it), else the view depth. Constant over the quad, so the depth
-        // test still rejects hidden footprints before they shade
-        let lateral = ndc / uniform.idDepthParams.yz;
-        let sortValue = select(depth, depth * depth * (1.0 + dot(lateral, lateral)), uniform.idDepthParams.x != 0.0);
-        output.position.z = clamp(sortValue * uniform.idDepthParams.w, 0.0, 1.0) * output.position.w;
+        // pass's depth follows the sort. A radial sort orders by distance to
+        // the camera (squared, as the projector keys it), which replaces the
+        // clip depth; otherwise the clip depth already orders view depth over
+        // the near-far interval, an orthographic camera's negative depths
+        // included. Constant over the quad, so the depth test still rejects
+        // hidden footprints before they shade
+        if (uniform.idDepthParams.x != 0.0) {
+            let lateral = ndc / uniform.idDepthParams.yz;
+            let distance2 = depth * depth * (1.0 + dot(lateral, lateral));
+            output.position.z = clamp(distance2 * uniform.idDepthParams.w, 0.0, 1.0) * output.position.w;
+        }
     #endif
     output.gaussianUV = corner;
     let fill = prepareOutputFromGamma(gaussianRgb, clip.w);

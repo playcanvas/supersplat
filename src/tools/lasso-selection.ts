@@ -44,6 +44,9 @@ class LassoSelection {
         };
 
         let dragId: number | undefined;
+        // the selection of a finished stroke is still settling: the polygon
+        // stays up and a new stroke waits for it
+        let finishing = false;
 
         const update = (e: PointerEvent) => {
             currentPoint = { x: e.offsetX, y: e.offsetY };
@@ -90,7 +93,7 @@ class LassoSelection {
         };
 
         const pointerdown = (e: PointerEvent) => {
-            if (dragId === undefined && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
+            if (dragId === undefined && !finishing && (e.pointerType === 'mouse' ? e.button === 0 : e.isPrimary)) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -130,13 +133,20 @@ class LassoSelection {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // wait for selection to complete before clearing polygon
-                await commitSelection(e);
-
+                // the stroke ends here, not once its selection settles: a
+                // buttonless move in between would end it again (see
+                // pointermove) and submit the selection twice
                 dragEnd();
+                finishing = true;
 
-                points = [];
-                paint();
+                // wait for selection to complete before clearing polygon
+                try {
+                    await commitSelection(e);
+                } finally {
+                    finishing = false;
+                    points = [];
+                    paint();
+                }
             }
         };
 

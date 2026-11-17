@@ -150,8 +150,10 @@ class Camera extends Element {
     // footprints opaque and depth tested into the id target, and the
     // visibility pass scatters it into the bits, so the splat pass's rings and
     // the centres both draw from this frame's set, sorted or stochastic
+    // the id target's clear: a forward pass takes its clears from its first
+    // layer step each frame, so the id pass cannot clear the target itself
+    idClearPass: RenderPass;
     idPass: RenderPassForward;
-    private idPassLayers = false;
     visibilityPass: FramePass;
     stochasticSplatPass: RenderPassForward;
     warpSplatPass: RenderPassForward;
@@ -420,6 +422,7 @@ class Camera extends Element {
         this.depthReducePass.name = 'depthReduce';
         this.depthReducePass.execute = () => scene.projectedSplatRenderer.afterSplatPass();
         // the splat material draws the id pass as its id-only variant
+        this.idClearPass = new RenderPass(device);
         this.idPass = new RenderPassForward(device, app.scene, camera);
         this.idPass.onBefore = () => scene.projectedSplatRenderer.beginIdPass();
         this.idPass.onAfter = () => scene.projectedSplatRenderer.endIdPass();
@@ -547,6 +550,7 @@ class Camera extends Element {
         this.warpClearPass?.destroy();
         this.mainPass?.destroy();
         this.splatPass?.destroy();
+        this.idClearPass?.destroy();
         this.idPass?.destroy();
         this.visibilityPass?.destroy();
         this.stochasticSplatPass?.destroy();
@@ -700,6 +704,7 @@ class Camera extends Element {
 
             // assign render passes to camera
             this.camera.framePasses = [
+                this.idClearPass,
                 this.idPass,
                 this.visibilityPass,
                 this.clearPass,
@@ -845,6 +850,7 @@ class Camera extends Element {
         } else {
             this.releaseIdTarget();
         }
+        this.idClearPass.enabled = this.visibilityIds;
         this.idPass.enabled = this.visibilityIds;
         this.visibilityPass.enabled = this.visibilityIds;
         this.splatPass.enabled = !movingRender;
@@ -856,9 +862,9 @@ class Camera extends Element {
         this.updateCameraUniforms();
     }
 
-    // the id target over the shared depth buffer: the id pass clears both,
-    // then the clear pass clears the depth again for the frame's own passes.
-    // Rgba8 carries the id a byte a channel, the pass being opaque
+    // the id target over the shared depth buffer: the id clear pass clears
+    // both, then the clear pass clears the depth again for the frame's own
+    // passes. Rgba8 carries the id a byte a channel, the pass being opaque
     private ensureIdTarget() {
         if (this.idTarget) {
             return;
@@ -880,16 +886,16 @@ class Camera extends Element {
             depthBuffer: this.mainTarget.depthBuffer,
             autoResolve: false
         });
+        this.idClearPass.init(this.idTarget);
+        this.idClearPass.setClearColor(new Color(0, 0, 0, 0));
+        this.idClearPass.setClearDepth(1);
+        this.idClearPass.setClearStencil(0);
+        // each layer step keeps the target it was added for, and sizes its
+        // viewport from it, so a new target needs new steps
         this.idPass.init(this.idTarget);
-        this.idPass.setClearColor(new Color(0, 0, 0, 0));
-        this.idPass.setClearDepth(1);
-        this.idPass.setClearStencil(0);
-        // the pass keeps its layers across a release
-        if (!this.idPassLayers) {
-            this.idPass.addLayer(this.scene.splatLayer, false, false);
-            this.idPass.addLayer(this.scene.splatLayer, true, false);
-            this.idPassLayers = true;
-        }
+        this.idPass.layerRenderSteps.length = 0;
+        this.idPass.addLayer(this.scene.splatLayer, false, false);
+        this.idPass.addLayer(this.scene.splatLayer, true, false);
     }
 
     private releaseIdTarget() {

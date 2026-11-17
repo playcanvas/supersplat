@@ -73,7 +73,7 @@ const SORT_KEY_BITS = 20;
 
 // the id pass's inputs (see updateIdPass): the view-projection, the target
 // size and the draw settings that decide which footprints it rasterises
-const ID_KEY_SIZE = 25;
+const ID_KEY_SIZE = 27;
 
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
@@ -251,9 +251,9 @@ class ProjectedSplatRenderer {
     private frameTail = false;
     // The id pass runs only when its bits could differ from the last ones
     // it produced (updateIdPass): the view, the target, the drawn set or a
-    // layer's gaussians changed. While the camera keeps moving it is skipped
-    // and the markers hold the bits from where the move began; the frame the
-    // camera settles on is owed to the scene, which renders it
+    // layer's gaussians changed. While the camera or a layer keeps moving it
+    // is skipped and the markers hold the bits from where the move began; the
+    // frame the scene settles on is owed to the scene, which renders it
     idPassOwed = false;
     private idValid = false;
     private readonly idKey = new Float64Array(ID_KEY_SIZE);
@@ -261,7 +261,7 @@ class ProjectedSplatRenderer {
     private idTexture: Texture | null = null;
     private contentVersion = 0;
     private idContentVersion = -1;
-    private prevCameraChanged = false;
+    private prevMoved = false;
     private visibilityCompute: Compute | null = null;
     private visibilityShader: Shader | null = null;
     private visibilityBindGroupFormat: BindGroupFormat | null = null;
@@ -294,12 +294,13 @@ class ProjectedSplatRenderer {
 
         // the edits that can change which gaussians own pixels: their state
         // (removal, locks, the selection), positions, opacity, a layer's
-        // visibility
+        // visibility or transform
         for (const name of [
             'splat.stateChanged',
             'splat.positionsChanged',
             'splat.colorsChanged',
-            'splat.visibility'
+            'splat.visibility',
+            'splat.moved'
         ]) {
             scene.events.on(name, () => {
                 this.contentVersion++;
@@ -1356,6 +1357,11 @@ class ProjectedSplatRenderer {
             key[22] = radialSort ? 1 : 0;
             key[23] = this.stochastic ? 1 : 0;
             key[24] = showCenters ? 1 : 0;
+            // the size cull and the anti-aliased dilation decide which
+            // footprints reach the id pass, and how large
+            key[25] = minPixelSize;
+            key[26] =
+                selectedSplat && effectiveModel(selectedSplat.resource.model, antiAlias) === 'antialiased' ? 1 : 0;
             this.updateIdPass();
         }
         this.submissionCpuMs = performance.now() - start;
@@ -1363,13 +1369,15 @@ class ProjectedSplatRenderer {
 
     // Whether this frame runs the id pass (Camera enables it whenever x-ray
     // off wants the bits; this turns it off when they would not change): the
-    // first frame of a camera move runs it, the frames that continue the move
-    // skip it, and the frame the camera settles on runs it again
+    // first frame of a move runs it, the frames that continue the move skip
+    // it, and the frame the scene settles on runs it again. A move is the
+    // camera's or a layer's (a gizmo drag, say)
     private updateIdPass() {
         const { scene } = this;
         const camera = scene.camera;
-        const moving = scene.cameraChanged && this.prevCameraChanged;
-        this.prevCameraChanged = scene.cameraChanged;
+        const moved = scene.cameraChanged || scene.elementsChanged;
+        const moving = moved && this.prevMoved;
+        this.prevMoved = moved;
         if (!camera.visibilityIds || !this.frameFilterVisible) {
             this.idValid = false;
             this.idPassOwed = false;
@@ -1394,10 +1402,10 @@ class ProjectedSplatRenderer {
             this.idKey.set(this.frameIdKey);
             this.idTexture = camera.visibilityBuffer;
             this.idContentVersion = this.contentVersion;
-            this.idPassOwed = false;
-        } else if (changed) {
-            this.idPassOwed = true;
         }
+        // owed only while the bits are stale: a move that returns to the
+        // cached view clears the debt with no pass
+        this.idPassOwed = changed && !run;
     }
 
     // whether this frame should run the id pass: x-ray off, with the markers

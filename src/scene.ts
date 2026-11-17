@@ -638,7 +638,7 @@ class Scene {
                 this.pendingResolve = false;
                 this.app.renderNextFrame = true;
             } else if (this.projectedSplatRenderer.idPassOwed) {
-                // the camera settled after moving with the id pass skipped:
+                // the camera or a layer settled after moving with the id pass skipped:
                 // one frame brings the x-ray-off markers up to date
                 this.app.renderNextFrame = true;
             }

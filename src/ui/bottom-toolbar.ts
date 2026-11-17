@@ -294,7 +294,7 @@ class BottomToolbar extends Container {
 
         const origin = new Button({
             id: 'bottom-toolbar-origin',
-            class: 'toolbar-toggle',
+            class: 'toolbar-button',
             icon: 'E189'
         });
 
@@ -309,25 +309,24 @@ class BottomToolbar extends Container {
         orient.dom.appendChild(createSvg(orientSvg));
         // crop.dom.appendChild(createSvg(cropSvg));
 
+        // each group of tools sits in a well (see toolbar.scss)
+        const well = (...tools: Element[]) => {
+            const container = new Container({ class: 'toolbar-well' });
+            tools.forEach((tool) => container.append(tool));
+            return container;
+        };
+
         this.append(undo);
         this.append(redo);
         this.append(new Element({ class: 'toolbar-separator' }));
-        this.append(picker);
-        this.append(brush);
-        this.append(polygon);
-        this.append(eyedropper);
+        this.append(well(picker, brush, polygon, eyedropper));
         this.append(new Element({ class: 'toolbar-separator' }));
-        this.append(sphereBrush);
-        this.append(sphere);
-        this.append(box);
-        // this.append(crop);
+        this.append(well(sphereBrush, sphere, box));
+        // crop belongs in the well above when it returns
         this.append(new Element({ class: 'toolbar-separator' }));
-        this.append(move);
-        this.append(rotate);
-        this.append(scale);
+        this.append(well(move, rotate, scale));
         this.append(new Element({ class: 'toolbar-separator' }));
-        this.append(measure);
-        this.append(orient);
+        this.append(well(measure, orient));
         this.append(coordSpace);
         this.append(origin);
 

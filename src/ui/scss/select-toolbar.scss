@@ -22,10 +22,11 @@
 
     // icon apply buttons (set/add/remove/intersect)
     .select-toolbar-op {
-        @extend %toolbar-control;
+        @extend %toolbar-bare;
     }
 
-    // gizmo mode buttons are the bottom toolbar's tool buttons
+    // gizmo mode buttons are the bottom toolbar's tool buttons, in a
+    // .toolbar-well
     .select-toolbar-mode {
         @extend %toolbar-tool;
     }

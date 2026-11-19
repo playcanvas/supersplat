@@ -15,7 +15,6 @@ import type { Events } from '../events';
 import type { ExportChoices, ExportDialogResult, ExportType } from '../export-options';
 import type { ExportSettings } from '../export-settings';
 import type { BlobReadSource, WriteTarget } from '../io';
-import type { Splat } from '../splat';
 
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
@@ -224,28 +223,6 @@ class ExportPopup extends Container {
         compressRow.append(compressLabel);
         compressRow.append(compressBoolean);
 
-        // spherical harmonic bands
-
-        const bandsRow = new Container({
-            class: 'row'
-        });
-
-        const bandsLabel = new Label({
-            class: 'label'
-        });
-        i18n.bindText(bandsLabel, 'popup.export.sh-bands');
-
-        const bandsSlider = new SliderInput({
-            class: 'slider',
-            min: 0,
-            max: 3,
-            precision: 0,
-            value: 3
-        });
-
-        bandsRow.append(bandsLabel);
-        bandsRow.append(bandsSlider);
-
         // sog iterations
 
         const iterationsRow = new Container({
@@ -341,7 +318,6 @@ class ExportPopup extends Container {
         content.append(colorRow);
         content.append(fovRow);
         content.append(compressRow);
-        content.append(bandsRow);
         content.append(iterationsRow);
         content.append(spzVersionRow);
 
@@ -545,31 +521,22 @@ class ExportPopup extends Container {
                 colorRow,
                 fovRow,
                 compressRow,
-                bandsRow,
                 iterationsRow,
                 spzVersionRow
             ];
 
             const activeRows: Container[] = {
-                ply: [compressRow, bandsRow],
+                ply: [compressRow],
                 splat: [],
                 ssproj: [],
-                sog: [bandsRow, iterationsRow],
-                spz: [bandsRow, spzVersionRow],
-                viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow, bandsRow]
+                sog: [iterationsRow],
+                spz: [spzVersionRow],
+                viewer: [viewerTypeRow, animationRow, loopRow, colorRow, fovRow]
             }[exportType];
 
             allRows.forEach((r) => {
                 r.hidden = activeRows.indexOf(r) === -1;
             });
-
-            // default to the scene's band count, capped by the viewport setting.
-            // higher values pad the missing coefficients with zeros
-            const sceneBands = Math.max(
-                0,
-                ...(events.invoke('scene.splats') as Splat[]).map((s) => s.resource.shBands)
-            );
-            bandsSlider.value = Math.min(events.invoke('view.bands'), sceneBands);
 
             // ply
             compressBoolean.value = false;
@@ -646,19 +613,17 @@ class ExportPopup extends Container {
                 const filename = getFilename();
                 switch (exportType) {
                     case 'ply':
-                        return { filename, shBands: bandsSlider.value, compressedPly: compressBoolean.value };
+                        return { filename, compressedPly: compressBoolean.value };
                     case 'sog':
-                        return { filename, shBands: bandsSlider.value, sogIterations: iterationsSlider.value };
+                        return { filename, sogIterations: iterationsSlider.value };
                     case 'spz':
                         return {
                             filename,
-                            shBands: bandsSlider.value,
                             spzVersion: spzVersionSelect.value === '3' ? 3 : 4
                         };
                     case 'viewer':
                         return {
                             filename,
-                            shBands: bandsSlider.value,
                             viewerType: viewerTypeSelect.value === 'zip' ? 'zip' : 'html',
                             includeAnimation: animationToggle.value,
                             loopMode: loopSelect.value as ExportChoices['loopMode'],

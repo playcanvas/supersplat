@@ -20,10 +20,9 @@ import { defaultPostEffectSettings } from '../splat-serialize';
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
 
-// Largest scene that can be published without LODs: it is written as a
-// single-file SOG, and splat-transform's WASM WebP encoder runs out of memory
-// between 45M and 50M splats. Keep in sync with the publish server's limit.
-const MAX_SINGLE_FILE_SPLATS = 40_000_000;
+// Scenes with at least this many splats are published with LODs. The publish
+// server decides from the uploaded file; this sends the same choice.
+const MIN_LOD_SPLATS = 1_000_000;
 
 // locale-aware unit formatting, e.g. "10 GB" / "10,5 GB", "45 min" / "45 Min."
 const formatUnit = (value: number, unit: string, maximumFractionDigits = 0) => {
@@ -200,18 +199,6 @@ class PublishSettingsDialog extends Container {
         colorRow.append(colorLabel);
         colorRow.append(colorPicker);
 
-        // generate LODs
-
-        const generateLodsLabel = new Label({ class: 'label' });
-        i18n.bindText(generateLodsLabel, 'popup.publish.generate-lods');
-        const generateLodsToggle = new BooleanInput({ class: 'boolean', type: 'toggle', value: false });
-        const generateLodsRow = new Container({ class: 'row' });
-        generateLodsRow.append(generateLodsLabel);
-        generateLodsRow.append(generateLodsToggle);
-
-        const generateLodsRequiredMessage = new Label({ class: 'lods-required-message', hidden: true });
-        i18n.bindText(generateLodsRequiredMessage, 'popup.publish.generate-lods-required');
-
         // shown when the server would refuse a new upload (daily allowance used, too many processing)
         const publishBlockedMessage = new Label({ class: 'publish-blocked-message', hidden: true });
         let publishLimits: PublishLimits | null = null;
@@ -235,21 +222,6 @@ class PublishSettingsDialog extends Container {
         fovRow.append(fovLabel);
         fovRow.append(fovSlider);
 
-        // spherical harmonic bands
-
-        const bandsLabel = new Label({ class: 'label' });
-        i18n.bindText(bandsLabel, 'popup.export.sh-bands');
-        const bandsSlider = new SliderInput({
-            class: 'slider',
-            min: 0,
-            max: 3,
-            precision: 0,
-            value: 3
-        });
-        const bandsRow = new Container({ class: 'row' });
-        bandsRow.append(bandsLabel);
-        bandsRow.append(bandsSlider);
-
         // content
 
         const content = new Container({ id: 'content' });
@@ -262,9 +234,6 @@ class PublishSettingsDialog extends Container {
         content.append(fovRow);
         content.append(animationRow);
         content.append(loopRow);
-        content.append(bandsRow);
-        content.append(generateLodsRow);
-        content.append(generateLodsRequiredMessage);
         content.append(publishBlockedMessage);
 
         // footer
@@ -313,7 +282,7 @@ class PublishSettingsDialog extends Container {
         };
 
         let hasPosesState = false;
-        let lodsRequired = false;
+        let generateLods = false;
 
         const updateLayout = () => {
             const isNew = overwriteSelect.value === '0';
@@ -328,13 +297,6 @@ class PublishSettingsDialog extends Container {
             animationRow.hidden = !isNew;
             overrideModelRow.hidden = isNew;
             overrideAnimationRow.hidden = isNew;
-            // bands and generateLods only matter when a model is uploaded — hide when republishing animation-only
-            bandsRow.hidden = !isNew && !modelOn;
-            generateLodsRow.hidden = !isNew && !modelOn;
-            // too many splats for a single-file publish: LODs are forced on
-            generateLodsToggle.enabled = !lodsRequired;
-            generateLodsRequiredMessage.hidden = generateLodsRow.hidden || !lodsRequired;
-
             if (isNew) {
                 animationToggle.enabled = hasPosesState;
                 loopRow.hidden = false;
@@ -369,24 +331,7 @@ class PublishSettingsDialog extends Container {
             const bgClr = events.invoke('bgClr');
             const totalSplats = splats.reduce((sum: number, s) => sum + (s.numSplats ?? 0), 0);
             // numSplats is the live count (deleted splats are already excluded)
-            lodsRequired = totalSplats > MAX_SINGLE_FILE_SPLATS;
-
-            // union scene bounds to decide LOD default for large scenes
-            const sceneMin = [Infinity, Infinity, Infinity];
-            const sceneMax = [-Infinity, -Infinity, -Infinity];
-            for (const s of splats) {
-                const bound = s.worldBound;
-                if (!bound) continue;
-                const { center, halfExtents } = bound;
-                const c = [center.x, center.y, center.z];
-                const h = [halfExtents.x, halfExtents.y, halfExtents.z];
-                for (let i = 0; i < 3; i++) {
-                    sceneMin[i] = Math.min(sceneMin[i], c[i] - h[i]);
-                    sceneMax[i] = Math.max(sceneMax[i], c[i] + h[i]);
-                }
-            }
-            const largeAxes = [0, 1, 2].filter((i) => sceneMax[i] - sceneMin[i] > 16).length;
-            const isLargeScene = largeAxes >= 2;
+            generateLods = totalSplats >= MIN_LOD_SPLATS;
 
             overwriteSelect.options = [
                 {
@@ -404,12 +349,6 @@ class PublishSettingsDialog extends Container {
             loopSelect.value = events.invoke('timeline.loop') ? 'repeat' : 'none';
             colorPicker.value = [bgClr.r, bgClr.g, bgClr.b];
             fovSlider.value = events.invoke('camera.fov');
-            // default to the scene's band count, capped by the viewport setting
-            bandsSlider.value = Math.min(
-                events.invoke('view.bands'),
-                Math.max(0, ...splats.map((s) => s.resource.shBands))
-            );
-            generateLodsToggle.value = lodsRequired || (totalSplats >= 1_000_000 && isLargeScene);
 
             updateLayout();
         };
@@ -516,8 +455,8 @@ class PublishSettingsDialog extends Container {
                         startMode: includeAnimation ? 'animTrack' : 'default'
                     };
 
+                    // the scene's own SH bands are published
                     const serializeSettings = {
-                        shBands: bandsSlider.value,
                         minOpacity: 1 / 255,
                         removeInvalid: true
                     };
@@ -532,7 +471,7 @@ class PublishSettingsDialog extends Container {
                         overwriteHash: selectedScene?.hash,
                         overrideModel: isNew || overrideModelToggle.value,
                         overrideAnimation: !isNew && overrideAnimationToggle.value,
-                        generateLods: generateLodsToggle.value
+                        generateLods
                     });
                 };
             }).finally(() => {

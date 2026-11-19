@@ -803,10 +803,27 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     });
 
+    // The saved export folder must never stop the export dialog opening: a
+    // damaged IndexedDB or a folder on an unreachable drive (network share,
+    // unplugged disk) can leave these calls pending forever, without an error.
+    const exportStorageTimeoutMs = 2000;
+    const withTimeout = <T>(promise: Promise<T>, fallback: T) => {
+        return Promise.race([
+            promise,
+            new Promise<T>((resolve) => {
+                setTimeout(() => resolve(fallback), exportStorageTimeoutMs);
+            })
+        ]);
+    };
+
     let exportSettings: ExportSettings = {};
-    const exportSettingsReady = loadExportSettings()
+    const exportSettingsReady = withTimeout(loadExportSettings(), null)
         .then((settings) => {
-            exportSettings = settings;
+            if (settings) {
+                exportSettings = settings;
+            } else {
+                console.warn('Export settings took too long to restore');
+            }
         })
         .catch((error) => {
             console.warn('Export settings could not be restored', error);
@@ -830,7 +847,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 mode: 'readwrite',
                 startIn: exportSettings.directory
             });
-            await persistExportSettings();
+            // Not awaited: a stuck store must not hold up the picked folder.
+            persistExportSettings();
             return exportSettings.directory;
         } catch (error) {
             if (error.name !== 'AbortError') {
@@ -844,29 +862,41 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
         }
     });
 
+    // Whether the saved folder can be written to now.
+    const checkExportDirectory = async (directory: FileSystemDirectoryHandle) => {
+        try {
+            const permission = await directory.queryPermission({ mode: 'readwrite' });
+            if (permission !== 'granted') return permission === 'prompt' ? 'prompt' : 'unavailable';
+            // A saved handle can outlive the folder it refers to.
+            await directory.values().next();
+            return 'granted';
+        } catch {
+            return 'unavailable';
+        }
+    };
+
     events.function('scene.getExportDirectory', async () => {
         await exportSettingsReady;
-        let directory = exportSettings.directory;
-        if (directory) {
-            try {
-                const permission = await directory.queryPermission({ mode: 'readwrite' });
+        const directory = exportSettings.directory;
+        if (!directory) return undefined;
+
+        const status = await withTimeout(checkExportDirectory(directory), 'timeout');
+        switch (status) {
+            case 'granted':
+                return directory;
+            case 'prompt':
                 // Keep the handle so the folder button can restore access.
-                if (permission === 'prompt') return undefined;
-                if (permission !== 'granted') {
-                    directory = undefined;
-                } else {
-                    // A saved handle can outlive the folder it refers to.
-                    await directory.values().next();
-                }
-            } catch {
-                directory = undefined;
-            }
-            if (!directory) {
+                return undefined;
+            case 'timeout':
+                // Forget the folder for this session only, so the folder button
+                // opens the picker; it may be reachable again next time.
                 exportSettings.directory = undefined;
-                await persistExportSettings();
-            }
+                return undefined;
+            default:
+                exportSettings.directory = undefined;
+                persistExportSettings();
+                return undefined;
         }
-        return directory;
     });
 
     const showExportError = async (error: Error) => {

@@ -43,6 +43,13 @@ const useTimeline = fn => use(async (state) => {
     scene.camera = {
         azim: 0, elevation: 0, distance: 1,
         onUpdate() {},
+        // the pose editor-session reports alongside its camera frame
+        getPose: () => ({
+            position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+            target: { x: camera.target.x, y: camera.target.y, z: camera.target.z },
+            fov: camera.fov,
+            roll: 0
+        }),
         captureFrame: () => ({
             position: camera.position.clone(), fov: camera.fov, ortho: false, target: { width: 1, height: 1 },
             view: new Mat4().setTranslate(-camera.position.x, -camera.position.y, -camera.position.z), projection: new Mat4()

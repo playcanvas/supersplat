@@ -1,7 +1,7 @@
-import { Vec3 } from 'playcanvas';
 import type { EventHandle } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
+import { createPose } from './camera-poses';
 import { AnimTrackEditOp } from './edit-ops';
 import { MAX_FRAMES } from './editor-timeline';
 import type { Events } from './events';
@@ -63,17 +63,8 @@ const registerCameraRecorderEvents = (events: Events) => {
     events.function('recorder.samples', () => poses.map((p) => p.frame));
 
     // the camera as a pose on the given frame
-    const poseAt = (frame: number): Pose => {
-        const pose = events.invoke('camera.getPose');
-        return {
-            name: `camera_${poses.length}`,
-            frame,
-            position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
-            target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
-            fov: pose.fov,
-            roll: pose.roll
-        };
-    };
+    const poseAt = (frame: number): Pose =>
+        createPose(events.invoke('camera.getPose'), frame, `camera_${poses.length}`);
 
     const capture = (frame: number) => {
         poses.push(poseAt(frame));

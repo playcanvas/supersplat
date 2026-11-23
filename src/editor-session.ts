@@ -162,7 +162,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
 
     const cameraInfo = () => {
         const frame = scene.camera.captureFrame();
-        const pose = events.invoke('camera.getPose');
+        const pose = scene.camera.getPose();
         return {
             position: frame.position,
             target: new Vec3(pose.target.x, pose.target.y, pose.target.z),

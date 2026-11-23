@@ -1,6 +1,7 @@
-import { Vec3 } from 'playcanvas';
+import type { Vec3 } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
+import { createPose, samePose } from './camera-poses';
 import type { CommandQueue } from './command-queue';
 import { AnimTrackEditOp } from './edit-ops';
 import type { CommandOptions } from './editor-command';
@@ -190,29 +191,23 @@ const createEditorTimeline = (
                 const capture = input.some((k) => !k.position || k.fov === undefined);
                 if (capture && events.invoke('timeline.playing'))
                     throw new EditorError('timeline_playing', 'Pause playback before capturing the camera pose.');
-                const pose = capture ? events.invoke('camera.getPose') : null;
+                // pose fields a key leaves out come from the live camera
+                const live = capture ? createPose(events.invoke('camera.getPose'), playhead, '') : null;
                 let affected = 0;
                 for (const k of input) {
                     const value = {
-                        position: k.position ?? new Vec3(pose.position.x, pose.position.y, pose.position.z),
-                        target: k.target ?? new Vec3(pose.target.x, pose.target.y, pose.target.z),
-                        fov: k.fov ?? pose.fov,
+                        position: k.position ?? live.position.clone(),
+                        target: k.target ?? live.target.clone(),
+                        fov: k.fov ?? live.fov,
                         // an explicit position/target is a level look-at key;
                         // omitted fields capture the live pose including roll
-                        roll: k.position ? 0 : (pose.roll ?? 0)
+                        roll: k.position ? 0 : live.roll
                     };
                     const index = poses.findIndex((p) => p.frame === k.frame);
                     const existing = poses[index];
-                    if (
-                        existing?.position.equals(value.position) &&
-                        existing.target.equals(value.target) &&
-                        existing.fov === value.fov &&
-                        (existing.roll ?? 0) === value.roll
-                    )
-                        continue;
-                    affected++;
-                    // new keys are named as the track names them
                     const key = { name: existing?.name ?? `camera_${poses.length}`, frame: k.frame, ...value };
+                    if (existing && samePose(existing, key)) continue;
+                    affected++;
                     if (existing) poses[index] = key;
                     else poses.push(key);
                 }

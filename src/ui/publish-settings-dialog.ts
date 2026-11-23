@@ -11,11 +11,9 @@ import {
     TextInput
 } from '@playcanvas/pcui';
 
-import type { Pose } from '../camera-poses';
 import type { Events } from '../events';
 import type { PublishLimits, PublishSettings, UserStatus } from '../publish';
-import type { AnimTrack, ExperienceSettings } from '../splat-serialize';
-import { defaultPostEffectSettings } from '../splat-serialize';
+import { buildExperienceSettings, orderedCameraPoses } from '../viewer-experience';
 
 import { i18n } from './localization';
 import sceneExport from './svg/export.svg';
@@ -356,15 +354,8 @@ class PublishSettingsDialog extends Container {
         // function implementations
 
         this.show = (userStatus: UserStatus) => {
-            const frames = events.invoke('timeline.frames');
-            const frameRate = events.invoke('timeline.frameRate');
-            const smoothness = events.invoke('timeline.smoothness');
-
-            // get poses
-            const orderedPoses = (events.invoke('camera.poses') as Pose[])
-                .slice()
-                .filter((p) => p.frame >= 0 && p.frame < frames)
-                .sort((a, b) => a.frame - b.frame);
+            // camera keys the publish can carry as an animation
+            const orderedPoses = orderedCameraPoses(events);
 
             // overwrite options
             const overwriteList = userStatus.scenes.map((s) => {
@@ -392,68 +383,12 @@ class PublishSettingsDialog extends Container {
                         ? userStatus.scenes[parseInt(overwriteSelect.value as string, 10) - 1]
                         : null;
 
-                    // extract camera animation
-                    const includeAnimation = isNew ? animationToggle.value : overrideAnimationToggle.value;
-                    const animTracks: AnimTrack[] = [];
-
-                    if (includeAnimation && orderedPoses.length > 0) {
-                        const times: number[] = [];
-                        const position: number[] = [];
-                        const target: number[] = [];
-                        const fovKeys: number[] = [];
-                        for (let i = 0; i < orderedPoses.length; ++i) {
-                            const op = orderedPoses[i];
-                            times.push(op.frame);
-                            position.push(op.position.x, op.position.y, op.position.z);
-                            target.push(op.target.x, op.target.y, op.target.z);
-                            fovKeys.push(op.fov);
-                        }
-
-                        animTracks.push({
-                            name: 'cameraAnim',
-                            duration: frames / frameRate,
-                            frameRate,
-                            loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
-                            interpolation: 'spline',
-                            smoothness,
-                            keyframes: {
-                                times,
-                                values: { position, target, fov: fovKeys }
-                            }
-                        });
-                    }
-
-                    const fov = fovSlider.value;
-                    const bgColor = colorPicker.value.slice(0, 3) as [number, number, number];
-
-                    // use current viewport as start pose
-                    const pose = events.invoke('camera.getPose');
-                    const p = pose?.position;
-                    const t = pose?.target;
-                    const cameras =
-                        p && t
-                            ? [
-                                  {
-                                      initial: {
-                                          position: [p.x, p.y, p.z] as [number, number, number],
-                                          target: [t.x, t.y, t.z] as [number, number, number],
-                                          fov
-                                      }
-                                  }
-                              ]
-                            : [];
-
-                    const experienceSettings: ExperienceSettings = {
-                        version: 2,
-                        tonemapping: 'none',
-                        highPrecisionRendering: false,
-                        background: { color: bgColor },
-                        postEffectSettings: defaultPostEffectSettings(),
-                        animTracks,
-                        cameras,
-                        annotations: [],
-                        startMode: includeAnimation ? 'animTrack' : 'default'
-                    };
+                    const experienceSettings = buildExperienceSettings(events, {
+                        includeAnimation: isNew ? animationToggle.value : overrideAnimationToggle.value,
+                        loopMode: loopSelect.value as 'none' | 'repeat' | 'pingpong',
+                        backgroundColor: colorPicker.value.slice(0, 3) as [number, number, number],
+                        fov: fovSlider.value
+                    });
 
                     // the scene's own SH bands are published
                     const serializeSettings = {

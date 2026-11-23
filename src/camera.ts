@@ -442,10 +442,20 @@ class Camera extends Element {
         vec.sub2(target, position);
         const l = vec.length();
         const { azim, elev } = dirToAzimElev(vec.mulScalar(1 / l));
-        this.setFocalPoint(target, dampingFactorFactor);
-        this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance((l / this.sceneRadius) * this.fovFactor, dampingFactorFactor);
+        this.applyRig(target, azim, elev, (l / this.sceneRadius) * this.fovFactor, dampingFactorFactor);
+        this.applyRoll(roll);
+    }
 
+    // set the orbit rig in one step
+    private applyRig(focalPoint: Vec3, azim: number, elev: number, distance: number, dampingFactorFactor: number) {
+        this.setFocalPoint(focalPoint, dampingFactorFactor);
+        this.setAzimElev(azim, elev, dampingFactorFactor);
+        this.setDistance(distance, dampingFactorFactor);
+    }
+
+    // carry a pose roll on top of the rig (or into the free pose), and drop
+    // any override for a level view
+    private applyRoll(roll: number) {
         if (this._controlMode === 'free') {
             this.syncFreeFromRig(roll);
         } else if (roll !== 0) {
@@ -528,6 +538,19 @@ class Camera extends Element {
     // pose target for callers that need a look-at point (keyframes, recording)
     getPoseTarget() {
         return this._controlMode === 'free' ? this.getFreeRig().focalPoint : this.focalPoint;
+    }
+
+    // the camera as a pose: a look-at target plus roll, so keyframes and
+    // recordings can store any camera mode (including free)
+    getPose() {
+        const position = this.position;
+        const target = this.getPoseTarget();
+        return {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: target.x, y: target.y, z: target.z },
+            fov: this.fov,
+            roll: this.getRoll()
+        };
     }
 
     // signed roll (degrees) of the current orientation about the view axis,
@@ -1452,24 +1475,12 @@ class Camera extends Element {
     }
 
     docDeserialize(settings: ReturnType<Camera['docSerialize']>) {
-        this.setFocalPoint(new Vec3(settings.focalPoint), 0);
-        this.setAzimElev(settings.azim, settings.elev, 0);
-        this.setDistance(settings.distance, 0);
+        this.applyRig(new Vec3(settings.focalPoint), settings.azim, settings.elev, settings.distance, 0);
         this.fov = settings.fov;
         this.tonemapping = settings.tonemapping;
 
         // apply roll after the setters above, which clear it for manual moves
-        const roll = settings.roll ?? 0;
-        if (this._controlMode === 'free') {
-            this.syncFreeFromRig(roll);
-        } else if (roll !== 0) {
-            if (!this.rotationOverride) {
-                this.rotationOverride = new Quat();
-            }
-            this.orientationWithRoll(this.azim, this.elevation, roll, this.rotationOverride);
-        } else {
-            this.rotationOverride = null;
-        }
+        this.applyRoll(settings.roll ?? 0);
     }
 
     // offscreen render mode

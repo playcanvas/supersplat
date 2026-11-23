@@ -30,6 +30,54 @@ type PoseSet = {
     poses: PackedPose[];
 };
 
+// a camera as reported by camera.getPose, before it becomes a keyframe
+type PoseValues = {
+    position: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+    fov: number;
+    roll?: number;
+};
+
+// build a pose from a camera.getPose result
+const createPose = (values: PoseValues, frame: number, name: string): Pose => ({
+    name,
+    frame,
+    position: new Vec3(values.position.x, values.position.y, values.position.z),
+    target: new Vec3(values.target.x, values.target.y, values.target.z),
+    fov: values.fov,
+    roll: values.roll ?? 0
+});
+
+// copy a pose so edits and snapshots never share its vectors
+const clonePose = (pose: Pose, overrides: Partial<Pose> = {}): Pose => ({
+    ...pose,
+    position: pose.position.clone(),
+    target: pose.target.clone(),
+    ...overrides
+});
+
+// whether two poses put the camera in the same place (ignoring name/frame)
+const samePose = (a: Pose, b: Pose) =>
+    a.position.equals(b.position) && a.target.equals(b.target) && a.fov === b.fov && (a.roll ?? 0) === (b.roll ?? 0);
+
+const packPose = (pose: Pose): PackedPose => ({
+    name: pose.name,
+    frame: pose.frame,
+    position: [pose.position.x, pose.position.y, pose.position.z],
+    target: [pose.target.x, pose.target.y, pose.target.z],
+    fov: pose.fov,
+    roll: pose.roll
+});
+
+const unpackPose = (pose: PackedPose, frame: number, fov: number): Pose => ({
+    name: pose.name,
+    frame: pose.frame ?? frame,
+    position: new Vec3(pose.position),
+    target: new Vec3(pose.target),
+    fov: pose.fov ?? fov,
+    roll: pose.roll ?? 0
+});
+
 /**
  * Camera animation track that manages camera keyframes and interpolation.
  * Implements AnimTrack interface so it can be used with the timeline system.
@@ -90,26 +138,7 @@ class CameraAnimTrack implements AnimTrack {
         const pose = this.events.invoke('camera.getPose');
         if (!pose) return false;
 
-        const existingIndex = this.poses.findIndex((p) => p.frame === frame);
-
-        const newPose: Pose = {
-            name: `camera_${this.poses.length}`,
-            frame,
-            position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
-            target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
-            fov: pose.fov,
-            roll: pose.roll
-        };
-
-        if (existingIndex === -1) {
-            this.poses.push(newPose);
-            this.rebuildSpline();
-            this.events.fire('track.keyAdded', frame);
-        } else {
-            this.poses[existingIndex] = newPose;
-            this.rebuildSpline();
-            this.events.fire('track.keyUpdated', frame);
-        }
+        this.store(createPose(pose, frame, `camera_${this.poses.length}`));
         return true;
     }
 
@@ -125,18 +154,13 @@ class CameraAnimTrack implements AnimTrack {
     moveKey(fromFrame: number, toFrame: number): boolean {
         if (fromFrame === toFrame) return false;
 
-        const index = this.poses.findIndex((p) => p.frame === fromFrame);
-        if (index === -1) return false;
+        const moved = this.poses.find((p) => p.frame === fromFrame);
+        if (!moved) return false;
 
         // Remove any existing pose at the target frame
-        const toIndex = this.poses.findIndex((p) => p.frame === toFrame);
-        if (toIndex !== -1) {
-            this.poses.splice(toIndex, 1);
-        }
+        this.removeFrame(toFrame);
 
-        // Update the frame (re-find index since splice may have shifted it)
-        const movedIndex = this.poses.findIndex((p) => p.frame === fromFrame);
-        this.poses[movedIndex].frame = toFrame;
+        moved.frame = toFrame;
         this.rebuildSpline();
         this.events.fire('track.keyMoved', fromFrame, toFrame);
         return true;
@@ -149,19 +173,9 @@ class CameraAnimTrack implements AnimTrack {
         if (!source) return false;
 
         // Remove any existing pose at the target frame
-        const toIndex = this.poses.findIndex((p) => p.frame === toFrame);
-        if (toIndex !== -1) {
-            this.poses.splice(toIndex, 1);
-        }
+        this.removeFrame(toFrame);
 
-        this.poses.push({
-            name: `camera_${this.poses.length}`,
-            frame: toFrame,
-            position: source.position.clone(),
-            target: source.target.clone(),
-            fov: source.fov,
-            roll: source.roll
-        });
+        this.poses.push(clonePose(source, { name: `camera_${this.poses.length}`, frame: toFrame }));
 
         this.rebuildSpline();
         this.events.fire('track.keyAdded', toFrame);
@@ -180,25 +194,11 @@ class CameraAnimTrack implements AnimTrack {
     }
 
     snapshot(): Pose[] {
-        return this.poses.map((p) => ({
-            name: p.name,
-            frame: p.frame,
-            position: p.position.clone(),
-            target: p.target.clone(),
-            fov: p.fov,
-            roll: p.roll
-        }));
+        return this.poses.map((p) => clonePose(p));
     }
 
     restore(snapshot: unknown): void {
-        this.poses = (snapshot as Pose[]).map((p) => ({
-            name: p.name,
-            frame: p.frame,
-            position: p.position.clone(),
-            target: p.target.clone(),
-            fov: p.fov,
-            roll: p.roll
-        }));
+        this.poses = (snapshot as Pose[]).map((p) => clonePose(p));
         this.rebuildSpline();
         this.events.fire('track.keysLoaded');
     }
@@ -212,17 +212,7 @@ class CameraAnimTrack implements AnimTrack {
         }
 
         pose.fov ??= this.events.invoke('camera.fov') ?? 60;
-
-        const idx = this.poses.findIndex((p) => p.frame === pose.frame);
-        if (idx !== -1) {
-            this.poses[idx] = pose;
-            this.rebuildSpline();
-            this.events.fire('track.keyUpdated', pose.frame);
-        } else {
-            this.poses.push(pose);
-            this.rebuildSpline();
-            this.events.fire('track.keyAdded', pose.frame);
-        }
+        this.store(pose);
     }
 
     /**
@@ -237,15 +227,29 @@ class CameraAnimTrack implements AnimTrack {
      */
     loadPoses(posesData: Pose[]): void {
         const defaultFov = this.events.invoke('camera.fov');
-        this.poses.length = 0;
-        posesData.forEach((pose) => {
-            this.poses.push({
-                ...pose,
-                fov: pose.fov ?? defaultFov
-            });
-        });
+        this.poses = posesData.map((pose) => clonePose(pose, { fov: pose.fov ?? defaultFov }));
         this.rebuildSpline();
         this.events.fire('track.keysLoaded');
+    }
+
+    // insert a pose or replace the key already on its frame
+    private store(pose: Pose): void {
+        const index = this.poses.findIndex((p) => p.frame === pose.frame);
+        if (index === -1) {
+            this.poses.push(pose);
+        } else {
+            this.poses[index] = pose;
+        }
+        this.rebuildSpline();
+        this.events.fire(index === -1 ? 'track.keyAdded' : 'track.keyUpdated', pose.frame);
+    }
+
+    // drop the key on a frame, if there is one
+    private removeFrame(frame: number): void {
+        const index = this.poses.findIndex((p) => p.frame === frame);
+        if (index !== -1) {
+            this.poses.splice(index, 1);
+        }
     }
 
     private rebuildSpline(): void {
@@ -342,7 +346,6 @@ const registerCameraPosesEvents = (events: Events) => {
     // Serialization
 
     events.function('docSerialize.poseSets', (): PoseSet[] => {
-        const pack3 = (v: Vec3) => [v.x, v.y, v.z];
         const poses = track.getPoses();
 
         if (poses.length === 0) {
@@ -352,16 +355,7 @@ const registerCameraPosesEvents = (events: Events) => {
         return [
             {
                 name: 'set0',
-                poses: poses.map((pose) => {
-                    return {
-                        name: pose.name,
-                        frame: pose.frame,
-                        position: pack3(pose.position),
-                        target: pack3(pose.target),
-                        fov: pose.fov,
-                        roll: pose.roll
-                    };
-                })
+                poses: poses.map(packPose)
             }
         ];
     });
@@ -375,19 +369,10 @@ const registerCameraPosesEvents = (events: Events) => {
 
         const defaultFov = documentCameraFov ?? events.invoke('camera.fov') ?? 60;
 
-        const loadedPoses: Pose[] = poseSets[0].poses.map((docPose, index) => {
-            return {
-                name: docPose.name,
-                frame: docPose.frame ?? index * fps,
-                position: new Vec3(docPose.position),
-                target: new Vec3(docPose.target),
-                fov: docPose.fov ?? defaultFov,
-                roll: docPose.roll ?? 0
-            };
-        });
-
-        track.loadPoses(loadedPoses);
+        track.loadPoses(
+            poseSets[0].poses.map((docPose, index) => unpackPose(docPose, docPose.frame ?? index * fps, defaultFov))
+        );
     });
 };
 
-export { registerCameraPosesEvents, CameraAnimTrack, Pose };
+export { registerCameraPosesEvents, CameraAnimTrack, Pose, createPose, samePose };

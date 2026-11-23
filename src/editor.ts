@@ -1314,19 +1314,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.function('camera.getPose', () => {
-        const camera = scene.camera;
-        const position = camera.position;
-        // free mode has an independent pose; expose a look-at target along
-        // its view direction so keyframes and recordings stay meaningful
-        const focalPoint = camera.getPoseTarget();
-        return {
-            position: { x: position.x, y: position.y, z: position.z },
-            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
-            fov: camera.fov,
-            roll: camera.getRoll()
-        };
-    });
+    events.function('camera.getPose', () => scene.camera.getPose());
 
     events.on('camera.setPose', (pose: { position: Vec3; target: Vec3; fov?: number; roll?: number }, speed = 1) => {
         // assign fov before setPose so distance is computed using the new fovFactor

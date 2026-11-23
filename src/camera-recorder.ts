@@ -48,10 +48,17 @@ const registerCameraRecorderEvents = (events: Events) => {
     // back the frames the recorder added while it ran
     let framesAtStart = 0;
 
+    // whether this take grew the timeline (an unclipped take outgrowing its
+    // length); only then does cancelling restore the starting length
+    let grewFrames = false;
+
     // an armed take waits for the camera to move before it starts recording;
     // armedPose is the pose the take begins from
     let armed = false;
     let armedPose: Pose = null;
+
+    // the clip the take is confined to (null when the whole timeline is open)
+    let takeRange: { start: number; end: number } = null;
 
     events.function('recorder.recording', () => recording);
 
@@ -98,28 +105,43 @@ const registerCameraRecorderEvents = (events: Events) => {
         return Math.abs((pose.roll ?? 0) - (armedPose.roll ?? 0)) > 1e-3;
     };
 
-    const stop = (commit: boolean) => {
+    const stop = (commit: boolean, restoreFrames = true) => {
         if (!recording) return;
         animHandle.off();
         animHandle = null;
 
         const frames = events.invoke('timeline.frames');
-        const finalFrame = Math.min(Math.floor(time), frames - 1);
+        // a clipped take never runs past its clip, even if the clip shrank or
+        // the stop arrives late
+        const liveRange = events.invoke('timeline.clipRange');
+        const takeEnd = liveRange ? liveRange.end : takeRange ? takeRange.end : -1;
+        const clipEnd = takeEnd >= 0 ? Math.min(takeEnd, frames - 1) : -1;
+        const finalFrame = Math.min(Math.floor(time), frames - 1, clipEnd >= 0 ? clipEnd : frames - 1);
 
         recording = false;
-        // a take stopped before the camera moved recorded nothing
-        const cancelled = !commit || armed;
+        // a take stopped before the camera moved, or left without a playable
+        // interval by a timeline shrink, recorded nothing
+        const invalidInterval = clipEnd >= 0 && startFrame > clipEnd;
+        const cancelled = !commit || armed || invalidInterval;
+        const range = takeRange;
         armed = false;
         armedPose = null;
+        takeRange = null;
         events.fire('recorder.recording', false);
 
         // a cancelled take leaves the track untouched, but the timeline length
-        // growth it caused is undone
+        // growth the recorder itself caused is undone
         if (cancelled) {
-            if (events.invoke('timeline.frames') !== framesAtStart) {
+            if (restoreFrames && grewFrames && events.invoke('timeline.frames') !== framesAtStart) {
                 events.fire('timeline.setFrames', framesAtStart);
             }
             return;
+        }
+
+        // a clip that shrank while the take ran drops samples past its end
+        if (clipEnd >= 0) {
+            poses = poses.filter((p) => p.frame <= clipEnd);
+            lastSampledFrame = poses.length > 0 ? poses[poses.length - 1].frame : -1;
         }
 
         // capture the pose where the take ended, unless a sample just landed there
@@ -130,15 +152,26 @@ const registerCameraRecorderEvents = (events: Events) => {
         if (poses.length === 0) return;
 
         // punch the take into the track in a single undo step, like
-        // track.addKey: keys before the take are kept, and everything from the
-        // take's start is replaced by the new samples
+        // track.addKey. An open take replaces everything from its start; a
+        // clipped take replaces only the interval it covered, so keys later in
+        // the clip survive an early stop.
         const lastCovered = poses[poses.length - 1].frame;
         const track = events.invoke('camera.animTrack');
         const before = track.snapshot();
-        const kept = (before as Pose[]).filter((p) => p.frame < startFrame);
+        const kept = (before as Pose[]).filter((p) =>
+            range ? p.frame < startFrame || p.frame > lastCovered : p.frame < startFrame
+        );
         const after = [...kept, ...poses].sort((a, b) => a.frame - b.frame);
         track.restore(after);
         events.fire('edit.add', new AnimTrackEditOp('recordTake', track, before, after), true);
+
+        if (range) {
+            // the clip already bounds the take: keep the timeline length and
+            // leave the playhead on the last captured frame
+            events.fire('timeline.setFrame', lastCovered);
+            events.fire('timeline.setPlaying', false);
+            return;
+        }
 
         // the take now defines the end of the animation
         const takeFrames = lastCovered + 1;
@@ -155,11 +188,16 @@ const registerCameraRecorderEvents = (events: Events) => {
         poses = [];
         lastSampledFrame = -1;
         framesAtStart = events.invoke('timeline.frames');
+        grewFrames = false;
 
         // continue from the playhead: a take started mid-timeline punches in
         // instead of wiping the track and restarting from frame 0
         startFrame = Math.max(0, Math.min(events.invoke('timeline.frame'), framesAtStart - 1));
         time = startFrame;
+
+        // a clip bounds the take: it commits at the clip's end instead of
+        // growing the timeline
+        takeRange = events.invoke('timeline.clipRange');
 
         // recording drives the playhead, so pause playback first
         if (events.invoke('timeline.playing')) {
@@ -177,18 +215,48 @@ const registerCameraRecorderEvents = (events: Events) => {
         nextSample = startFrame + interval;
 
         animHandle = events.on('update', (dt: number) => {
+            // the clip and the timeline length can change while the take runs,
+            // so read them live
+            let frames = events.invoke('timeline.frames');
+            const liveRange = events.invoke('timeline.clipRange');
+            const takeEnd = liveRange ? liveRange.end : takeRange ? takeRange.end : -1;
+            const clipEnd = takeEnd >= 0 ? Math.min(takeEnd, frames - 1) : -1;
+
             if (armed) {
                 if (!cameraMoved()) return;
 
                 armed = false;
-                poses.push(armedPose);
+                // no playable frame after the start: record the pose the
+                // movement produced rather than the one captured on click
+                if (clipEnd >= 0 && startFrame >= clipEnd) {
+                    poses.push(poseAt(startFrame));
+                } else {
+                    poses.push(armedPose);
+                }
                 lastSampledFrame = startFrame;
                 events.fire('recorder.sampled', startFrame);
             }
 
             time += dt * events.invoke('timeline.frameRate');
-            let frames = events.invoke('timeline.frames');
             let frame = Math.floor(time);
+
+            // the timeline shrank past the take's start: there is no interval
+            // left to punch in, so end quietly and keep the new length
+            if (clipEnd >= 0 && startFrame > clipEnd) {
+                stop(false, false);
+                return;
+            }
+
+            if (clipEnd >= 0 && frame >= clipEnd) {
+                time = clipEnd;
+                events.fire('timeline.setFrame', clipEnd);
+                while (nextSample <= clipEnd) {
+                    capture(nextSample);
+                    nextSample += interval;
+                }
+                stop(true);
+                return;
+            }
 
             // the take has outgrown the timeline: extend it by a second and
             // keep recording instead of committing, so a take runs past the
@@ -202,6 +270,7 @@ const registerCameraRecorderEvents = (events: Events) => {
                 }
                 frames = Math.min(MAX_FRAMES, frame + events.invoke('timeline.frameRate'));
                 events.fire('timeline.setFrames', frames);
+                grewFrames = true;
                 frame = Math.min(frame, frames - 1);
             }
 

@@ -163,10 +163,11 @@ const createEditorTimeline = (
                 if (c.frame !== undefined || (before.playing && c.playing === false))
                     track().evaluate(events.invoke('timeline.frame'));
                 // resuming at the end of a non-looping timeline would start it over;
-                // playback ends there, so stay stopped unless playing was asked for
-                const atEnd =
-                    !events.invoke('timeline.loop') &&
-                    events.invoke('timeline.frame') >= events.invoke('timeline.frames') - 1;
+                // playback ends there, so stay stopped unless playing was asked for.
+                // a clip moves the playable end, so use that when one is selected
+                const clip = events.invoke('timeline.clipRange');
+                const end = clip ? clip.end : events.invoke('timeline.frames') - 1;
+                const atEnd = !events.invoke('timeline.loop') && events.invoke('timeline.frame') >= end;
                 if (c.playing ?? (before.playing && !atEnd)) events.fire('timeline.setPlaying', true);
                 const after = state();
                 const fields = ['frames', 'frameRate', 'smoothness', 'loop', 'frame', 'playing'] as const;

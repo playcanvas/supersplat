@@ -185,11 +185,19 @@ class CameraAnimTrack implements AnimTrack {
         return true;
     }
 
+    removeRange(fromFrame: number, toFrame: number): boolean {
+        const before = this.poses.length;
+        this.poses = this.poses.filter((p) => p.frame < fromFrame || p.frame > toFrame);
+        if (this.poses.length === before) return false;
+        this.rebuildSpline();
+        this.events.fire('track.keysRemoved');
+        return true;
+    }
+
     evaluate(frame: number): void {
         if (this.recording) return;
         this.onTimelineChange?.(frame);
     }
-
     clear(): void {
         this.poses.length = 0;
         this.onTimelineChange = null;

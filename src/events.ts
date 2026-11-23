@@ -59,6 +59,7 @@ type Results = {
     'show.savePopup': Promise<ExportDialogResult | null>;
     showPopup: Promise<{ action: string; value?: string }>;
     targetSize: { width: number; height: number };
+    'timeline.clipRange': { start: number; end: number } | null;
     'timeline.frame': number;
     'timeline.frameRate': number;
     'timeline.frames': number;

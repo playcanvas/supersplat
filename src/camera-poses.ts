@@ -38,6 +38,9 @@ type PoseValues = {
     roll?: number;
 };
 
+// a stored roll that is absent or malformed reads as no roll
+const sanitizeRoll = (roll: number) => (Number.isFinite(roll) ? roll : 0);
+
 // build a pose from a camera.getPose result
 const createPose = (values: PoseValues, frame: number, name: string): Pose => ({
     name,
@@ -45,7 +48,7 @@ const createPose = (values: PoseValues, frame: number, name: string): Pose => ({
     position: new Vec3(values.position.x, values.position.y, values.position.z),
     target: new Vec3(values.target.x, values.target.y, values.target.z),
     fov: values.fov,
-    roll: values.roll ?? 0
+    roll: sanitizeRoll(values.roll)
 });
 
 // copy a pose so edits and snapshots never share its vectors
@@ -75,7 +78,7 @@ const unpackPose = (pose: PackedPose, frame: number, fov: number): Pose => ({
     position: new Vec3(pose.position),
     target: new Vec3(pose.target),
     fov: pose.fov ?? fov,
-    roll: pose.roll ?? 0
+    roll: sanitizeRoll(pose.roll)
 });
 
 /**
@@ -270,11 +273,12 @@ class CameraAnimTrack implements AnimTrack {
             points.push(p.position.x, p.position.y, p.position.z);
             points.push(p.target.x, p.target.y, p.target.z);
 
-            // unwrap roll so interpolation takes the short way around
-            let roll = p.roll ?? 0;
+            // unwrap roll so interpolation takes the short way around. bounded
+            // arithmetic, so a corrupt or huge stored value can't spin here.
+            let roll = sanitizeRoll(p.roll);
             if (i > 0) {
-                while (roll - prevRoll > 180) roll -= 360;
-                while (roll - prevRoll < -180) roll += 360;
+                const delta = roll - prevRoll;
+                roll = prevRoll + delta - 360 * Math.round(delta / 360);
             }
             prevRoll = roll;
 

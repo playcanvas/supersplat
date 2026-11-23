@@ -356,6 +356,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     const saved = {
                         position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
                         target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
+                        roll: pose.roll,
                         fov: camera.fov,
                         ortho: camera.ortho
                     };
@@ -364,7 +365,8 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                         const basePose = events.invoke('camera.getPose');
                         const base = {
                             position: new Vec3(basePose.position.x, basePose.position.y, basePose.position.z),
-                            target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z)
+                            target: new Vec3(basePose.target.x, basePose.target.y, basePose.target.z),
+                            roll: basePose.roll
                         };
                         // changing the pose leaves orthographic projection, so every tile restores it
                         const ortho = camera.ortho;
@@ -446,7 +448,11 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
                     } finally {
                         scene.viewOverride = null;
                         events.fire('camera.setFov', saved.fov);
-                        events.fire('camera.setPose', { position: saved.position, target: saved.target }, 0);
+                        events.fire(
+                            'camera.setPose',
+                            { position: saved.position, target: saved.target, roll: saved.roll },
+                            0
+                        );
                         camera.ortho = saved.ortho;
                         camera.onUpdate(0);
                         scene.forceRender = true;

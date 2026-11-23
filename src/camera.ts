@@ -421,9 +421,10 @@ class Camera extends Element {
         }
     }
 
-    setDistance(distance: number, dampingFactorFactor = 1) {
-        // manual zoom drops a pose orientation override
-        if (this._controlMode !== 'free') {
+    // keepRoll is for internal distance adjustments (scene bounds) that are
+    // not the user zooming, which is what drops a pose orientation override
+    setDistance(distance: number, dampingFactorFactor = 1, keepRoll = false) {
+        if (!keepRoll && this._controlMode !== 'free') {
             this.rotationOverride = null;
         }
 
@@ -825,7 +826,8 @@ class Camera extends Element {
     onBoundChanged(bound: BoundingBox) {
         const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
         this.sceneRadius = Math.max(1e-3, bound.halfExtents.length());
-        this.setDistance(prevDistance / this.sceneRadius, 0);
+        // keep the view's roll: the bounds changed, the user did not zoom
+        this.setDistance(prevDistance / this.sceneRadius, 0, true);
     }
 
     serialize(serializer: Serializer) {

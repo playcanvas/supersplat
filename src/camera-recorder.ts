@@ -14,6 +14,10 @@ import type { Events } from './events';
  * keeps full control of the camera; the camera track's spline evaluation is
  * suspended for the duration (see CameraAnimTrack).
  *
+ * Starting a take arms it: the playhead stays where it was until the camera
+ * actually moves, so the time between clicking record and starting to move the
+ * camera is not captured.
+ *
  * A take is a punch-in: it starts at the playhead, keys before it are left
  * untouched and everything from there on is replaced by the new samples.
  *
@@ -44,6 +48,11 @@ const registerCameraRecorderEvents = (events: Events) => {
     // back the frames the recorder added while it ran
     let framesAtStart = 0;
 
+    // an armed take waits for the camera to move before it starts recording;
+    // armedPose is the pose the take begins from
+    let armed = false;
+    let armedPose: Pose = null;
+
     events.function('recorder.recording', () => recording);
 
     // first frame of the running take (-1 when idle), so the strip can show
@@ -53,17 +62,46 @@ const registerCameraRecorderEvents = (events: Events) => {
     // frames captured so far, for live display on the timeline
     events.function('recorder.samples', () => poses.map((p) => p.frame));
 
-    const capture = (frame: number) => {
+    // the camera as a pose on the given frame
+    const poseAt = (frame: number): Pose => {
         const pose = events.invoke('camera.getPose');
-        poses.push({
+        return {
             name: `camera_${poses.length}`,
             frame,
             position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
             target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
             fov: pose.fov
-        });
+        };
+    };
+
+    const capture = (frame: number) => {
+        poses.push(poseAt(frame));
         lastSampledFrame = frame;
         events.fire('recorder.sampled', frame);
+    };
+
+    // whether the camera has left the pose it was armed at. The thresholds are
+    // tiny but non-zero, so tween settling does not start the take while any
+    // real input does (keyboard, drag, wheel or a pose command).
+    const cameraMoved = () => {
+        const pose = events.invoke('camera.getPose');
+        const a = armedPose.position;
+        const b = pose.position;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = b.z - a.z;
+        if (dx * dx + dy * dy + dz * dz > 1e-8) return true;
+
+        // view direction
+        const ax = armedPose.target.x - a.x;
+        const ay = armedPose.target.y - a.y;
+        const az = armedPose.target.z - a.z;
+        const bx = pose.target.x - b.x;
+        const by = pose.target.y - b.y;
+        const bz = pose.target.z - b.z;
+        const la = Math.hypot(ax, ay, az);
+        const lb = Math.hypot(bx, by, bz);
+        return la > 0 && lb > 0 && (ax * bx + ay * by + az * bz) / (la * lb) < 1 - 1e-9;
     };
 
     const stop = (commit: boolean) => {
@@ -75,11 +113,15 @@ const registerCameraRecorderEvents = (events: Events) => {
         const finalFrame = Math.min(Math.floor(time), frames - 1);
 
         recording = false;
+        // a take stopped before the camera moved recorded nothing
+        const cancelled = !commit || armed;
+        armed = false;
+        armedPose = null;
         events.fire('recorder.recording', false);
 
-        // a discarded take leaves the track untouched, but the timeline length
+        // a cancelled take leaves the track untouched, but the timeline length
         // growth it caused is undone
-        if (!commit) {
+        if (cancelled) {
             if (events.invoke('timeline.frames') !== framesAtStart) {
                 events.fire('timeline.setFrames', framesAtStart);
             }
@@ -134,11 +176,22 @@ const registerCameraRecorderEvents = (events: Events) => {
         recording = true;
         events.fire('recorder.recording', true);
 
-        // the pose at the playhead is the take's first key
-        capture(startFrame);
+        // arm the take. It starts when the camera moves, and its first key is
+        // the pose at the playhead when record was clicked
+        armed = true;
+        armedPose = poseAt(startFrame);
         nextSample = startFrame + interval;
 
         animHandle = events.on('update', (dt: number) => {
+            if (armed) {
+                if (!cameraMoved()) return;
+
+                armed = false;
+                poses.push(armedPose);
+                lastSampledFrame = startFrame;
+                events.fire('recorder.sampled', startFrame);
+            }
+
             time += dt * events.invoke('timeline.frameRate');
             let frames = events.invoke('timeline.frames');
             let frame = Math.floor(time);

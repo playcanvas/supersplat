@@ -64,25 +64,81 @@ const defaultShortcuts: Record<string, ShortcutBinding> = {
     'timelinePanel.toggle': { keys: ['t'], ctrl: 'required', capture: true },
     'scene.reexport': { keys: ['e'], ctrl: 'required', shift: 'required', capture: true },
 
-    // Camera fly keys - use physical positions (codes) for WASD layout on non-QWERTY keyboards
-    'camera.fly.forward': { codes: ['KeyW'], held: true, shift: 'optional', alt: 'optional' },
-    'camera.fly.backward': { codes: ['KeyS'], held: true, shift: 'optional', alt: 'optional' },
-    'camera.fly.left': { codes: ['KeyA'], held: true, shift: 'optional', alt: 'optional' },
-    'camera.fly.right': { codes: ['KeyD'], held: true, shift: 'optional', alt: 'optional' },
-    'camera.fly.down': { codes: ['KeyQ'], held: true, shift: 'optional', alt: 'optional' },
-    'camera.fly.up': { codes: ['KeyE'], held: true, shift: 'optional', alt: 'optional' },
+    // Camera movement keys - shared by fly and free modes. Use physical
+    // positions (codes) for the WASD layout on non-QWERTY keyboards.
+    'camera.move.forward': { codes: ['KeyW'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.move.backward': { codes: ['KeyS'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.move.left': { codes: ['KeyA'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.move.right': { codes: ['KeyD'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.move.down': { codes: ['KeyQ'], held: true, shift: 'optional', alt: 'optional' },
+    'camera.move.up': { codes: ['KeyE'], held: true, shift: 'optional', alt: 'optional' },
     'camera.modifier.fast': { codes: ['ShiftLeft', 'ShiftRight'], held: true, alt: 'optional' },
     'camera.modifier.slow': { codes: ['AltLeft', 'AltRight'], held: true, shift: 'optional' }
+};
+
+// Free camera look. These sit ahead of the defaults so the keys are claimed
+// while the free camera is active; in the other modes the enabled gate fails
+// and the key keeps its usual tool meaning.
+const freeCameraShortcuts = (events: Events): Record<string, ShortcutBinding> => {
+    const freeCamera = () =>
+        events.functions.has('camera.controlMode') && events.invoke('camera.controlMode') === 'free';
+
+    return {
+        'camera.free.lookUp': {
+            codes: ['KeyI'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        },
+        'camera.free.lookDown': {
+            codes: ['KeyK'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        },
+        'camera.free.yawLeft': {
+            codes: ['KeyJ'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        },
+        'camera.free.yawRight': {
+            codes: ['KeyL'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        },
+        'camera.free.rollCW': {
+            codes: ['KeyO'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        },
+        'camera.free.rollCCW': {
+            codes: ['KeyU'],
+            held: true,
+            shift: 'optional',
+            alt: 'optional',
+            enabled: freeCamera
+        }
+    };
 };
 
 class ShortcutManager {
     private bindings: Record<string, ShortcutBinding>;
 
     constructor(events: Events) {
-        // Clone the defaults so they can be modified without affecting the originals
+        // free camera keys first so they take precedence, then clone them so
+        // a manager can modify its bindings without affecting the originals
+        const defaults = { ...freeCameraShortcuts(events), ...defaultShortcuts };
         this.bindings = {};
-        for (const id in defaultShortcuts) {
-            this.bindings[id] = { ...defaultShortcuts[id] };
+        for (const id in defaults) {
+            this.bindings[id] = { ...defaults[id] };
         }
 
         // Create shortcuts and register all bindings
@@ -98,7 +154,8 @@ class ShortcutManager {
                 alt: binding.alt,
                 held: binding.held,
                 repeat: binding.repeat,
-                capture: binding.capture
+                capture: binding.capture,
+                enabled: binding.enabled
             });
         }
     }

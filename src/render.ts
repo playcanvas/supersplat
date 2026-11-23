@@ -245,13 +245,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 equirect = new EquirectRenderer(scene.graphicsDevice, faceSize, width, height);
                 scene.camera.ortho = false;
 
-                // snapshot the current camera pose. supersplat cameras never
-                // roll, so with level horizon the capture frame is the
-                // camera yaw, otherwise yaw and pitch
+                // snapshot the current camera pose. with a level horizon the
+                // capture frame is the camera yaw (pitch and roll dropped),
+                // otherwise the full camera rotation
                 const camPos = new Vec3().copy(scene.camera.position);
                 const qCapture = new Quat();
                 if (levelHorizon ?? true) {
-                    qCapture.setFromEulerAngles(0, scene.camera.azim, 0);
+                    qCapture.setFromEulerAngles(0, scene.camera.viewYaw, 0);
                 } else {
                     qCapture.copy(scene.camera.mainCamera.getRotation());
                 }
@@ -673,12 +673,12 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
                 // animated camera position, re-sorting splats per face
                 // direction, then project to equirect and encode
                 const capture360 = async (frameTime: number) => {
-                    // snapshot the animated camera pose. supersplat cameras
-                    // never roll, so with level horizon the capture frame is
-                    // the camera yaw, otherwise yaw and pitch
+                    // snapshot the animated camera pose. with a level horizon
+                    // the capture frame is the camera yaw (pitch and roll
+                    // dropped), otherwise the full camera rotation
                     camPos.copy(scene.camera.position);
                     if (levelHorizon ?? true) {
-                        qCapture.setFromEulerAngles(0, scene.camera.azim, 0);
+                        qCapture.setFromEulerAngles(0, scene.camera.viewYaw, 0);
                     } else {
                         qCapture.copy(scene.camera.mainCamera.getRotation());
                     }

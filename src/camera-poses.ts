@@ -10,6 +10,9 @@ type Pose = {
     position: Vec3;
     target: Vec3;
     fov?: number;
+    // roll in degrees about the view axis, relative to the level look-at
+    // orientation. absent in legacy poses (treated as 0).
+    roll?: number;
 };
 
 // pose as stored in documents
@@ -19,6 +22,7 @@ type PackedPose = {
     position: number[];
     target: number[];
     fov?: number;
+    roll?: number;
 };
 
 type PoseSet = {
@@ -93,7 +97,8 @@ class CameraAnimTrack implements AnimTrack {
             frame,
             position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
             target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
-            fov: pose.fov
+            fov: pose.fov,
+            roll: pose.roll
         };
 
         if (existingIndex === -1) {
@@ -154,7 +159,8 @@ class CameraAnimTrack implements AnimTrack {
             frame: toFrame,
             position: source.position.clone(),
             target: source.target.clone(),
-            fov: source.fov
+            fov: source.fov,
+            roll: source.roll
         });
 
         this.rebuildSpline();
@@ -179,7 +185,8 @@ class CameraAnimTrack implements AnimTrack {
             frame: p.frame,
             position: p.position.clone(),
             target: p.target.clone(),
-            fov: p.fov
+            fov: p.fov,
+            roll: p.roll
         }));
     }
 
@@ -189,7 +196,8 @@ class CameraAnimTrack implements AnimTrack {
             frame: p.frame,
             position: p.position.clone(),
             target: p.target.clone(),
-            fov: p.fov
+            fov: p.fov,
+            roll: p.roll
         }));
         this.rebuildSpline();
         this.events.fire('track.keysLoaded');
@@ -252,11 +260,22 @@ class CameraAnimTrack implements AnimTrack {
 
         const times = orderedPoses.map((p) => p.frame);
         const points: number[] = [];
+        let prevRoll = 0;
         for (let i = 0; i < orderedPoses.length; ++i) {
             const p = orderedPoses[i];
             points.push(p.position.x, p.position.y, p.position.z);
             points.push(p.target.x, p.target.y, p.target.z);
+
+            // unwrap roll so interpolation takes the short way around
+            let roll = p.roll ?? 0;
+            if (i > 0) {
+                while (roll - prevRoll > 180) roll -= 360;
+                while (roll - prevRoll < -180) roll += 360;
+            }
+            prevRoll = roll;
+
             points.push(p.fov);
+            points.push(roll);
         }
 
         if (orderedPoses.length > 1) {
@@ -266,19 +285,25 @@ class CameraAnimTrack implements AnimTrack {
                 ? CubicSpline.fromPointsLooping(duration, times, points, smoothness)
                 : CubicSpline.fromPoints(times, points, smoothness);
             const result: number[] = [];
-            const pose = { position: new Vec3(), target: new Vec3(), fov: 0 };
+            const pose = { position: new Vec3(), target: new Vec3(), fov: 0, roll: 0 };
 
             this.onTimelineChange = (frame: number) => {
                 spline.evaluate(frame, result);
                 pose.position.set(result[0], result[1], result[2]);
                 pose.target.set(result[3], result[4], result[5]);
                 pose.fov = result[6];
+                pose.roll = result[7];
                 this.events.fire('camera.setPose', pose, 0);
             };
         } else if (orderedPoses.length === 1) {
             // a single key can't form a spline; hold its pose at every frame
             const p = orderedPoses[0];
-            const pose = { position: p.position.clone(), target: p.target.clone(), fov: p.fov };
+            const pose = {
+                position: p.position.clone(),
+                target: p.target.clone(),
+                fov: p.fov,
+                roll: p.roll ?? 0
+            };
 
             this.onTimelineChange = () => {
                 this.events.fire('camera.setPose', pose, 0);
@@ -333,7 +358,8 @@ const registerCameraPosesEvents = (events: Events) => {
                         frame: pose.frame,
                         position: pack3(pose.position),
                         target: pack3(pose.target),
-                        fov: pose.fov
+                        fov: pose.fov,
+                        roll: pose.roll
                     };
                 })
             }
@@ -355,7 +381,8 @@ const registerCameraPosesEvents = (events: Events) => {
                 frame: docPose.frame ?? index * fps,
                 position: new Vec3(docPose.position),
                 target: new Vec3(docPose.target),
-                fov: docPose.fov ?? defaultFov
+                fov: docPose.fov ?? defaultFov,
+                roll: docPose.roll ?? 0
             };
         });
 

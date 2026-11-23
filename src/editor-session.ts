@@ -168,7 +168,7 @@ const createEditorSession = (events: Events, scene: Scene, queue: CommandQueue, 
             target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
             fov: frame.fov,
             orthographic: frame.ortho,
-            azimuth: scene.camera.azim,
+            azimuth: scene.camera.viewYaw,
             elevation: -scene.camera.elevation,
             distance: scene.camera.distance
         };

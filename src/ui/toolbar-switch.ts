@@ -17,15 +17,15 @@ const createSvg = (svgString: string) => {
     return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
 };
 
-// A two-option switch for the toolbars (toolbar.scss, .toolbar-switch): two
-// options on a dark track and a highlight that slides to the chosen one. The
-// editing mode on the mode strip and the camera mode on the right toolbar are
-// both this, so they look and behave alike. With selectOnClick, a click on an
-// option chooses it; a toolbar that also wants press-and-hold on the switch
-// passes false and calls select itself from its own press handling
+// A switch for the toolbars (toolbar.scss, .toolbar-switch): a small set of
+// exclusive options on a dark track with a highlight that slides to the chosen
+// one. The editing mode on the mode strip and the camera mode on the right
+// toolbar are both this, so they look and behave alike. With selectOnClick, a
+// click on an option chooses it; a toolbar that also wants press-and-hold on
+// the switch passes false and calls select itself from its own press handling
 const createSwitch = <T>(
     orientation: Orientation,
-    options: [SwitchOption<T>, SwitchOption<T>],
+    options: SwitchOption<T>[],
     select: (value: T) => void,
     selectOnClick = true
 ) => {
@@ -75,8 +75,9 @@ const createSwitch = <T>(
             button.class[i === index ? 'add' : 'remove']('active');
             button.dom.setAttribute('aria-pressed', String(i === index));
         });
+        // the thumb rounds its ends only while it sits on one of them
         container.class[index === 0 ? 'add' : 'remove']('toolbar-switch-first');
-        container.class[index === 1 ? 'add' : 'remove']('toolbar-switch-second');
+        container.class[index === options.length - 1 ? 'add' : 'remove']('toolbar-switch-last');
         place();
     };
 

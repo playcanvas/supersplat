@@ -70,7 +70,8 @@ const registerCameraRecorderEvents = (events: Events) => {
             frame,
             position: new Vec3(pose.position.x, pose.position.y, pose.position.z),
             target: new Vec3(pose.target.x, pose.target.y, pose.target.z),
-            fov: pose.fov
+            fov: pose.fov,
+            roll: pose.roll
         };
     };
 
@@ -101,7 +102,9 @@ const registerCameraRecorderEvents = (events: Events) => {
         const bz = pose.target.z - b.z;
         const la = Math.hypot(ax, ay, az);
         const lb = Math.hypot(bx, by, bz);
-        return la > 0 && lb > 0 && (ax * bx + ay * by + az * bz) / (la * lb) < 1 - 1e-9;
+        if (la > 0 && lb > 0 && (ax * bx + ay * by + az * bz) / (la * lb) < 1 - 1e-9) return true;
+
+        return Math.abs((pose.roll ?? 0) - (armedPose.roll ?? 0)) > 1e-3;
     };
 
     const stop = (commit: boolean) => {

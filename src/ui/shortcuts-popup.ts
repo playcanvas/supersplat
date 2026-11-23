@@ -40,7 +40,9 @@ const popupConfig: Record<string, CategoryConfig> = {
             { displayKey: 'W / A / S / D', localeKey: 'popup.shortcuts.fly-movement' },
             { displayKey: 'Q / E', localeKey: 'popup.shortcuts.fly-vertical' },
             { displayKey: 'Shift', localeKey: 'popup.shortcuts.fly-speed-fast' },
-            { displayKey: 'Alt', localeKey: 'popup.shortcuts.fly-speed-slow' }
+            { displayKey: 'Alt', localeKey: 'popup.shortcuts.fly-speed-slow' },
+            { displayKey: 'I / J / K / L', localeKey: 'popup.shortcuts.free-look' },
+            { displayKey: 'U / O', localeKey: 'popup.shortcuts.free-roll' }
         ]
     },
     show: {

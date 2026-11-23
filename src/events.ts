@@ -25,6 +25,7 @@ type Results = {
         position: { x: number; y: number; z: number };
         target: { x: number; y: number; z: number };
         fov: number;
+        roll: number;
     };
     'camera.poses': readonly Pose[];
     'camera.showInfo': boolean;

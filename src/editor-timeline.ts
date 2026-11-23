@@ -19,7 +19,7 @@ type TimelineSettings = {
 };
 // omitted fields come from the playhead and camera when the command runs
 type KeyInput = { frame?: number; position?: Vec3; target?: Vec3; fov?: number };
-type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; inRange: boolean };
+type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; roll: number; inRange: boolean };
 
 // the timeline panel's choices; other rates would leave its select blank
 const FRAME_RATES = [1, 6, 12, 24, 30, 60];
@@ -56,6 +56,7 @@ const createEditorTimeline = (
         position: pose.position.clone(),
         target: pose.target.clone(),
         fov: pose.fov,
+        roll: pose.roll ?? 0,
         inRange: pose.frame < frames
     });
     const state = () => {
@@ -195,14 +196,18 @@ const createEditorTimeline = (
                     const value = {
                         position: k.position ?? new Vec3(pose.position.x, pose.position.y, pose.position.z),
                         target: k.target ?? new Vec3(pose.target.x, pose.target.y, pose.target.z),
-                        fov: k.fov ?? pose.fov
+                        fov: k.fov ?? pose.fov,
+                        // an explicit position/target is a level look-at key;
+                        // omitted fields capture the live pose including roll
+                        roll: k.position ? 0 : (pose.roll ?? 0)
                     };
                     const index = poses.findIndex((p) => p.frame === k.frame);
                     const existing = poses[index];
                     if (
                         existing?.position.equals(value.position) &&
                         existing.target.equals(value.target) &&
-                        existing.fov === value.fov
+                        existing.fov === value.fov &&
+                        (existing.roll ?? 0) === value.roll
                     )
                         continue;
                     affected++;

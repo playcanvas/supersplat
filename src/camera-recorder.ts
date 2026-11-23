@@ -3,6 +3,7 @@ import type { EventHandle } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
 import { AnimTrackEditOp } from './edit-ops';
+import { MAX_FRAMES } from './editor-timeline';
 import type { Events } from './events';
 
 /**
@@ -140,14 +141,21 @@ const registerCameraRecorderEvents = (events: Events) => {
         animHandle = events.on('update', (dt: number) => {
             time += dt * events.invoke('timeline.frameRate');
             let frames = events.invoke('timeline.frames');
-            const frame = Math.floor(time);
+            let frame = Math.floor(time);
 
             // the take has outgrown the timeline: extend it by a second and
             // keep recording instead of committing, so a take runs past the
             // total frames it started with until the user stops it
             if (frame >= frames) {
-                frames = frame + events.invoke('timeline.frameRate');
+                // the timeline length is shared with the editor API and the
+                // panel; at that limit finish the take instead of outgrowing it
+                if (frames >= MAX_FRAMES) {
+                    stop(true);
+                    return;
+                }
+                frames = Math.min(MAX_FRAMES, frame + events.invoke('timeline.frameRate'));
                 events.fire('timeline.setFrames', frames);
+                frame = Math.min(frame, frames - 1);
             }
 
             events.fire('timeline.setFrame', frame);

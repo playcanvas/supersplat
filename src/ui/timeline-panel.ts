@@ -50,12 +50,16 @@ class Ticks extends Container {
             // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
             const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);
 
+            // a one-frame timeline has no span to scale across: keep frame 0
+            // at the left edge instead of dividing by zero
+            const frameSpan = Math.max(1, numFrames - 1);
+
             const offsetFromFrame = (frame: number) => {
-                return padding + Math.floor((frame / (numFrames - 1)) * width);
+                return padding + Math.floor((frame / frameSpan) * width);
             };
 
             frameFromOffset = (offset: number) => {
-                return Math.max(0, Math.min(numFrames - 1, Math.floor(((offset - padding) / width) * (numFrames - 1))));
+                return Math.max(0, Math.min(numFrames - 1, Math.floor(((offset - padding) / width) * frameSpan)));
             };
 
             // timeline labels
@@ -401,6 +405,10 @@ class TimelinePanel extends Container {
             class: 'button',
             id: 'record'
         });
+        // the button draws its icon in css, so give it a name a screen reader
+        // can announce, and expose the record/stop state
+        i18n.onChange(() => record.dom.setAttribute('aria-label', i18n.t('tooltip.timeline.record')), record);
+        record.dom.setAttribute('aria-pressed', 'false');
 
         // loop
 
@@ -613,6 +621,7 @@ class TimelinePanel extends Container {
         const updateRecordingStates = (recording: boolean) => {
             this.class[recording ? 'add' : 'remove']('recording');
             record.class[recording ? 'add' : 'remove']('recording');
+            record.dom.setAttribute('aria-pressed', String(recording));
             prev.enabled = !recording;
             play.enabled = !recording;
             next.enabled = !recording;

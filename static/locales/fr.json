@@ -105,6 +105,7 @@
     "panel.settings.fov.tooltip": "Champ de vision de la caméra, en degrés.",
     "panel.settings.fov-dolly.tooltip": "Modifier le FOV déplace la caméra pour garder le cadrage au lieu de zoomer.",
     "panel.settings.reset": "Réinitialiser les valeurs par défaut",
+    "panel.close": "Fermer",
     "mode-toolbar.centers": "Centres",
     "mode-toolbar.centers.tooltip": "Un point au centre de chaque gaussienne. Sélectionne par centre.",
     "mode-toolbar.rings": "Anneaux",

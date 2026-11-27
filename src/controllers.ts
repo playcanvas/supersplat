@@ -13,6 +13,9 @@ const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 -
 class PointerController {
     update: (deltaTime: number) => void;
     destroy: () => void;
+    // a mouse button is down on the canvas: a camera drag is in progress,
+    // even on frames where the pointer holds still
+    held: () => boolean;
 
     constructor(camera: Camera, target: HTMLElement) {
         // Orbit mode: rotate camera around the focal point
@@ -72,6 +75,8 @@ class PointerController {
         // touch state
         let touches: { id: number; x: number; y: number }[] = [];
         let midx: number, midy: number, midlen: number;
+
+        this.held = () => pressedButton !== -1;
 
         const pointerdown = (event: PointerEvent) => {
             if (event.pointerType === 'mouse') {

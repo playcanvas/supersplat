@@ -5,6 +5,7 @@ import type { AntiAliasMode } from '../editor-splat-resource';
 import type { Events } from '../events';
 
 import { i18n } from './localization';
+import closeSvg from './svg/close.svg';
 import resetSvg from './svg/reset.svg';
 import type { Tooltips } from './tooltips';
 
@@ -61,9 +62,24 @@ class SettingsPanel extends Container {
             }
         });
 
+        const closeButton = new Container({
+            class: 'panel-header-button'
+        });
+        closeButton.dom.appendChild(createSvg(closeSvg));
+        closeButton.dom.setAttribute('role', 'button');
+        closeButton.dom.setAttribute('tabindex', '0');
+        i18n.onChange(() => closeButton.dom.setAttribute('aria-label', i18n.t('panel.close')), closeButton);
+        closeButton.dom.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                closeButton.dom.click();
+            }
+        });
+
         header.append(icon);
         header.append(label);
         header.append(resetButton);
+        header.append(closeButton);
 
         // section bars share the panel-header styling, like the scene
         // manager's transform header
@@ -441,6 +457,10 @@ class SettingsPanel extends Container {
             }
         });
 
+        closeButton.on('click', () => {
+            setVisible(false);
+        });
+
         // sh bands
 
         events.on('view.bands', (bands: number) => {
@@ -547,6 +567,7 @@ class SettingsPanel extends Container {
 
         // tooltips
         tooltips.register(resetButton, () => i18n.t('panel.settings.reset'), 'left');
+        tooltips.register(closeButton, () => i18n.t('panel.close'), 'left');
 
         // row help: what each setting controls
         const help = (localeKey: string) => () => i18n.t(localeKey);

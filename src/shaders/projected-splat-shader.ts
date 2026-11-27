@@ -352,11 +352,16 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             if (ringBand) {
                 // unselected bands fade by the unselected colour's alpha;
                 // selected ones always show in full
-                alpha = 0.6 * select(uniform.ringOpacity, 1.0, selected);
+                let ringAlpha = 0.6 * select(uniform.ringOpacity, 1.0, selected);
                 // the ring colour arrives fully resolved from the vertex stage:
                 // blended from the splat's own colour so it stays independent
                 // of the gaussian tints, and already the selected variant
-                color = vec3f(packedMid.y, unpack2x16float(packedColor2));
+                let ringColor = vec3f(packedMid.y, unpack2x16float(packedColor2));
+                // the band composites over the gaussian's own fill rather than
+                // replacing it, so a faded ring leaves the gaussian intact
+                let bandAlpha = ringAlpha + alpha * (1.0 - ringAlpha);
+                color = (ringColor * ringAlpha + color * (alpha * (1.0 - ringAlpha))) / max(bandAlpha, 1e-6);
+                alpha = bandAlpha;
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its
                 // fill but never drops below a faint floor, so even invisible

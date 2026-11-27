@@ -1009,7 +1009,9 @@ class ProjectedSplatRenderer {
         // preview mode differs. While it previews, the outline stands in for
         // every marker, which would otherwise cover the grade; in outline mode
         // it stands in for the selected ones. Picks keep the markers: rings
-        // decide what a pick can hit
+        // decide what a pick can hit. Stochastic frames draw no outline (their
+        // work buffer stays clear), so outside a preview the selected markers
+        // stay up on them
         const pending = events.invoke('colorPanel.pending') as GradeParams;
         const outlineSelection = events.invoke('view.outlineSelection') || !!pending;
         if (pending) {
@@ -1024,7 +1026,7 @@ class ProjectedSplatRenderer {
         const centerSize = events.invoke('view.centerSize') as number;
         const numSelected = selectedSplat?.instances.numSelected ?? 0;
         const showMarkers = !pending || forPick;
-        const showSelectedMarkers = !outlineSelection || forPick;
+        const showSelectedMarkers = (showMarkers && (!outlineSelection || this.scene.movingRender)) || forPick;
         const showUnselectedCenters = showMarkers && events.invoke('view.centers') && editView;
         const showSelectedCenters = showSelectedMarkers && events.invoke('view.selectionCenters') && numSelected > 0;
         const centersMask = (showUnselectedCenters ? 1 : 0) | (showSelectedCenters ? 2 : 0);

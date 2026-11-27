@@ -116,7 +116,16 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     #else
         let ringEligible = ringShown && overlayVisible(entry, flags);
     #endif
-    if (alpha == 0.0 && !ringEligible) {
+    // the selection outline counts every selected footprint, however faint:
+    // an invisible splat whose ring is hidden still needs it to show selected.
+    // Picks are unaffected, so what can be selected stays the same
+    var keepInvisible = ringEligible;
+    #ifndef PICK_PASS
+      #ifndef ID_PASS
+        keepInvisible = keepInvisible || (uniform.outlineMode != 0u && (flags & 1u) != 0u);
+      #endif
+    #endif
+    if (alpha == 0.0 && !keepInvisible) {
         output.position = discardPosition;
         return output;
     }

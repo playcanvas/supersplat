@@ -255,6 +255,8 @@ uniform ringSize: f32;
 uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
+// the unselected colour's alpha: an unselected ring band's opacity
+uniform ringOpacity: f32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
 uniform visibleOnly: u32;
@@ -348,7 +350,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
-                alpha = 0.6;
+                // unselected bands fade by the unselected colour's alpha;
+                // selected ones always show in full
+                alpha = 0.6 * select(uniform.ringOpacity, 1.0, selected);
                 // the ring colour arrives fully resolved from the vertex stage:
                 // blended from the splat's own colour so it stays independent
                 // of the gaussian tints, and already the selected variant

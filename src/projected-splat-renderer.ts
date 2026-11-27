@@ -1,10 +1,12 @@
 import type { GraphicsDevice, WebgpuGraphicsDevice } from 'playcanvas';
 import {
     BLEND_NONE,
+    BLEND_NORMAL,
     BLEND_PREMULTIPLIED,
     BUFFERUSAGE_COPY_DST,
     BUFFERUSAGE_COPY_SRC,
     CULLFACE_NONE,
+    FUNC_EQUAL,
     FUNC_LESS,
     PIXELFORMAT_R32U,
     PIXELFORMAT_RGBA32U,
@@ -29,6 +31,7 @@ import {
     BindStorageTextureFormat,
     BindTextureFormat,
     BindUniformBufferFormat,
+    BlendState,
     Camera,
     Compute,
     ComputeRadixSort,
@@ -183,6 +186,11 @@ class ProjectedSplatRenderer {
     // list - survivors plus the size-culled tail - on the centres layer
     private readonly centersMaterial: ShaderMaterial;
     private readonly centersMeshInstance: MeshInstance;
+    // faded unselected centres: centersMaterial turns depth-only and this pass
+    // blends the colour of the centre that won each pixel (see the constructor)
+    private readonly centersFadeMaterial: ShaderMaterial;
+    private readonly centersFadeMeshInstance: MeshInstance;
+    private centersFaded = false;
     private readonly centersEntity: Entity;
 
     private sortKeys: StorageBuffer | null = null;
@@ -336,6 +344,7 @@ class ProjectedSplatRenderer {
         this.material.setParameter('selectedRingColor', [0, 0, 0, 0]);
         this.material.setParameter('ringsBase', 0);
         this.material.setParameter('ringsCount', 0);
+        this.material.setParameter('ringOpacity', 1);
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('pickFootprint', 1);
         this.material.setParameter('warpStrength', 0);
@@ -382,9 +391,34 @@ class ProjectedSplatRenderer {
         this.centersMeshInstance.cull = false;
         this.centersMeshInstance.setInstancing(true, false);
 
+        // unselected centres faded below full opacity keep the result order
+        // independent with a depth prepass: centersMaterial stops writing colour
+        // (it stays in the layer's opaque step), so it leaves only the frontmost
+        // centre's depth in each pixel, and this transparent-step pass blends
+        // the colour of exactly that centre, once
+        this.centersFadeMaterial = new ShaderMaterial({
+            uniqueName: 'ProjectedSplatCentersMaterial',
+            attributes: {
+                vertex_position: SEMANTIC_POSITION
+            },
+            vertexWGSL: centersVertexShader,
+            fragmentWGSL: centersFragmentShader
+        });
+        this.centersFadeMaterial.blendType = BLEND_NORMAL;
+        this.centersFadeMaterial.cull = CULLFACE_NONE;
+        this.centersFadeMaterial.depthWrite = false;
+        this.centersFadeMaterial.depthTest = true;
+        this.centersFadeMaterial.depthFunc = FUNC_EQUAL;
+        this.centersFadeMaterial.update();
+
+        this.centersFadeMeshInstance = new MeshInstance(this.mesh, this.centersFadeMaterial, null);
+        this.centersFadeMeshInstance.cull = false;
+        this.centersFadeMeshInstance.setInstancing(true, false);
+        this.centersFadeMeshInstance.visible = false;
+
         this.centersEntity = new Entity('projectedSplatCenters');
         this.centersEntity.addComponent('render', {
-            meshInstances: [this.centersMeshInstance],
+            meshInstances: [this.centersMeshInstance, this.centersFadeMeshInstance],
             layers: [scene.centersLayer.id]
         });
         this.centersEntity.enabled = false;
@@ -1280,7 +1314,9 @@ class ProjectedSplatRenderer {
                 : [0, 0, 0, 0]
         );
         // the unselected markers take the flat colour or the gaussians' own,
-        // one switch per marker; selected markers always the selection colour.
+        // one switch per marker, and fade by the unselected colour's alpha;
+        // selected markers take the selection colour in full, so the selection
+        // stays readable whatever the selected alpha does to the gaussian tint.
         // The ring blends start from the splat's own colour, so they stay
         // independent of the gaussian tints
         this.material.setParameter('ringColor', [
@@ -1295,6 +1331,7 @@ class ProjectedSplatRenderer {
             selectedColor.b,
             events.invoke('view.selectionRings') ? (selectedSplat?.selectionAlpha ?? 1) : 0
         ]);
+        this.material.setParameter('ringOpacity', unselectedColor.a);
         this.material.setParameter('ringsBase', ringsBase);
         this.material.setParameter('ringsCount', ringsCount);
         this.material.setParameter('cameraParams', [
@@ -1324,31 +1361,47 @@ class ProjectedSplatRenderer {
         // compact list, counter and cache. Its entry range is the selected
         // placement's, which is also the rings range
         this.centersMeshInstance.setIndirect(null, drawSlot + 1, 1);
+        this.centersFadeMeshInstance.setIndirect(null, drawSlot + 1, 1);
         this.centersEntity.enabled = showCenters;
         if (showCenters) {
-            const centers = this.centersMaterial;
-            centers.setParameter('compactEntries', this.compactEntries);
-            centers.setParameter('splatCount', this.splatCounter);
-            centers.setParameter('cacheA', this.cacheA);
-            centers.setParameter('cacheB', this.cacheB);
-            centers.setParameter('cacheWidth', this.cacheWidth);
-            centers.setParameter('capacity', this.capacity);
-            centers.setParameter('viewportSize', viewportParams);
-            centers.setParameter('clipZParams', clipZParams);
-            centers.setParameter('centersBase', ringsBase);
-            centers.setParameter('centersCount', ringsCount);
-            centers.setParameter('centerSize', centerSize * window.devicePixelRatio);
-            centers.setParameter('drawMask', centersMask);
-            centers.setParameter('visible', this.visibleBits);
-            centers.setParameter('visibleOnly', filterVisible ? 1 : 0);
-            centers.setParameter('colorBlend', events.invoke('view.tintCenters') ? 1 : 0);
-            centers.setParameter('selectedClr', [selectedColor.r, selectedColor.g, selectedColor.b, selectedColor.a]);
-            centers.setParameter('unselectedClr', [
-                unselectedColor.r,
-                unselectedColor.g,
-                unselectedColor.b,
-                unselectedColor.a
-            ]);
+            // fully opaque centres keep the single opaque draw; faded ones
+            // switch it to the depth prepass and add the blended colour pass
+            const faded = unselectedColor.a < 1;
+            if (faded !== this.centersFaded) {
+                this.centersFaded = faded;
+                this.centersMaterial.blendState = faded ? BlendState.NOWRITE : BlendState.NOBLEND;
+                this.centersMaterial.update();
+                this.centersFadeMeshInstance.visible = faded;
+            }
+            for (const centers of [this.centersMaterial, this.centersFadeMaterial]) {
+                centers.setParameter('compactEntries', this.compactEntries);
+                centers.setParameter('splatCount', this.splatCounter);
+                centers.setParameter('cacheA', this.cacheA);
+                centers.setParameter('cacheB', this.cacheB);
+                centers.setParameter('cacheWidth', this.cacheWidth);
+                centers.setParameter('capacity', this.capacity);
+                centers.setParameter('viewportSize', viewportParams);
+                centers.setParameter('clipZParams', clipZParams);
+                centers.setParameter('centersBase', ringsBase);
+                centers.setParameter('centersCount', ringsCount);
+                centers.setParameter('centerSize', centerSize * window.devicePixelRatio);
+                centers.setParameter('drawMask', centersMask);
+                centers.setParameter('visible', this.visibleBits);
+                centers.setParameter('visibleOnly', filterVisible ? 1 : 0);
+                centers.setParameter('colorBlend', events.invoke('view.tintCenters') ? 1 : 0);
+                centers.setParameter('selectedClr', [
+                    selectedColor.r,
+                    selectedColor.g,
+                    selectedColor.b,
+                    selectedColor.a
+                ]);
+                centers.setParameter('unselectedClr', [
+                    unselectedColor.r,
+                    unselectedColor.g,
+                    unselectedColor.b,
+                    unselectedColor.a
+                ]);
+            }
         }
         // staged for scatterVisibility, which runs after the id pass
         if (!forPick) {
@@ -1641,6 +1694,8 @@ class ProjectedSplatRenderer {
         this.centersEntity.destroy();
         this.centersMeshInstance.destroy();
         this.centersMaterial.destroy();
+        this.centersFadeMeshInstance.destroy();
+        this.centersFadeMaterial.destroy();
     }
 }
 

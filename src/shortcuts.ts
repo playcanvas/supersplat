@@ -20,6 +20,7 @@ interface ShortcutBinding {
     held?: boolean;
     repeat?: boolean; // whether to fire on keyboard repeat events (for non-held shortcuts)
     capture?: boolean; // whether to use capture phase for the event listener
+    enabled?: () => boolean; // optional runtime gate (e.g. camera mode)
 }
 
 /**
@@ -124,6 +125,10 @@ class Shortcuts {
                     (options.keys?.some((k) => k.toLowerCase() === e.key.toLowerCase()) ||
                         options.codes?.some((c) => c === e.code)) ??
                     false;
+
+                if (options.enabled && !options.enabled()) {
+                    continue;
+                }
 
                 if (keyMatches && (options.capture ?? false) === capture && ctrlMatch && shiftMatch && altMatch) {
                     // consume the event

@@ -4,6 +4,7 @@ import type { EditorAPI, ScreenPoint, SelectionOp } from './editor-api';
 import type { EditScope } from './editor-command';
 import { checkCancelled, EditorError } from './editor-command';
 import type { CameraSettings } from './editor-session';
+import { MAX_FRAMES } from './editor-timeline';
 import type { TimelineSettings } from './editor-timeline';
 import { GENERATOR_MAX_COUNT, GENERATOR_TIMEOUT_MS } from './generator-sandbox';
 import { modelFormatNames } from './import-formats';
@@ -737,13 +738,13 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'set_timeline',
         'Change timeline settings and the playhead as the timeline panel does. Settings apply before frame; moving the playhead during playback continues from there. With keys the camera follows the animation, so this returns the resulting camera and viewToken. Saved with the document but not undoable. Playback moves the camera every tick: pause before view-dependent tools.',
         {
-            frames: integer('Timeline length in frames.', 1, 10000),
+            frames: integer('Timeline length in frames.', 1, MAX_FRAMES),
             frameRate: { type: 'integer', enum: [1, 6, 12, 24, 30, 60], description: 'Frames per second.' },
             smoothness: number('Camera path smoothness: 0 is linear, 1 smoothest.', 0, 1),
             loop: boolean(
                 'Loop playback and the camera path. Otherwise the first and last keys hold, playback stops on the last frame, and playing from the last frame starts over.'
             ),
-            frame: integer('Playhead frame, below frames.', 0, 9999),
+            frame: integer('Playhead frame, below frames.', 0, MAX_FRAMES - 1),
             playing: boolean('Start or pause playback.')
         },
         [],
@@ -759,7 +760,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
             keys: {
                 type: 'array',
                 items: object({
-                    frame: integer('Key frame below the timeline length; default the playhead.', 0, 9999),
+                    frame: integer('Key frame below the timeline length; default the playhead.', 0, MAX_FRAMES - 1),
                     position: vector('Camera world position; requires target.'),
                     target: vector('World look-at point; requires position.'),
                     fov: number('Field of view in degrees.', 5, 170)
@@ -786,7 +787,7 @@ const createWebMCPTools = (editor: EditorAPI): Tool[] => {
         'Move or copy one camera keyframe to another frame. An occupied destination fails with key_exists unless overwrite is true (then reported as replaced). Keys stranded beyond the timeline end can be moved back into range. Undoable.',
         {
             from: integer('Frame of the existing key.'),
-            to: integer('Destination frame, below the timeline length.', 0, 9999),
+            to: integer('Destination frame, below the timeline length.', 0, MAX_FRAMES - 1),
             copy: boolean('Keep the original key; default false.'),
             overwrite: boolean('Replace a key at the destination; default false.')
         },

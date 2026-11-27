@@ -257,6 +257,50 @@ class SettingsPanel extends Container {
         cameraFlySpeedRow.append(cameraFlySpeedLabel);
         cameraFlySpeedRow.append(cameraFlySpeedSlider);
 
+        // free camera sensitivity
+
+        const freeMoveRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const freeMoveLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(freeMoveLabel, 'panel.free-camera.move-sensitivity');
+
+        const freeMoveSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 0.1,
+            max: 3,
+            precision: 1,
+            step: 0.1,
+            value: 1
+        });
+
+        freeMoveRow.append(freeMoveLabel);
+        freeMoveRow.append(freeMoveSlider);
+
+        const freeRotateRow = new Container({
+            class: 'settings-panel-row'
+        });
+
+        const freeRotateLabel = new Label({
+            class: 'settings-panel-row-label'
+        });
+        i18n.bindText(freeRotateLabel, 'panel.free-camera.rotate-speed');
+
+        const freeRotateSlider = new SliderInput({
+            class: 'settings-panel-row-slider',
+            min: 5,
+            max: 180,
+            precision: 0,
+            step: 1,
+            value: 30
+        });
+
+        freeRotateRow.append(freeRotateLabel);
+        freeRotateRow.append(freeRotateSlider);
+
         // stochastic alpha
 
         const stochasticRow = new Container({
@@ -411,6 +455,9 @@ class SettingsPanel extends Container {
         this.append(fovRow);
         this.append(cameraFlySpeedRow);
         this.append(fovDollyRow);
+        this.append(sectionHeader('panel.free-camera.title'));
+        this.append(freeMoveRow);
+        this.append(freeRotateRow);
         this.append(sectionHeader('panel.settings.colors'));
         this.append(colorsRow);
 
@@ -469,6 +516,24 @@ class SettingsPanel extends Container {
 
         cameraFlySpeedSlider.on('change', (value: number) => {
             events.fire('camera.setFlySpeed', value);
+        });
+
+        // free camera sensitivity
+
+        events.on('camera.freeMoveSensitivity', (value: number) => {
+            freeMoveSlider.value = value;
+        });
+
+        freeMoveSlider.on('change', (value: number) => {
+            events.fire('camera.setFreeMoveSensitivity', value);
+        });
+
+        events.on('camera.freeRotateSpeed', (value: number) => {
+            freeRotateSlider.value = value;
+        });
+
+        freeRotateSlider.on('change', (value: number) => {
+            events.fire('camera.setFreeRotateSpeed', value);
         });
 
         // fov auto dolly
@@ -559,6 +624,8 @@ class SettingsPanel extends Container {
         tooltips.register(stochasticLabel, help('panel.settings.stochastic-alpha.tooltip'), 'top');
         tooltips.register(fovLabel, help('panel.settings.fov.tooltip'), 'top');
         tooltips.register(cameraFlySpeedLabel, help('panel.settings.fly-speed.tooltip'), 'top');
+        tooltips.register(freeMoveLabel, help('panel.free-camera.hint'), 'top');
+        tooltips.register(freeRotateLabel, help('panel.free-camera.hint'), 'top');
         tooltips.register(fovDollyLabel, help('panel.settings.fov-dolly.tooltip'), 'top');
     }
 }

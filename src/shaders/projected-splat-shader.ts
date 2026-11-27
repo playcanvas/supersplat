@@ -118,11 +118,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     #endif
     // the selection outline counts every selected footprint, however faint:
     // an invisible splat whose ring is hidden still needs it to show selected.
+    // Hidden (locked) splats keep their selected bit but are not selected.
     // Picks are unaffected, so what can be selected stays the same
     var keepInvisible = ringEligible;
     #ifndef PICK_PASS
       #ifndef ID_PASS
-        keepInvisible = keepInvisible || (uniform.outlineMode != 0u && (flags & 1u) != 0u);
+        keepInvisible = keepInvisible || (uniform.outlineMode != 0u && (flags & 3u) == 1u);
       #endif
     #endif
     if (alpha == 0.0 && !keepInvisible) {
@@ -345,7 +346,9 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
         output.color = vec4f(1.0, 0.0, 0.0, 0.0);
         output.color1 = vec4f(0.0);
       #else
-        let selected = (gaussianFlags & 1u) != 0u;
+        // hidden (locked) splats keep their selected bit, but neither outline
+        // nor show through as selected
+        let selected = (gaussianFlags & 3u) == 1u;
         let norm = normExp(radius);
         let showGaussian = select(uniform.showGaussians != 0u, uniform.showSelectedGaussians != 0u, selected);
         var alpha = select(0.0, splatAlpha(radius, opacity), showGaussian);

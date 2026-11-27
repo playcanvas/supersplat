@@ -732,6 +732,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                             );
                         } else if (method === 'footprint') {
                             await footprintSelect(ctx, splat, op, region, footprint, frame);
+                        } else if (footprint === 0) {
+                            // centres: those in the mask whose gaussians show
+                            // enough, the rule the centre markers follow
+                            const visible = await scene.camera.pickVisibleCenters(ctx, frame, splat, op);
+                            await visibleCentersSelect(ctx, splat, op, visible, { mask: maskTexture }, frame);
                         } else {
                             const mask = maskPixels;
 
@@ -777,11 +782,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                                 }
                             }
 
-                            if (footprint === 0) {
-                                await visibleCentersSelect(ctx, splat, op, selected, { mask: maskTexture }, frame);
-                            } else {
-                                await ctx.apply(new SelectOp(splat, op, new Uint32Array(selected).sort()));
-                            }
+                            await ctx.apply(new SelectOp(splat, op, new Uint32Array(selected).sort()));
                         }
                     }
                 },

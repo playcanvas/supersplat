@@ -88,7 +88,11 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     let depth = bitcast<f32>(a.y);
     let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
-    let clip = vec4f(ndc * w, clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w), w);
+    // a per-centre push back of a few ulps keeps exact depth ties (duplicate
+    // points, flat data seen head on) rare, so the faded colour pass's
+    // FUNC_EQUAL matches one centre per pixel. Both passes compute it alike
+    let tie = 1.0 + f32(entry & 255u) * (1.0 / 4194304.0);
+    let clip = vec4f(ndc * w, clamp((uniform.clipZParams.x * depth + uniform.clipZParams.y) * tie, 0.0, w), w);
     // a centerSize-pixel square
     let clipOffset = vertex_position.xy * (0.5 * uniform.centerSize) * w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);

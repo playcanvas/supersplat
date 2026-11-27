@@ -363,7 +363,8 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
                 // splats read as discs inside their rings. Skipped in stochastic
                 // mode, where a floor would dither every footprint with noise
                 #ifndef STOCHASTIC
-                    alpha = max(0.05, alpha);
+                    // the floor is part of the marker, so it fades with the band
+                    alpha = max(0.05 * select(uniform.ringOpacity, 1.0, selected), alpha);
                 #endif
             }
         }

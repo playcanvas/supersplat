@@ -1383,12 +1383,14 @@ class ProjectedSplatRenderer {
     // off wants the bits; this turns it off when they would not change): the
     // first frame of a move runs it, the frames that continue the move skip
     // it, and the frame the scene settles on runs it again. A move is the
-    // camera's or a layer's (a gizmo drag, say)
+    // camera's or a layer's (a gizmo drag, say). A mouse drag of the camera
+    // is one move from press to release, pauses included, so it runs once
+    // the drag is released and the camera has coasted to a stop
     private updateIdPass() {
         const { scene } = this;
         const camera = scene.camera;
         const moved = scene.cameraChanged || scene.elementsChanged;
-        const moving = moved && this.prevMoved;
+        const moving = camera.controller.held() || (moved && this.prevMoved);
         this.prevMoved = moved;
         if (!camera.visibilityIds || !this.frameFilterVisible) {
             this.idValid = false;

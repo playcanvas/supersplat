@@ -1,5 +1,6 @@
 import { Button, Container, Element } from '@playcanvas/pcui';
 
+import type { CameraControlMode } from '../camera';
 import type { Events } from '../events';
 import type { ShortcutManager } from '../shortcut-manager';
 
@@ -7,6 +8,7 @@ import { i18n } from './localization';
 import cameraFrameSelectionSvg from './svg/camera-frame-selection.svg';
 import cameraResetSvg from './svg/camera-reset.svg';
 import flyCameraSvg from './svg/fly-camera.svg';
+import freeCameraSvg from './svg/free-camera.svg';
 import orbitCameraSvg from './svg/orbit-camera.svg';
 import overlaysSvg from './svg/overlays.svg';
 import { createSwitch } from './toolbar-switch';
@@ -36,16 +38,17 @@ class RightToolbar extends Container {
             class: 'toolbar-panel'
         });
 
-        // the camera mode: one two-option switch
-        const cameraSwitch = createSwitch<'orbit' | 'fly'>(
+        // the camera mode: one switch, one option per control mode
+        const cameraSwitch = createSwitch<CameraControlMode>(
             'vertical',
             [
                 { id: 'right-toolbar-orbit-mode', value: 'orbit', svg: orbitCameraSvg },
-                { id: 'right-toolbar-fly-mode', value: 'fly', svg: flyCameraSvg }
+                { id: 'right-toolbar-fly-mode', value: 'fly', svg: flyCameraSvg },
+                { id: 'right-toolbar-free-mode', value: 'free', svg: freeCameraSvg }
             ],
             (mode) => events.fire('camera.setControlMode', mode)
         );
-        const [orbitMode, flyMode] = cameraSwitch.buttons;
+        const [orbitMode, flyMode, freeMode] = cameraSwitch.buttons;
 
         const cameraFrameSelection = new Button({
             id: 'right-toolbar-frame-selection',
@@ -72,6 +75,7 @@ class RightToolbar extends Container {
             [overlays, 'panel.overlays'],
             [orbitMode, 'tooltip.right-toolbar.orbit-camera'],
             [flyMode, 'tooltip.right-toolbar.fly-camera'],
+            [freeMode, 'tooltip.right-toolbar.free-camera'],
             [cameraFrameSelection, 'tooltip.right-toolbar.frame-selection'],
             [cameraReset, 'tooltip.right-toolbar.reset-camera'],
             [settings, 'panel.settings']
@@ -105,6 +109,7 @@ class RightToolbar extends Container {
         tooltips.register(overlays, tooltip('panel.overlays'), 'left');
         tooltips.register(orbitMode, tooltip('tooltip.right-toolbar.orbit-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(flyMode, tooltip('tooltip.right-toolbar.fly-camera', 'camera.toggleControlMode'), 'left');
+        tooltips.register(freeMode, tooltip('tooltip.right-toolbar.free-camera', 'camera.toggleControlMode'), 'left');
         tooltips.register(
             cameraFrameSelection,
             tooltip('tooltip.right-toolbar.frame-selection', 'camera.focus'),
@@ -128,7 +133,7 @@ class RightToolbar extends Container {
         cameraSwitch.setValue('orbit');
 
         events.on('overlaysPanel.visible', (visible: boolean) => setActive(overlays, visible));
-        events.on('camera.controlMode', (mode: 'orbit' | 'fly') => cameraSwitch.setValue(mode));
+        events.on('camera.controlMode', (mode: CameraControlMode) => cameraSwitch.setValue(mode));
         events.on('settingsPanel.visible', (visible: boolean) => setActive(settings, visible));
     }
 }

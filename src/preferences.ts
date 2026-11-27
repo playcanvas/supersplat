@@ -146,6 +146,20 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             group: 'preferences'
         },
         {
+            key: 'camera.freeMoveSensitivity',
+            setCommand: 'camera.setFreeMoveSensitivity',
+            getDefault: () => 1,
+            validate: isNumber(0.1, 3),
+            group: 'preferences'
+        },
+        {
+            key: 'camera.freeRotateSpeed',
+            setCommand: 'camera.setFreeRotateSpeed',
+            getDefault: () => 30,
+            validate: isNumber(5, 180),
+            group: 'preferences'
+        },
+        {
             key: 'view.centerSize',
             setCommand: 'view.setCenterSize',
             getDefault: () => 2,
@@ -279,12 +293,6 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             getDefault: () => config.show.cameraInfo,
             validate: isBool,
             group: 'overlays'
-        },
-        {
-            key: 'camera.controlMode',
-            setCommand: 'camera.setControlMode',
-            getDefault: () => 'orbit',
-            validate: isEnum(['orbit', 'fly'])
         }
     ];
 

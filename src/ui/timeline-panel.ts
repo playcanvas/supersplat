@@ -23,6 +23,11 @@ class Ticks extends Container {
 
         let frameFromOffset: (offset: number) => number;
         let moveCursor: (frame: number) => void;
+        let moveRange: (range: { start: number; end: number } | null) => void;
+
+        // the drawable span of the strip (inside its padding), set by rebuild
+        let stripLeft = 0;
+        let stripRight = 0;
 
         // pcui wrappers around key markers, kept so their tooltips unregister
         // (via the destroy event) when the timeline is rebuilt
@@ -37,9 +42,12 @@ class Ticks extends Container {
 
             const numFrames = events.invoke('timeline.frames');
             const currentFrame = events.invoke('timeline.frame');
+            const clipRange = events.invoke('timeline.clipRange');
 
             const padding = 20;
             const width = this.dom.getBoundingClientRect().width - padding * 2;
+            stripLeft = padding;
+            stripRight = padding + width;
 
             // round the smallest step that keeps labels ~50px apart up to the
             // 1/2/5 * 10^n series so labels land on round frame numbers
@@ -50,13 +58,24 @@ class Ticks extends Container {
             // subdivide labels with minor ticks (fifths, or halves for 1/2 steps)
             const tickStep = labelStep === 1 ? 0 : labelStep / (labelStep % 5 === 0 ? 5 : 2);
 
+            // a one-frame timeline has no span to scale across: keep frame 0
+            // at the left edge instead of dividing by zero
+            const frameSpan = Math.max(1, numFrames - 1);
+
             const offsetFromFrame = (frame: number) => {
-                return padding + Math.floor((frame / (numFrames - 1)) * width);
+                return padding + Math.floor((frame / frameSpan) * width);
             };
 
             frameFromOffset = (offset: number) => {
-                return Math.max(0, Math.min(numFrames - 1, Math.floor(((offset - padding) / width) * (numFrames - 1))));
+                // round to the nearest frame so a click or drag lands on the
+                // key under the pointer as it is drawn
+                return Math.max(0, Math.min(numFrames - 1, Math.round(((offset - padding) / width) * frameSpan)));
             };
+
+            // selected clip band, behind the labels and keys
+            const rangeEl = document.createElement('div');
+            rangeEl.classList.add('time-range');
+            workArea.dom.appendChild(rangeEl);
 
             // timeline labels
 
@@ -81,13 +100,26 @@ class Ticks extends Container {
                 }
             }
 
-            // keys - get from active track
-            const keys = (events.invoke('track.keys') as number[]) ?? [];
+            // keys - while recording, show the frames captured so far plus the
+            // keys before the take. the take starts at the playhead and replaces
+            // everything from there on, so later keys are not drawn.
+            const recording = events.invoke('recorder.recording');
+            const trackKeys = (events.invoke('track.keys') as number[]) ?? [];
+            const samples = recording ? ((events.invoke('recorder.samples') as number[]) ?? []) : [];
+            const takeStart = recording ? ((events.invoke('recorder.startFrame') as number) ?? 0) : 0;
+            const takeEnd = samples.length > 0 ? samples[samples.length - 1] : takeStart;
+            const keys = recording
+                ? [
+                      // a clipped take only replaces keys up to its clip's end
+                      ...trackKeys.filter((k) => (clipRange ? k < takeStart || k > clipRange.end : k < takeStart)),
+                      ...samples
+                  ]
+                : trackKeys;
 
             // keys at frame >= numFrames don't play (the spline ignores them);
             // pin them just past the right end of the strip instead of hiding them
             const inRangeKeys = keys.filter((k) => k < numFrames);
-            const outOfRangeKeys = keys.filter((k) => k >= numFrames).sort((a, b) => a - b);
+            const outOfRangeKeys = recording ? [] : keys.filter((k) => k >= numFrames).sort((a, b) => a - b);
 
             // center of a pinned marker: 10px right of the last frame, staggered
             // 2px per extra marker, capped so the 8px diamond stays inside the
@@ -103,93 +135,112 @@ class Ticks extends Container {
                 label.classList.add('time-label', 'key');
                 if (outOfRange) {
                     label.classList.add('out-of-range');
+                } else if (recording && keyFrame >= takeStart && keyFrame <= takeEnd) {
+                    // recorded samples are pure display, not editable keys; keys
+                    // outside the take are ordinary keys waiting to be reached
+                    label.classList.add('recorded');
+                } else if (clipRange && keyFrame >= clipRange.start && keyFrame <= clipRange.end) {
+                    label.classList.add('in-range');
                 }
                 label.style.left = `${outOfRange ? pinnedOffset(pinnedIndex) : offsetFromFrame(keyFrame)}px`;
                 label.dataset.frame = keyFrame.toString();
 
-                const wrapper = new Element({ dom: label });
-                tooltips.register(
-                    wrapper,
-                    () =>
-                        outOfRange
-                            ? i18n.t('tooltip.timeline.key-out-of-range', { frame: keyFrame })
-                            : i18n.t('tooltip.timeline.key'),
-                    'top'
-                );
-                keyElements.push(wrapper);
-                let dragging = false;
-                let copying = false;
-                let clone: HTMLElement = null;
-                let toFrame = -1;
+                // recorded samples are display-only: no tooltip, no dragging
+                if (!recording) {
+                    const wrapper = new Element({ dom: label });
+                    tooltips.register(
+                        wrapper,
+                        () =>
+                            outOfRange
+                                ? i18n.t('tooltip.timeline.key-out-of-range', { frame: keyFrame })
+                                : i18n.t('tooltip.timeline.key'),
+                        'top'
+                    );
+                    keyElements.push(wrapper);
+                    let dragging = false;
+                    let copying = false;
+                    let clone: HTMLElement = null;
+                    let toFrame = -1;
 
-                label.addEventListener('pointerdown', (event) => {
-                    if (!dragging && event.isPrimary) {
-                        dragging = true;
-                        copying = event.shiftKey;
-                        label.setPointerCapture(event.pointerId);
-                        event.stopPropagation();
+                    label.addEventListener('pointerdown', (event) => {
+                        if (!dragging && event.isPrimary && event.button === 0) {
+                            dragging = true;
+                            copying = event.shiftKey;
+                            label.setPointerCapture(event.pointerId);
+                            event.stopPropagation();
 
-                        if (copying) {
-                            // create a visual clone to drag; original stays in place
-                            clone = document.createElement('div');
-                            clone.classList.add('time-label', 'key', 'dragging');
-                            clone.style.left = label.style.left;
-                            workArea.dom.appendChild(clone);
-                            label.classList.add('copying');
-                        } else {
-                            label.classList.add('dragging');
-                        }
-                    }
-                });
-
-                label.addEventListener('pointermove', (event: PointerEvent) => {
-                    if (dragging) {
-                        toFrame = frameFromOffset(parseInt(label.style.left, 10) + event.offsetX);
-                        if (copying) {
-                            clone.style.left = `${offsetFromFrame(toFrame)}px`;
-                        } else {
-                            // once dragged, the key can only land in range
-                            label.classList.remove('out-of-range');
-                            label.style.left = `${offsetFromFrame(toFrame)}px`;
-                        }
-                    } else {
-                        // hint that ctrl+click overwrites the key with the current pose
-                        label.classList.toggle('stamping', event.ctrlKey);
-                    }
-                });
-
-                label.addEventListener('pointerup', (event: PointerEvent) => {
-                    if (dragging && event.isPrimary) {
-                        const fromFrame = parseInt(label.dataset.frame, 10);
-
-                        // Clean up DOM state before firing events, since event
-                        // handlers may call rebuild() which clears workArea.
-                        if (copying) {
-                            workArea.dom.removeChild(clone);
-                            clone = null;
-                            label.classList.remove('copying');
-                        } else {
-                            label.classList.remove('dragging');
-                        }
-
-                        label.releasePointerCapture(event.pointerId);
-
-                        if (event.ctrlKey && (toFrame < 0 || toFrame === fromFrame)) {
-                            // ctrl+click without dragging: overwrite this key
-                            // with the current camera pose
-                            events.fire('track.addKey', fromFrame);
-                        } else if (fromFrame !== toFrame && toFrame >= 0) {
                             if (copying) {
-                                events.fire('track.copyKey', fromFrame, toFrame);
+                                // create a visual clone to drag; original stays in place
+                                clone = document.createElement('div');
+                                clone.classList.add('time-label', 'key', 'dragging');
+                                clone.style.left = label.style.left;
+                                workArea.dom.appendChild(clone);
+                                label.classList.add('copying');
                             } else {
-                                events.fire('track.moveKey', fromFrame, toFrame);
+                                label.classList.add('dragging');
                             }
                         }
+                    });
 
-                        copying = false;
-                        dragging = false;
-                    }
-                });
+                    label.addEventListener('pointermove', (event: PointerEvent) => {
+                        if (dragging) {
+                            // strip-relative pointer position: the marker is
+                            // centred on its frame, so its own offset would be
+                            // half a marker to the right
+                            toFrame = frameFromEvent(event);
+                            if (copying) {
+                                clone.style.left = `${offsetFromFrame(toFrame)}px`;
+                            } else {
+                                // once dragged, the key can only land in range
+                                label.classList.remove('out-of-range');
+                                label.style.left = `${offsetFromFrame(toFrame)}px`;
+                            }
+                        } else {
+                            // hint that ctrl+click overwrites the key with the current pose
+                            label.classList.toggle('stamping', event.ctrlKey);
+                        }
+                    });
+
+                    label.addEventListener('pointerup', (event: PointerEvent) => {
+                        if (dragging && event.isPrimary) {
+                            const fromFrame = parseInt(label.dataset.frame, 10);
+
+                            // Clean up DOM state before firing events, since event
+                            // handlers may call rebuild() which clears workArea.
+                            if (copying) {
+                                workArea.dom.removeChild(clone);
+                                clone = null;
+                                label.classList.remove('copying');
+                            } else {
+                                label.classList.remove('dragging');
+                            }
+
+                            label.releasePointerCapture(event.pointerId);
+
+                            if (event.ctrlKey && (toFrame < 0 || toFrame === fromFrame)) {
+                                // ctrl+click without dragging: overwrite this key
+                                // with the current camera pose
+                                events.fire('track.addKey', fromFrame);
+                            } else if (fromFrame !== toFrame && toFrame >= 0) {
+                                if (copying) {
+                                    events.fire('track.copyKey', fromFrame, toFrame);
+                                } else {
+                                    events.fire('track.moveKey', fromFrame, toFrame);
+                                }
+                            } else if (!copying && (toFrame < 0 || toFrame === fromFrame)) {
+                                // a plain click on a key outside the clip cancels
+                                // it, like a click on the strip there
+                                const range = events.invoke('timeline.clipRange');
+                                if (range && (fromFrame < range.start || fromFrame > range.end)) {
+                                    events.fire('timeline.clearClipRange', fromFrame);
+                                }
+                            }
+
+                            copying = false;
+                            dragging = false;
+                        }
+                    });
+                }
 
                 workArea.dom.appendChild(label);
             };
@@ -215,31 +266,155 @@ class Ticks extends Container {
                 cursor.style.left = `${offsetFromFrame(frame)}px`;
                 cursor.textContent = frame.toString();
             };
+
+            // re-place the clip band and tint keys without rebuilding markers
+            const placeRange = (range: { start: number; end: number } | null) => {
+                if (!range) {
+                    rangeEl.style.display = 'none';
+                } else {
+                    rangeEl.style.display = '';
+                    rangeEl.style.left = `${offsetFromFrame(range.start)}px`;
+                    rangeEl.style.width = `${Math.max(
+                        3,
+                        offsetFromFrame(range.end) - offsetFromFrame(range.start) + 1
+                    )}px`;
+                }
+                workArea.dom.querySelectorAll<HTMLElement>('.time-label.key').forEach((el) => {
+                    const frame = parseInt(el.dataset.frame, 10);
+                    el.classList.toggle('in-range', !!range && frame >= range.start && frame <= range.end);
+                });
+            };
+            moveRange = placeRange;
+            placeRange(clipRange);
         };
 
-        // handle scrubbing
+        // handle scrubbing (left) and clip selection (right)
 
-        let scrubbing = false;
+        let gesture: 'scrub' | 'clip' = null;
+        let gesturePointer = -1;
+        let clipAnchor = -1;
+        let scrubStartFrame = -1;
+        let scrubStartX = 0;
+        let scrubStartOutside = false;
+        let scrubMoved = false;
+
+        // the recorder drives the playhead, so scrubbing is disabled mid-recording
+        const canScrub = () => !events.invoke('recorder.recording');
+
+        // frame under the pointer, using the same geometry as the markers
+        const frameFromEvent = (event: PointerEvent) => {
+            const rect = workArea.dom.getBoundingClientRect();
+            return frameFromOffset(event.clientX - rect.left);
+        };
+
+        // clip boundaries snap to the key under the pointer: on a dense
+        // timeline the pixel mapping can miss the marker that was dragged to
+        const clipFrameFromEvent = (event: PointerEvent) => {
+            const el = document.elementFromPoint(event.clientX, event.clientY);
+            const keyEl = el instanceof HTMLElement ? el.closest('.time-label.key') : null;
+            return keyEl instanceof HTMLElement ? parseInt(keyEl.dataset.frame, 10) : frameFromEvent(event);
+        };
+
+        const endGesture = (event: PointerEvent) => {
+            if (workArea.dom.hasPointerCapture(event.pointerId)) {
+                workArea.dom.releasePointerCapture(event.pointerId);
+            }
+            gesture = null;
+            gesturePointer = -1;
+        };
+
+        // the strip has its own right-button gesture
+        workArea.dom.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+        });
 
         workArea.dom.addEventListener('pointerdown', (event: PointerEvent) => {
-            if (!scrubbing && event.isPrimary) {
-                scrubbing = true;
-                workArea.dom.setPointerCapture(event.pointerId);
-                events.fire('timeline.setFrame', frameFromOffset(event.offsetX));
+            if (gesture || !canScrub()) return;
+
+            // manual playhead control wins: stop playback first, otherwise
+            // the playback tick keeps overwriting the drag and the cursor
+            // flickers between the two
+            if (events.invoke('timeline.playing')) {
+                events.fire('timeline.setPlaying', false);
             }
+
+            const rect = workArea.dom.getBoundingClientRect();
+            const offset = event.clientX - rect.left;
+
+            // a key marker knows its own frame; the pixel mapping can't always
+            // recover it when frames are closer than the marker is wide
+            const target = event.target instanceof HTMLElement ? event.target : null;
+            const keyEl = target?.closest('.time-label.key');
+            const keyFrame = keyEl instanceof HTMLElement ? parseInt(keyEl.dataset.frame, 10) : -1;
+            const frame = keyFrame >= 0 ? keyFrame : frameFromOffset(offset);
+
+            if (event.button === 2) {
+                // right drag selects a clip; the playhead jumps to the anchor
+                // and stays there while the range grows in either direction
+                event.preventDefault();
+                gesture = 'clip';
+                gesturePointer = event.pointerId;
+                clipAnchor = frame;
+                workArea.dom.setPointerCapture(event.pointerId);
+                events.fire('timeline.setClipRange', { start: frame, end: frame }, frame);
+                return;
+            }
+
+            if (event.button !== 0) return;
+
+            const range = events.invoke('timeline.clipRange');
+            // clicking the strip's padding is outside the drawable range, which
+            // is the only way to cancel a clip that covers every frame
+            const outsideStrip = offset < stripLeft || offset > stripRight;
+            gesture = 'scrub';
+            gesturePointer = event.pointerId;
+            scrubStartFrame = frame;
+            scrubStartX = event.clientX;
+            scrubStartOutside = !!range && (outsideStrip || frame < range.start || frame > range.end);
+            scrubMoved = false;
+            workArea.dom.setPointerCapture(event.pointerId);
+            events.fire('timeline.setFrame', frame);
         });
 
         workArea.dom.addEventListener('pointermove', (event: PointerEvent) => {
-            if (scrubbing) {
-                events.fire('timeline.setFrame', frameFromOffset(event.offsetX));
+            if (event.pointerId !== gesturePointer) return;
+
+            if (gesture === 'clip') {
+                events.fire('timeline.setClipRange', { start: clipAnchor, end: clipFrameFromEvent(event) }, clipAnchor);
+                return;
+            }
+
+            if (gesture === 'scrub' && canScrub()) {
+                if (!scrubMoved && Math.abs(event.clientX - scrubStartX) > 3) {
+                    scrubMoved = true;
+                }
+
+                // a drag that started outside the clip cancels it as soon as it
+                // moves, then scrubs the whole timeline; a drag from inside
+                // stays confined to the clip
+                if (scrubMoved && scrubStartOutside) {
+                    scrubStartOutside = false;
+                    events.fire('timeline.clearClipRange', frameFromEvent(event));
+                    return;
+                }
+
+                events.fire('timeline.setFrame', frameFromEvent(event));
             }
         });
 
         workArea.dom.addEventListener('pointerup', (event: PointerEvent) => {
-            if (scrubbing && event.isPrimary) {
-                workArea.dom.releasePointerCapture(event.pointerId);
-                scrubbing = false;
+            if (event.pointerId !== gesturePointer) return;
+
+            if (gesture === 'scrub' && !scrubMoved && scrubStartOutside) {
+                // a click outside the clip cancels it and seeks to the click
+                events.fire('timeline.clearClipRange', scrubStartFrame);
             }
+            endGesture(event);
+        });
+
+        workArea.dom.addEventListener('pointercancel', (event: PointerEvent) => {
+            if (event.pointerId !== gesturePointer) return;
+            endGesture(event);
         });
 
         // update the stamp cursor hint when ctrl changes while already
@@ -287,6 +462,11 @@ class Ticks extends Container {
             moveCursor(frame);
         });
 
+        // the clip band and key tints follow the range without a full rebuild
+        events.on('timeline.clipRange', (range: { start: number; end: number } | null) => {
+            moveRange?.(range);
+        });
+
         // rebuild when track keys change
         events.on('track.keyAdded', () => {
             rebuild();
@@ -309,6 +489,20 @@ class Ticks extends Container {
         });
 
         events.on('track.keysCleared', () => {
+            rebuild();
+        });
+
+        events.on('track.keysRemoved', () => {
+            rebuild();
+        });
+
+        // rebuild while the recorder captures samples and when recording
+        // starts/stops (which swaps which keys the strip displays)
+        events.on('recorder.sampled', () => {
+            rebuild();
+        });
+
+        events.on('recorder.recording', () => {
             rebuild();
         });
     }
@@ -353,14 +547,56 @@ class TimelinePanel extends Container {
             enabled: false
         });
 
+        // clear all keyframes (one-click wipe of the recorded path)
+
+        const clearKeys = new Button({
+            class: 'button',
+            text: '\uE124',
+            enabled: false
+        });
+
+        // record controls (icon drawn in css: circle while idle, square while recording)
+
+        const record = new Button({
+            class: 'button',
+            id: 'record'
+        });
+        // the button draws its icon in css, so give it a name a screen reader
+        // can announce, and expose the record/stop state
+        i18n.onChange(() => record.dom.setAttribute('aria-label', i18n.t('tooltip.timeline.record')), record);
+        record.dom.setAttribute('aria-pressed', 'false');
+
+        // loop
+
+        const loop = new Button({
+            class: 'button',
+            id: 'loop',
+            text: '\uE128'
+        });
+
+        loop.on('click', () => {
+            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
+        });
+
+        events.on('timeline.loop', (loopIn: boolean) => {
+            loop.class[loopIn ? 'add' : 'remove']('active');
+        });
+
+        if (events.invoke('timeline.loop')) {
+            loop.class.add('active');
+        }
+
         const buttonControls = new Container({
             id: 'button-controls'
         });
+        buttonControls.append(loop);
         buttonControls.append(prev);
         buttonControls.append(play);
         buttonControls.append(next);
         buttonControls.append(addKey);
         buttonControls.append(removeKey);
+        buttonControls.append(clearKeys);
+        buttonControls.append(record);
 
         // settings
 
@@ -385,11 +621,14 @@ class TimelinePanel extends Container {
             speed.value = frameRate.toString();
         });
 
+        // the recorder grows the timeline past its current length, so keep the
+        // cap well above what a take is likely to need (100000 frames is ~55
+        // minutes at 30 fps) instead of clamping the number while it climbs
         const frames = new NumericInput({
             id: 'totalFrames',
             value: 180,
             min: 1,
-            max: 10000,
+            max: 100000,
             precision: 0
         });
 
@@ -419,24 +658,15 @@ class TimelinePanel extends Container {
             smoothness.value = smoothnessIn;
         });
 
-        // loop
+        // record sample interval: capture a camera keyframe every N frames
 
-        const loop = new Button({
-            id: 'loop',
-            text: '\uE128'
+        const sampleInterval = new NumericInput({
+            id: 'sampleInterval',
+            min: 1,
+            max: 60,
+            precision: 0,
+            value: 3
         });
-
-        loop.on('click', () => {
-            events.fire('timeline.setLoop', !events.invoke('timeline.loop'));
-        });
-
-        events.on('timeline.loop', (loopIn: boolean) => {
-            loop.class[loopIn ? 'add' : 'remove']('active');
-        });
-
-        if (events.invoke('timeline.loop')) {
-            loop.class.add('active');
-        }
 
         const settingsControls = new Container({
             id: 'settings-controls'
@@ -444,7 +674,7 @@ class TimelinePanel extends Container {
         settingsControls.append(speed);
         settingsControls.append(frames);
         settingsControls.append(smoothness);
-        settingsControls.append(loop);
+        settingsControls.append(sampleInterval);
 
         // append control groups
 
@@ -510,6 +740,18 @@ class TimelinePanel extends Container {
             events.fire('track.removeKey', frame);
         });
 
+        clearKeys.on('click', () => {
+            events.fire('track.clearAll');
+        });
+
+        record.on('click', () => {
+            if (events.invoke('recorder.recording')) {
+                events.fire('recorder.stop');
+            } else {
+                events.fire('recorder.start', sampleInterval.value);
+            }
+        });
+
         // Helper to check if the current frame has a key
         const canDeleteKey = () => {
             const keys = (events.invoke('track.keys') as number[]) ?? [];
@@ -517,10 +759,43 @@ class TimelinePanel extends Container {
             return keys.includes(frame);
         };
 
+        // Helper to check whether the track has any keys to clear (inside the
+        // selected clip when one is set)
+        const canClearKeys = () => {
+            const keys = (events.invoke('track.keys') as number[]) ?? [];
+            const range = events.invoke('timeline.clipRange');
+            return range ? keys.some((k) => k >= range.start && k <= range.end) : keys.length > 0;
+        };
+
         // Update key button states
         const updateKeyButtonStates = () => {
-            removeKey.enabled = canDeleteKey();
+            const recording = events.invoke('recorder.recording');
+            removeKey.enabled = !recording && canDeleteKey();
+            clearKeys.enabled = !recording && canClearKeys();
         };
+
+        // While recording the camera belongs to the user: lock the transport,
+        // the key edits and the timeline settings, and mark the panel
+        const updateRecordingStates = (recording: boolean) => {
+            this.class[recording ? 'add' : 'remove']('recording');
+            record.class[recording ? 'add' : 'remove']('recording');
+            record.dom.setAttribute('aria-pressed', String(recording));
+            prev.enabled = !recording;
+            play.enabled = !recording;
+            next.enabled = !recording;
+            addKey.enabled = !recording;
+            removeKey.enabled = !recording && canDeleteKey();
+            clearKeys.enabled = !recording && canClearKeys();
+            speed.enabled = !recording;
+            frames.enabled = !recording;
+            smoothness.enabled = !recording;
+            sampleInterval.enabled = !recording;
+            loop.enabled = !recording;
+        };
+
+        events.on('recorder.recording', (recording: boolean) => {
+            updateRecordingStates(recording);
+        });
 
         // Update button states when frame changes
         events.on('timeline.frame', () => {
@@ -552,6 +827,15 @@ class TimelinePanel extends Container {
             updateKeyButtonStates();
         });
 
+        // the clip decides which keys Clear removes
+        events.on('timeline.clipRange', () => {
+            updateKeyButtonStates();
+        });
+
+        events.on('track.keysRemoved', () => {
+            updateKeyButtonStates();
+        });
+
         // cancel animation playback if user interacts with camera
         events.on('camera.controller', () => {
             if (events.invoke('timeline.playing')) {
@@ -577,9 +861,12 @@ class TimelinePanel extends Container {
         tooltips.register(next, tooltip('tooltip.timeline.next-frame', 'timeline.nextFrame'), 'top');
         tooltips.register(addKey, tooltip('tooltip.timeline.add-key', 'track.addKey'), 'top');
         tooltips.register(removeKey, tooltip('tooltip.timeline.remove-key', 'track.removeKey'), 'top');
+        tooltips.register(clearKeys, () => i18n.t('tooltip.timeline.clear-keys'), 'top');
+        tooltips.register(record, () => i18n.t('tooltip.timeline.record'), 'top');
         tooltips.register(speed, () => i18n.t('tooltip.timeline.frame-rate'), 'top');
         tooltips.register(frames, () => i18n.t('tooltip.timeline.total-frames'), 'top');
         tooltips.register(smoothness, () => i18n.t('tooltip.timeline.smoothness'), 'top');
+        tooltips.register(sampleInterval, () => i18n.t('tooltip.timeline.sample-interval'), 'top');
         tooltips.register(loop, () => i18n.t('tooltip.timeline.loop'), 'top');
     }
 }

@@ -1,7 +1,7 @@
 import type { Mat4 } from 'playcanvas';
 import { Color, Quat, Texture, Vec3 } from 'playcanvas';
 
-import type { CameraFrame } from './camera';
+import type { CameraControlMode, CameraFrame } from './camera';
 import type { GradeParams } from './color-grade';
 import type { CommandContext } from './command-queue';
 import type { IntersectOptions } from './data-processor/intersect';
@@ -1130,28 +1130,27 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // the centre point, 1 the full projected footprint
     events.function('selection.footprint', () => (viewMode === 'rings' ? 1 : 0));
 
-    // camera control mode (orbit/fly)
+    // camera control mode (orbit/fly/free)
 
-    let controlMode: 'orbit' | 'fly' = 'orbit';
-
-    const setControlMode = (mode: 'orbit' | 'fly') => {
-        if (mode !== controlMode) {
-            controlMode = mode;
+    const setControlMode = (mode: CameraControlMode) => {
+        if (mode !== scene.camera.controlMode) {
             scene.camera.controlMode = mode;
-            events.fire('camera.controlMode', controlMode);
+            events.fire('camera.controlMode', mode);
         }
     };
 
     events.function('camera.controlMode', () => {
-        return controlMode;
+        return scene.camera.controlMode;
     });
 
-    events.on('camera.setControlMode', (mode: 'orbit' | 'fly') => {
+    events.on('camera.setControlMode', (mode: CameraControlMode) => {
         setControlMode(mode);
     });
 
     events.on('camera.toggleControlMode', () => {
-        setControlMode(controlMode === 'orbit' ? 'fly' : 'orbit');
+        // cycle orbit -> fly -> free -> orbit
+        const mode = scene.camera.controlMode;
+        setControlMode(mode === 'orbit' ? 'fly' : mode === 'fly' ? 'free' : 'orbit');
     });
 
     // center size
@@ -1188,6 +1187,30 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     events.on('camera.setFlySpeed', (value: number) => {
         setFlySpeed(value);
+    });
+
+    // free camera sensitivity (movement multiplier and rotation rate)
+
+    const setFreeMoveSensitivity = (value: number) => {
+        if (value !== scene.camera.freeMoveSensitivity) {
+            scene.camera.freeMoveSensitivity = value;
+            events.fire('camera.freeMoveSensitivity', value);
+        }
+    };
+
+    events.on('camera.setFreeMoveSensitivity', (value: number) => {
+        setFreeMoveSensitivity(value);
+    });
+
+    const setFreeRotateSpeed = (value: number) => {
+        if (value !== scene.camera.freeRotateSpeed) {
+            scene.camera.freeRotateSpeed = value;
+            events.fire('camera.freeRotateSpeed', value);
+        }
+    };
+
+    events.on('camera.setFreeRotateSpeed', (value: number) => {
+        setFreeRotateSpeed(value);
     });
 
     // view spherical harmonic bands
@@ -1291,18 +1314,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    events.function('camera.getPose', () => {
-        const camera = scene.camera;
-        const position = camera.position;
-        const focalPoint = camera.focalPoint;
-        return {
-            position: { x: position.x, y: position.y, z: position.z },
-            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
-            fov: camera.fov
-        };
-    });
+    events.function('camera.getPose', () => scene.camera.getPose());
 
-    events.on('camera.setPose', (pose: { position: Vec3; target: Vec3; fov?: number }, speed = 1) => {
+    events.on('camera.setPose', (pose: { position: Vec3; target: Vec3; fov?: number; roll?: number }, speed = 1) => {
         // assign fov before setPose so distance is computed using the new fovFactor
         if (pose.fov !== undefined) {
             // pose-driven fov (timeline playback, fly-to-pose) is not a user
@@ -1316,7 +1330,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 events.fire('preferences.resume');
             }
         }
-        scene.camera.setPose(pose.position, pose.target, speed);
+        scene.camera.setPose(pose.position, pose.target, speed, pose.roll ?? 0);
     });
 
     // hack: fire events to initialize UI

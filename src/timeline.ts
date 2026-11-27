@@ -10,6 +10,13 @@ type TimelineData = Partial<{
     loop: boolean;
 }>;
 
+// an inclusive frame range selected on the strip; the playhead and playback are
+// confined to it while it is set
+type TimelineRange = {
+    start: number;
+    end: number;
+};
+
 /**
  * Register global timeline events.
  * The timeline manages playback state (frames, frameRate, current frame, playing).
@@ -24,7 +31,23 @@ const registerTimelineEvents = (events: Events) => {
     // current frame
     let frame = 0;
 
+    // set when a bounds change clamps the playhead, so playback's clock
+    // continues from the frame on screen instead of its old position
+    let clockRebase = false;
+
+    // selected clip, or null when the whole timeline is seekable
+    let clipRange: TimelineRange = null;
+
+    // the inclusive bounds the playhead may occupy
+    const bounds = (): TimelineRange => clipRange ?? { start: 0, end: frames - 1 };
+
+    const clampFrame = (value: number) => {
+        const { start, end } = bounds();
+        return Math.max(start, Math.min(end, value));
+    };
+
     const setFrame = (value: number) => {
+        value = clampFrame(value);
         if (value !== frame) {
             frame = value;
             events.fire('timeline.frame', frame);
@@ -44,10 +67,24 @@ const registerTimelineEvents = (events: Events) => {
     const setFrames = (value: number) => {
         if (value !== frames) {
             frames = value;
-            // clamp a stranded playhead before announcing the new length so
-            // 'timeline.frames' listeners observe a consistent frame/frames pair
-            if (frame >= frames) {
-                setFrame(frames - 1);
+
+            // keep the clip inside the new length; a clip with nothing left
+            // in range is dropped
+            if (clipRange) {
+                if (clipRange.start >= frames) {
+                    clipRange = null;
+                } else {
+                    clipRange = { start: clipRange.start, end: Math.min(clipRange.end, frames - 1) };
+                }
+                events.fire('timeline.clipRange', clipRange);
+            }
+
+            // clamp a playhead left outside the new bounds before announcing
+            // the new length, so listeners observe a consistent pair
+            const beforeFrame = frame;
+            setFrame(frame);
+            if (frame !== beforeFrame) {
+                clockRebase = true;
             }
             events.fire('timeline.frames', frames);
         }
@@ -59,6 +96,36 @@ const registerTimelineEvents = (events: Events) => {
 
     events.on('timeline.setFrames', (value: number) => {
         setFrames(value);
+    });
+
+    // clip range
+
+    const setClipRange = (range: TimelineRange | null, seekTo?: number) => {
+        if (range) {
+            const lo = Math.max(0, Math.min(frames - 1, Math.min(range.start, range.end)));
+            const hi = Math.max(lo, Math.min(frames - 1, Math.max(range.start, range.end)));
+            clipRange = { start: lo, end: hi };
+        } else {
+            clipRange = null;
+        }
+
+        // announce the range first, then clamp the playhead into it
+        events.fire('timeline.clipRange', clipRange);
+        const beforeFrame = frame;
+        setFrame(seekTo ?? frame);
+        if (frame !== beforeFrame) {
+            clockRebase = true;
+        }
+    };
+
+    events.function('timeline.clipRange', () => (clipRange ? { ...clipRange } : null));
+
+    events.on('timeline.setClipRange', (range: TimelineRange | null, seekTo?: number) => {
+        setClipRange(range, seekTo);
+    });
+
+    events.on('timeline.clearClipRange', (seekTo?: number) => {
+        setClipRange(null, seekTo);
     });
 
     // frame rate
@@ -116,21 +183,51 @@ const registerTimelineEvents = (events: Events) => {
     let animHandle: EventHandle = null;
 
     const play = () => {
-        // with loop off, playing from the last frame starts over from the first
-        if (!loop && frame >= frames - 1) {
-            setFrame(0);
+        const initial = bounds();
+
+        // with loop off, playing from the end starts over from the start
+        if (!loop && frame >= initial.end) {
+            setFrame(initial.start);
         }
         let time = frame;
 
         // handle application update tick
         animHandle = events.on('update', (dt: number) => {
+            // the bounds can change while playing (timeline length or clip)
+            const clip = events.invoke('timeline.clipRange');
+            const { start, end } = bounds();
+            const span = end - start + 1;
+
+            // a bounds change may have clamped the playhead; continue from the
+            // frame on screen instead of the clock's old position
+            if (clockRebase) {
+                time = frame;
+                clockRebase = false;
+            }
+
             time += dt * frameRate;
-            // with loop off, stop on the last frame instead of wrapping to the first
-            const end = !loop && time >= frames - 1;
-            time = loop ? time % frames : Math.min(time, frames - 1);
-            setFrame(Math.floor(time));
-            events.fire('timeline.time', time);
-            if (end) {
+            let ended = false;
+
+            if (loop) {
+                // wrap the clock inside the playable bounds, staying correct
+                // even if a tick spans several laps
+                if (time >= end + 1) {
+                    time = start + ((((time - start) % span) + span) % span);
+                }
+            } else if (time >= end) {
+                // stop on the last playable frame instead of running past it
+                time = end;
+                ended = true;
+            }
+
+            // a clip holds the camera on its last frame for the rest of that
+            // frame's duration; without a clip the full-timeline spline keeps
+            // its loop-seam interpolation
+            const evaluated = clip ? Math.min(Math.max(time, start), end) : time;
+
+            setFrame(Math.floor(evaluated));
+            events.fire('timeline.time', evaluated);
+            if (ended) {
                 setPlaying(false);
             }
         });
@@ -146,7 +243,7 @@ const registerTimelineEvents = (events: Events) => {
 
     const setPlaying = (value: boolean) => {
         // a single frame without looping has nothing to play
-        if (value && !loop && frames <= 1) {
+        if (value && !loop && bounds().end <= bounds().start) {
             return;
         }
         if (value !== playing) {
@@ -174,17 +271,23 @@ const registerTimelineEvents = (events: Events) => {
     });
 
     events.on('timeline.prevFrame', () => {
-        setFrame((frame - 1 + frames) % frames);
+        const { start, end } = bounds();
+        const span = end - start + 1;
+        setFrame(start + ((((frame - start - 1) % span) + span) % span));
     });
 
     events.on('timeline.nextFrame', () => {
-        setFrame((frame + 1) % frames);
+        const { start, end } = bounds();
+        const span = end - start + 1;
+        setFrame(start + ((((frame - start + 1) % span) + span) % span));
     });
 
     // Key navigation - delegates to active track's keys
     const skipToKey = (dir: 'forward' | 'back') => {
-        // ignore keys beyond the end of the timeline - they don't play
-        const keys = ((events.invoke('track.keys') as number[]) ?? []).filter((k) => k < frames);
+        const { start, end } = bounds();
+
+        // ignore keys outside the playable bounds - they don't play
+        const keys = ((events.invoke('track.keys') as number[]) ?? []).filter((k) => k >= start && k <= end);
 
         if (keys.length > 0) {
             const orderedKeys = keys.slice().sort((a, b) => a - b);
@@ -198,7 +301,7 @@ const registerTimelineEvents = (events: Events) => {
                 setFrame(orderedKeys[dir === 'back' ? (nextKeyIndex + l - 1) % l : nextKeyIndex]);
             }
         } else {
-            setFrame(dir === 'back' ? 0 : frames - 1);
+            setFrame(dir === 'back' ? start : end);
         }
     };
 
@@ -212,6 +315,10 @@ const registerTimelineEvents = (events: Events) => {
 
     // clear timeline state when scene is cleared
     events.on('scene.clear', () => {
+        if (clipRange) {
+            clipRange = null;
+            events.fire('timeline.clipRange', null);
+        }
         events.fire('timeline.frames', frames);
     });
 
@@ -235,7 +342,11 @@ const registerTimelineEvents = (events: Events) => {
         smoothness = data.smoothness ?? 1;
         loop = data.loop ?? true;
 
+        // the clip is session state, not part of the document
+        clipRange = null;
+
         // Fire events to update UI (always fire to ensure rebuild)
+        events.fire('timeline.clipRange', null);
         events.fire('timeline.frames', frames);
         events.fire('timeline.frameRate', frameRate);
         events.fire('timeline.frame', frame);

@@ -1,6 +1,7 @@
-import { Vec3 } from 'playcanvas';
+import type { Vec3 } from 'playcanvas';
 
 import type { Pose } from './camera-poses';
+import { createPose, samePose } from './camera-poses';
 import type { CommandQueue } from './command-queue';
 import { AnimTrackEditOp } from './edit-ops';
 import type { CommandOptions } from './editor-command';
@@ -19,11 +20,14 @@ type TimelineSettings = {
 };
 // omitted fields come from the playhead and camera when the command runs
 type KeyInput = { frame?: number; position?: Vec3; target?: Vec3; fov?: number };
-type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; inRange: boolean };
+type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; roll: number; inRange: boolean };
 
 // the timeline panel's choices; other rates would leave its select blank
 const FRAME_RATES = [1, 6, 12, 24, 30, 60];
-const MAX_FRAMES = 10000;
+// matches the timeline panel's total-frames input: the recorder grows the
+// timeline as a take runs, so the API must accept long takes too (100000
+// frames is ~55 minutes at 30 fps)
+const MAX_FRAMES = 100000;
 
 const invalid = (message: string): never => {
     throw new EditorError('invalid_input', message);
@@ -53,6 +57,7 @@ const createEditorTimeline = (
         position: pose.position.clone(),
         target: pose.target.clone(),
         fov: pose.fov,
+        roll: pose.roll ?? 0,
         inRange: pose.frame < frames
     });
     const state = () => {
@@ -158,10 +163,11 @@ const createEditorTimeline = (
                 if (c.frame !== undefined || (before.playing && c.playing === false))
                     track().evaluate(events.invoke('timeline.frame'));
                 // resuming at the end of a non-looping timeline would start it over;
-                // playback ends there, so stay stopped unless playing was asked for
-                const atEnd =
-                    !events.invoke('timeline.loop') &&
-                    events.invoke('timeline.frame') >= events.invoke('timeline.frames') - 1;
+                // playback ends there, so stay stopped unless playing was asked for.
+                // a clip moves the playable end, so use that when one is selected
+                const clip = events.invoke('timeline.clipRange');
+                const end = clip ? clip.end : events.invoke('timeline.frames') - 1;
+                const atEnd = !events.invoke('timeline.loop') && events.invoke('timeline.frame') >= end;
                 if (c.playing ?? (before.playing && !atEnd)) events.fire('timeline.setPlaying', true);
                 const after = state();
                 const fields = ['frames', 'frameRate', 'smoothness', 'loop', 'frame', 'playing'] as const;
@@ -186,25 +192,23 @@ const createEditorTimeline = (
                 const capture = input.some((k) => !k.position || k.fov === undefined);
                 if (capture && events.invoke('timeline.playing'))
                     throw new EditorError('timeline_playing', 'Pause playback before capturing the camera pose.');
-                const pose = capture ? events.invoke('camera.getPose') : null;
+                // pose fields a key leaves out come from the live camera
+                const live = capture ? createPose(events.invoke('camera.getPose'), playhead, '') : null;
                 let affected = 0;
                 for (const k of input) {
                     const value = {
-                        position: k.position ?? new Vec3(pose.position.x, pose.position.y, pose.position.z),
-                        target: k.target ?? new Vec3(pose.target.x, pose.target.y, pose.target.z),
-                        fov: k.fov ?? pose.fov
+                        position: k.position ?? live.position.clone(),
+                        target: k.target ?? live.target.clone(),
+                        fov: k.fov ?? live.fov,
+                        // an explicit position/target is a level look-at key;
+                        // omitted fields capture the live pose including roll
+                        roll: k.position ? 0 : live.roll
                     };
                     const index = poses.findIndex((p) => p.frame === k.frame);
                     const existing = poses[index];
-                    if (
-                        existing?.position.equals(value.position) &&
-                        existing.target.equals(value.target) &&
-                        existing.fov === value.fov
-                    )
-                        continue;
-                    affected++;
-                    // new keys are named as the track names them
                     const key = { name: existing?.name ?? `camera_${poses.length}`, frame: k.frame, ...value };
+                    if (existing && samePose(existing, key)) continue;
+                    affected++;
                     if (existing) poses[index] = key;
                     else poses.push(key);
                 }
@@ -263,5 +267,5 @@ const createEditorTimeline = (
     };
 };
 
-export { createEditorTimeline };
+export { createEditorTimeline, MAX_FRAMES };
 export type { TimelineSettings, KeyInput, KeyInfo };

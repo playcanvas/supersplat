@@ -33,6 +33,12 @@ interface AnimTrack {
     copyKey(fromFrame: number, toFrame: number): boolean;
 
     /**
+     * Remove every keyframe in an inclusive frame range.
+     * @returns true if the track was modified, false if no key was in range.
+     */
+    removeRange(fromFrame: number, toFrame: number): boolean;
+
+    /**
      * Clear all keyframes.
      */
     clear(): void;

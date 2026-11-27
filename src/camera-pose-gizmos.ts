@@ -87,6 +87,7 @@ class CameraPoseGizmos extends Element {
         events.on('track.keyMoved', markDirty);
         events.on('track.keyUpdated', markDirty);
         events.on('track.keysCleared', markDirty);
+        events.on('track.keysRemoved', markDirty);
         events.on('track.keysLoaded', markDirty);
         events.on('scene.boundChanged', markDirty);
     }

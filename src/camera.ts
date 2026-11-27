@@ -1,4 +1,4 @@
-import type { BoundingBox, Quat } from 'playcanvas';
+import type { BoundingBox } from 'playcanvas';
 import {
     math,
     ADDRESS_CLAMP_TO_EDGE,
@@ -24,6 +24,7 @@ import {
     Entity,
     FramePass,
     Mat4,
+    Quat,
     Ray,
     RenderPass,
     RenderPassForward,
@@ -82,8 +83,29 @@ const va = new Vec3();
 const m = new Mat4();
 const v4 = new Vec4();
 
+// free-camera work globals
+const freeOffset = new Vec3();
+const freeViewDir = new Vec3();
+const freeAxisQuat = new Quat();
+
+// pose-roll work globals
+const levelQuat = new Quat();
+const deltaQuat = new Quat();
+
+type CameraControlMode = 'orbit' | 'fly' | 'free';
+const CAMERA_CONTROL_MODES: CameraControlMode[] = ['orbit', 'fly', 'free'];
+
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
+
+// orbit angles for a view (camera forward) direction. shared by the free pose,
+// pose capture and getPose so they cannot drift apart.
+const azimElevResult = { azim: 0, elev: 0 };
+const dirToAzimElev = (dir: Vec3) => {
+    azimElevResult.azim = Math.atan2(-dir.x, -dir.z) * math.RAD_TO_DEG;
+    azimElevResult.elev = Math.asin(math.clamp(dir.y, -1, 1)) * math.RAD_TO_DEG;
+    return azimElevResult;
+};
 
 class Camera extends Element {
     /**
@@ -115,11 +137,54 @@ class Camera extends Element {
 
     flySpeed = 1;
 
-    controlMode: 'orbit' | 'fly' = 'orbit';
+    // free-mode feel, adjusted from the free camera settings.
+    // move sensitivity is a multiplier on flySpeed; rotate speed is in
+    // degrees per second.
+    freeMoveSensitivity = 1;
+    freeRotateSpeed = 30;
+
+    // orientation override applied on top of the rig: it carries roll (which
+    // azim/elev cannot express) and is also the authoritative free-mode
+    // orientation. cleared by manual camera moves.
+    rotationOverride: Quat | null = null;
+
+    // free (6dof) mode position; its orientation lives in rotationOverride
+    freePosition = new Vec3();
 
     // during fly-mode look, stores the camera position that must stay fixed
     // while the azim/elev tween smoothly converges
     lookCameraPos: Vec3 | null = null;
+
+    private _controlMode: CameraControlMode = 'orbit';
+
+    // switching modes converts between the free pose and the orbit rig so the
+    // camera doesn't jump. roll is carried through rotationOverride, since the
+    // azim/elev rig cannot express it.
+    get controlMode() {
+        return this._controlMode;
+    }
+
+    set controlMode(value: CameraControlMode) {
+        if (value === this._controlMode) {
+            return;
+        }
+
+        const previous = this._controlMode;
+        this._controlMode = value;
+
+        if (value === 'free') {
+            // cameraRoot has identity transform, so the world pose captured
+            // here is directly usable as the local pose
+            this.freePosition.copy(this.mainCamera.getPosition());
+            if (!this.rotationOverride) {
+                this.rotationOverride = new Quat();
+            }
+            this.rotationOverride.copy(this.mainCamera.getRotation());
+            this.lookCameraPos = null;
+        } else if (previous === 'free') {
+            this.exitFreeMode();
+        }
+    }
 
     picker: Picker;
 
@@ -282,11 +347,26 @@ class Camera extends Element {
         return this.azimElev.elev;
     }
 
+    // view yaw in the orbit convention. in free mode the rig angles are
+    // stale, so derive it from the actual orientation.
+    get viewYaw() {
+        if (this._controlMode === 'free') {
+            const rotation = this.rotationOverride ?? this.mainCamera.getRotation();
+            rotation.transformVector(Vec3.FORWARD, freeViewDir);
+            return mod(dirToAzimElev(freeViewDir).azim, 360);
+        }
+        return this.azim;
+    }
+
     get distance() {
         return this.distanceTween.target.distance;
     }
 
     setFocalPoint(point: Vec3, dampingFactorFactor = 1) {
+        // manual moves drop a pose orientation override
+        if (this._controlMode !== 'free') {
+            this.rotationOverride = null;
+        }
         this.lookCameraPos = null;
         this.focalPointTween.goto(point, dampingFactorFactor * this.scene.config.controls.dampingFactor);
     }
@@ -327,9 +407,27 @@ class Camera extends Element {
 
         // return to perspective mode on rotation
         this.ortho = false;
+
+        if (this._controlMode === 'free') {
+            // a requested view rotates the free camera in place; roll is
+            // dropped since the request only carries yaw/pitch
+            if (!this.rotationOverride) {
+                this.rotationOverride = new Quat();
+            }
+            this.rotationOverride.setFromEulerAngles(elev, azim, 0);
+        } else {
+            // manual rotation drops a pose orientation override
+            this.rotationOverride = null;
+        }
     }
 
-    setDistance(distance: number, dampingFactorFactor = 1) {
+    // keepRoll is for internal distance adjustments (scene bounds) that are
+    // not the user zooming, which is what drops a pose orientation override
+    setDistance(distance: number, dampingFactorFactor = 1, keepRoll = false) {
+        if (!keepRoll && this._controlMode !== 'free') {
+            this.rotationOverride = null;
+        }
+
         this.lookCameraPos = null;
 
         const controls = this.scene.config.controls;
@@ -341,14 +439,161 @@ class Camera extends Element {
         t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    setPose(position: Vec3, target: Vec3, dampingFactorFactor = 1) {
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor = 1, roll = 0) {
         vec.sub2(target, position);
         const l = vec.length();
-        const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
-        const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
-        this.setFocalPoint(target, dampingFactorFactor);
+        const { azim, elev } = dirToAzimElev(vec.mulScalar(1 / l));
+        this.applyRig(target, azim, elev, (l / this.sceneRadius) * this.fovFactor, dampingFactorFactor);
+        this.applyRoll(roll);
+    }
+
+    // set the orbit rig in one step
+    private applyRig(focalPoint: Vec3, azim: number, elev: number, distance: number, dampingFactorFactor: number) {
+        this.setFocalPoint(focalPoint, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
-        this.setDistance((l / this.sceneRadius) * this.fovFactor, dampingFactorFactor);
+        this.setDistance(distance, dampingFactorFactor);
+    }
+
+    // carry a pose roll on top of the rig (or into the free pose), and drop
+    // any override for a level view
+    private applyRoll(roll: number) {
+        if (this._controlMode === 'free') {
+            this.syncFreeFromRig(roll);
+        } else if (roll !== 0) {
+            if (!this.rotationOverride) {
+                this.rotationOverride = new Quat();
+            }
+            this.orientationWithRoll(this.azim, this.elevation, roll, this.rotationOverride);
+        } else {
+            this.rotationOverride = null;
+        }
+    }
+
+    // free-mode pose helpers
+
+    private exitFreeMode() {
+        // rebuild the orbit rig from the free pose without moving the camera:
+        // keep the view direction and the previous orbit radius. roll is
+        // carried through rotationOverride so the view doesn't snap.
+        const rotation = this.rotationOverride ?? this.mainCamera.getRotation();
+        const roll = this.rollOf(rotation);
+        rotation.transformVector(Vec3.FORWARD, freeViewDir);
+        const distance = Math.max((this.distanceTween.value.distance * this.sceneRadius) / this.fovFactor, 1e-3);
+        const target = new Vec3().copy(this.freePosition).add(freeViewDir.mulScalar(distance));
+        this.setPose(this.freePosition, target, 0, roll);
+    }
+
+    // translate the free camera by an offset expressed in its local frame
+    // (x right, y up, -z forward)
+    translateFree(localDelta: Vec3) {
+        if (!this.rotationOverride) {
+            return;
+        }
+        this.rotationOverride.transformVector(localDelta, freeOffset);
+        this.freePosition.add(freeOffset);
+    }
+
+    // rotate the free camera about its own axes. positive pitch looks up
+    // (forward rotates toward up), positive yaw turns left, positive roll is
+    // clockwise seen from behind the camera (up rotates toward right).
+    rotateFree(pitch: number, yaw: number, roll: number) {
+        const rotation = this.rotationOverride;
+        if (!rotation) {
+            return;
+        }
+        if (pitch !== 0) {
+            freeAxisQuat.setFromAxisAngle(Vec3.RIGHT, pitch);
+            rotation.mul2(rotation, freeAxisQuat);
+        }
+        if (yaw !== 0) {
+            freeAxisQuat.setFromAxisAngle(Vec3.UP, yaw);
+            rotation.mul2(rotation, freeAxisQuat);
+        }
+        if (roll !== 0) {
+            // the camera's local forward is -z, which is the roll axis
+            freeAxisQuat.setFromAxisAngle(Vec3.FORWARD, roll);
+            rotation.mul2(rotation, freeAxisQuat);
+        }
+        if (pitch !== 0 || yaw !== 0 || roll !== 0) {
+            rotation.normalize();
+        }
+    }
+
+    // the look-at equivalent of the free pose: a focal point one scene radius
+    // ahead of the camera plus the rig angles that reproduce the view. Used
+    // where the orbit representation is required (serialization, getPose).
+    private getFreeRig() {
+        const rotation = this.rotationOverride ?? this.mainCamera.getRotation();
+        rotation.transformVector(Vec3.FORWARD, freeViewDir);
+        const { azim, elev } = dirToAzimElev(freeViewDir);
+        const distance = Math.max(this.sceneRadius, 1e-3);
+        const focalPoint = new Vec3().copy(this.freePosition).add(freeViewDir.mulScalar(distance));
+        return {
+            focalPoint,
+            azim: mod(azim, 360),
+            elev,
+            distance: (distance / this.sceneRadius) * this.fovFactor
+        };
+    }
+
+    // pose target for callers that need a look-at point (keyframes, recording)
+    getPoseTarget() {
+        return this._controlMode === 'free' ? this.getFreeRig().focalPoint : this.focalPoint;
+    }
+
+    // the camera as a pose: a look-at target plus roll, so keyframes and
+    // recordings can store any camera mode (including free)
+    getPose() {
+        const position = this.position;
+        const target = this.getPoseTarget();
+        return {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: target.x, y: target.y, z: target.z },
+            fov: this.fov,
+            roll: this.getRoll()
+        };
+    }
+
+    // signed roll (degrees) of the current orientation about the view axis,
+    // relative to the level look-at orientation. pose capture uses this so
+    // recordings and keyframes keep free-camera rolls.
+    getRoll() {
+        return this.rollOf(this.mainCamera.getRotation());
+    }
+
+    // roll of an arbitrary orientation, relative to its level look-at frame
+    private rollOf(rotation: Quat) {
+        rotation.transformVector(Vec3.FORWARD, freeViewDir);
+        const { azim, elev } = dirToAzimElev(freeViewDir);
+        levelQuat.setFromEulerAngles(elev, azim, 0).invert();
+        deltaQuat.mul2(levelQuat, rotation);
+        const roll = -2 * Math.atan2(deltaQuat.z, deltaQuat.w) * math.RAD_TO_DEG;
+        // report the principal angle so stored poses stay readable
+        const wrapped = ((((roll + 180) % 360) + 360) % 360) - 180;
+        return Math.abs(wrapped) < 1e-6 ? 0 : wrapped;
+    }
+
+    // build an orientation from rig angles plus a roll about the view axis
+    private orientationWithRoll(azim: number, elev: number, roll: number, out: Quat) {
+        out.setFromEulerAngles(elev, azim, 0);
+        if (roll !== 0) {
+            freeAxisQuat.setFromAxisAngle(Vec3.FORWARD, roll);
+            out.mul2(out, freeAxisQuat);
+        }
+        return out;
+    }
+
+    // while in free mode, pose-driven cameras (timeline, camera info edits)
+    // write the rig; mirror the result into the free pose so they take effect
+    private syncFreeFromRig(roll = 0) {
+        Camera.calcForwardVec(freeViewDir, this.azim, this.elevation);
+        const t = this.focalPointTween.target;
+        freeViewDir.mulScalar((this.distanceTween.target.distance * this.sceneRadius) / this.fovFactor);
+        this.freePosition.set(t.x, t.y, t.z).add(freeViewDir);
+        if (!this.rotationOverride) {
+            this.rotationOverride = new Quat();
+        }
+        this.orientationWithRoll(this.azim, this.elevation, roll, this.rotationOverride);
     }
 
     // set or clear the pose override and apply it immediately so subsequent
@@ -581,7 +826,8 @@ class Camera extends Element {
     onBoundChanged(bound: BoundingBox) {
         const prevDistance = this.distanceTween.value.distance * this.sceneRadius;
         this.sceneRadius = Math.max(1e-3, bound.halfExtents.length());
-        this.setDistance(prevDistance / this.sceneRadius, 0);
+        // keep the view's roll: the bounds changed, the user did not zoom
+        this.setDistance(prevDistance / this.sceneRadius, 0, true);
     }
 
     serialize(serializer: Serializer) {
@@ -771,10 +1017,19 @@ class Camera extends Element {
             this.near = near;
             this.far = far;
         } else {
-            this.mainCamera.setLocalPosition(cameraPosition);
+            // free mode moves the camera itself; otherwise the rig provides
+            // the position and the orientation override is layered on top
+            const position = this._controlMode === 'free' ? this.freePosition : cameraPosition;
+            this.mainCamera.setLocalPosition(position);
             this.mainCamera.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
 
-            this.fitClippingPlanes(this.mainCamera.getLocalPosition(), this.mainCamera.forward);
+            // free mode and pose playback carry an orientation the rig cannot
+            // express (roll); it is authoritative when present
+            if (this.rotationOverride) {
+                this.mainCamera.setLocalRotation(this.rotationOverride);
+            }
+
+            this.fitClippingPlanes(position, this.mainCamera.forward);
 
             this.displayTransform.copy(this.mainCamera.getWorldTransform());
         }
@@ -1197,22 +1452,37 @@ class Camera extends Element {
     docSerialize() {
         const pack3 = (v: { x: number; y: number; z: number }) => [v.x, v.y, v.z];
 
+        // the document stores the orbit representation; convert the free pose
+        // to its look-at equivalent. roll is stored separately because the
+        // azim/elev rig cannot express it.
+        const view =
+            this._controlMode === 'free'
+                ? this.getFreeRig()
+                : {
+                      focalPoint: this.focalPoint,
+                      azim: this.azim,
+                      elev: this.elevation,
+                      distance: this.distance
+                  };
+
         return {
-            focalPoint: pack3(this.focalPointTween.target),
-            azim: this.azim,
-            elev: this.elevation,
-            distance: this.distance,
+            focalPoint: pack3(view.focalPoint),
+            azim: view.azim,
+            elev: view.elev,
+            distance: view.distance,
+            roll: this.getRoll(),
             fov: this.fov,
             tonemapping: this.tonemapping
         };
     }
 
     docDeserialize(settings: ReturnType<Camera['docSerialize']>) {
-        this.setFocalPoint(new Vec3(settings.focalPoint), 0);
-        this.setAzimElev(settings.azim, settings.elev, 0);
-        this.setDistance(settings.distance, 0);
+        this.applyRig(new Vec3(settings.focalPoint), settings.azim, settings.elev, settings.distance, 0);
         this.fov = settings.fov;
         this.tonemapping = settings.tonemapping;
+
+        // apply roll after the setters above, which clear it for manual moves
+        this.applyRoll(settings.roll ?? 0);
     }
 
     // offscreen render mode
@@ -1252,4 +1522,5 @@ class Camera extends Element {
     }
 }
 
-export { Camera, CameraFrame };
+export { Camera, CameraFrame, CAMERA_CONTROL_MODES };
+export type { CameraControlMode };

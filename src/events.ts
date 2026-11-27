@@ -25,6 +25,7 @@ type Results = {
         position: { x: number; y: number; z: number };
         target: { x: number; y: number; z: number };
         fov: number;
+        roll: number;
     };
     'camera.poses': readonly Pose[];
     'camera.showInfo': boolean;
@@ -35,6 +36,9 @@ type Results = {
     pivot: Pivot;
     'polygonSelection.removeLastPoint': boolean;
     'publish.userStatus': Promise<UserStatus | null>;
+    'recorder.recording': boolean;
+    'recorder.samples': readonly number[];
+    'recorder.startFrame': number;
     'render.baseFilename': string;
     'render.image': Promise<boolean>;
     'render.maxTextureSize': number;
@@ -55,6 +59,7 @@ type Results = {
     'show.savePopup': Promise<ExportDialogResult | null>;
     showPopup: Promise<{ action: string; value?: string }>;
     targetSize: { width: number; height: number };
+    'timeline.clipRange': { start: number; end: number } | null;
     'timeline.frame': number;
     'timeline.frameRate': number;
     'timeline.frames': number;

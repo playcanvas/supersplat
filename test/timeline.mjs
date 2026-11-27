@@ -105,6 +105,92 @@ const timelineChecks = {
         const result = await timeline.update({ frame: 9 });
         assert.equal(result.timeline.frame, 9);
         assert.equal(result.timeline.playing, true);
+    },
+
+    'a clip clamps the playhead and wraps the frame steps inside it'() {
+        const events = setup();
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 5);
+        assert.equal(events.invoke('timeline.frame'), 5);
+
+        events.fire('timeline.setFrame', 0);
+        assert.equal(events.invoke('timeline.frame'), 3);
+        events.fire('timeline.setFrame', 9);
+        assert.equal(events.invoke('timeline.frame'), 6);
+
+        // steps wrap inside the clip rather than the full timeline
+        events.fire('timeline.nextFrame');
+        assert.equal(events.invoke('timeline.frame'), 3);
+        events.fire('timeline.prevFrame');
+        assert.equal(events.invoke('timeline.frame'), 6);
+    },
+
+    'playback loops inside a clip'() {
+        const events = setup({ loop: true });
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 5);
+        events.fire('timeline.setPlaying', true);
+        advance(events, 2);
+        // 5 -> 6 -> wraps back to 3
+        assert.equal(events.invoke('timeline.frame'), 3);
+        assert.equal(events.invoke('timeline.playing'), true);
+    },
+
+    'playback stops on a clip end when not looping'() {
+        const events = setup({ loop: false });
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 3);
+        events.fire('timeline.setPlaying', true);
+        advance(events, 5);
+        assert.equal(events.invoke('timeline.frame'), 6);
+        assert.equal(events.invoke('timeline.playing'), false);
+    },
+
+    'looping a clip holds the camera sample on its last frame'() {
+        const events = setup({ loop: true });
+        const times = [];
+        events.on('timeline.time', (time) => times.push(time));
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 6);
+        events.fire('timeline.setPlaying', true);
+        // half a frame past the end, the camera must not sample beyond the clip
+        events.fire('update', 0.5);
+        assert.equal(times[times.length - 1], 6);
+    },
+
+    'playback follows a timeline length change'() {
+        const events = setup({ frames: 10, loop: true });
+        events.fire('timeline.setFrame', 5);
+        events.fire('timeline.setPlaying', true);
+        events.fire('timeline.setFrames', 7);
+        advance(events, 1);
+        assert.equal(events.invoke('timeline.frame'), 6);
+        advance(events, 1);
+        assert.equal(events.invoke('timeline.frame'), 0);
+    },
+
+    'a clip follows the timeline length down and drops when nothing is left'() {
+        const events = setup();
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 3);
+
+        events.fire('timeline.setFrames', 5);
+        assert.deepEqual(events.invoke('timeline.clipRange'), { start: 3, end: 4 });
+
+        events.fire('timeline.setFrames', 3);
+        assert.equal(events.invoke('timeline.clipRange'), null);
+        assert.equal(events.invoke('timeline.frame'), 2);
+    },
+
+    'clearing a clip reopens the whole timeline'() {
+        const events = setup();
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 3);
+        events.fire('timeline.clearClipRange', 9);
+        assert.equal(events.invoke('timeline.clipRange'), null);
+        assert.equal(events.invoke('timeline.frame'), 9);
+    },
+
+    async 'an editor seek outside the clip lands on its boundary'() {
+        const { events, timeline } = setupEditor();
+        events.fire('timeline.setClipRange', { start: 3, end: 6 }, 3);
+        const result = await timeline.update({ frame: 9 });
+        assert.equal(result.timeline.frame, 6);
+        assert.deepEqual(events.invoke('timeline.clipRange'), { start: 3, end: 6 });
     }
 };
 

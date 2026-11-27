@@ -6,6 +6,14 @@ const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
 const worldDiff = new Vec3();
 const moveVec = new Vec3();
+const freeMove = new Vec3();
+
+// free-camera movement uses the same world-units-per-second rate as fly mode
+// (scaled by the shared fly speed setting, the free-mode sensitivity and the
+// fast/slow modifiers). rotation base speed lives on the camera so the
+// free-camera settings can adjust it live.
+const FREE_ROTATE_FAST = 4;
+const FREE_ROTATE_SLOW = 0.25;
 
 // calculate the distance between two 2d points
 const dist = (x0: number, y0: number, x1: number, y1: number) => Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
@@ -74,6 +82,11 @@ class PointerController {
         let midx: number, midy: number, midlen: number;
 
         const pointerdown = (event: PointerEvent) => {
+            // free mode is keyboard-only: the mouse belongs to the editing tools
+            if (camera.controlMode === 'free') {
+                return;
+            }
+
             if (event.pointerType === 'mouse') {
                 // If a button is already pressed, ignore this press
                 if (pressedButton !== -1) {
@@ -134,6 +147,11 @@ class PointerController {
         };
 
         const pointermove = (event: PointerEvent) => {
+            // free mode is keyboard-only: the mouse belongs to the editing tools
+            if (camera.controlMode === 'free') {
+                return;
+            }
+
             if (event.pointerType === 'mouse') {
                 // Only process if we're tracking a button
                 if (pressedButton === -1) {
@@ -295,6 +313,13 @@ class PointerController {
         };
 
         const wheel = (event: WheelEvent) => {
+            // free mode is keyboard-only; swallow the wheel so the page
+            // doesn't scroll but leave the camera alone
+            if (camera.controlMode === 'free') {
+                event.preventDefault();
+                return;
+            }
+
             const { deltaX, deltaY } = event;
 
             // Some browsers (notably Safari/Firefox on macOS) remap a vertical
@@ -345,6 +370,12 @@ class PointerController {
         const canvas = camera.scene.app.graphicsDevice.canvas;
 
         const dblclick = (event: globalThis.MouseEvent) => {
+            // free mode is keyboard-only; double-click must not yank the
+            // camera back to orbit
+            if (camera.controlMode === 'free') {
+                return;
+            }
+
             if (event.target === target || event.target === canvas) {
                 // Switch to orbit mode when double-clicking to focus
                 if (camera.controlMode === 'fly') {
@@ -354,13 +385,43 @@ class PointerController {
             }
         };
 
-        // fly movement state (updated via shortcut events)
-        let flyForward = false;
-        let flyBackward = false;
-        let flyLeft = false;
-        let flyRight = false;
-        let flyDown = false;
-        let flyUp = false;
+        // movement key state, shared by fly and free modes. the shortcut
+        // table routes the same held keys to camera.move.* for both modes;
+        // the mode decides which camera property they move.
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let moveDown = false;
+        let moveUp = false;
+
+        // free-mode look state (IJKL/UO)
+        const freeLook = {
+            pitchUp: false,
+            pitchDown: false,
+            yawLeft: false,
+            yawRight: false,
+            rollCW: false,
+            rollCCW: false
+        };
+
+        const clearMoveKeys = () => {
+            moveForward = false;
+            moveBackward = false;
+            moveLeft = false;
+            moveRight = false;
+            moveDown = false;
+            moveUp = false;
+        };
+
+        const clearFreeLook = () => {
+            freeLook.pitchUp = false;
+            freeLook.pitchDown = false;
+            freeLook.yawLeft = false;
+            freeLook.yawRight = false;
+            freeLook.rollCW = false;
+            freeLook.rollCCW = false;
+        };
 
         // track modifier keys for speed control (updated via shortcut events)
         let fastDown = false;
@@ -368,50 +429,55 @@ class PointerController {
 
         // Clear all keys when window loses focus to prevent stuck keys
         const clearAllKeys = () => {
-            flyForward = false;
-            flyBackward = false;
-            flyLeft = false;
-            flyRight = false;
-            flyDown = false;
-            flyUp = false;
+            clearMoveKeys();
+            clearFreeLook();
             fastDown = false;
             slowDown = false;
             ctrlDown = false;
         };
 
-        // Helper to switch to fly mode when a fly key is pressed
-        const handleFlyKey = (down: boolean) => {
-            if (down && camera.controlMode !== 'fly') {
+        // pressing a movement key in orbit mode switches to fly; free mode
+        // keeps its own camera
+        const handleMoveKey = (down: boolean) => {
+            if (down && camera.controlMode === 'orbit') {
                 camera.scene.events.fire('camera.setControlMode', 'fly');
             }
         };
 
-        // Listen for fly movement shortcut events
+        // Listen for shared movement and modifier shortcut events
         const events = camera.scene.events;
 
-        const onFlyForward = (down: boolean) => {
-            flyForward = down;
-            handleFlyKey(down);
+        const onControlMode = () => {
+            // movement keys are shared, so they survive a mode switch (e.g.
+            // the orbit -> fly auto-switch happens on the same key press).
+            // free look keys are mode-specific, so they must not leak.
+            clearFreeLook();
         };
-        const onFlyBackward = (down: boolean) => {
-            flyBackward = down;
-            handleFlyKey(down);
+        events.on('camera.controlMode', onControlMode);
+
+        const onMoveForward = (down: boolean) => {
+            moveForward = down;
+            handleMoveKey(down);
         };
-        const onFlyLeft = (down: boolean) => {
-            flyLeft = down;
-            handleFlyKey(down);
+        const onMoveBackward = (down: boolean) => {
+            moveBackward = down;
+            handleMoveKey(down);
         };
-        const onFlyRight = (down: boolean) => {
-            flyRight = down;
-            handleFlyKey(down);
+        const onMoveLeft = (down: boolean) => {
+            moveLeft = down;
+            handleMoveKey(down);
         };
-        const onFlyDown = (down: boolean) => {
-            flyDown = down;
-            handleFlyKey(down);
+        const onMoveRight = (down: boolean) => {
+            moveRight = down;
+            handleMoveKey(down);
         };
-        const onFlyUp = (down: boolean) => {
-            flyUp = down;
-            handleFlyKey(down);
+        const onMoveDown = (down: boolean) => {
+            moveDown = down;
+            handleMoveKey(down);
+        };
+        const onMoveUp = (down: boolean) => {
+            moveUp = down;
+            handleMoveKey(down);
         };
         const onModifierFast = (down: boolean) => {
             fastDown = down;
@@ -420,27 +486,76 @@ class PointerController {
             slowDown = down;
         };
 
-        events.on('camera.fly.forward', onFlyForward);
-        events.on('camera.fly.backward', onFlyBackward);
-        events.on('camera.fly.left', onFlyLeft);
-        events.on('camera.fly.right', onFlyRight);
-        events.on('camera.fly.down', onFlyDown);
-        events.on('camera.fly.up', onFlyUp);
+        events.on('camera.move.forward', onMoveForward);
+        events.on('camera.move.backward', onMoveBackward);
+        events.on('camera.move.left', onMoveLeft);
+        events.on('camera.move.right', onMoveRight);
+        events.on('camera.move.down', onMoveDown);
+        events.on('camera.move.up', onMoveUp);
         events.on('camera.modifier.fast', onModifierFast);
         events.on('camera.modifier.slow', onModifierSlow);
 
+        // free-mode look keys
+        const freeLookBindings: [string, keyof typeof freeLook][] = [
+            ['camera.free.lookUp', 'pitchUp'],
+            ['camera.free.lookDown', 'pitchDown'],
+            ['camera.free.yawLeft', 'yawLeft'],
+            ['camera.free.yawRight', 'yawRight'],
+            ['camera.free.rollCW', 'rollCW'],
+            ['camera.free.rollCCW', 'rollCCW']
+        ];
+        const freeLookHandlers = freeLookBindings.map(([name, key]) => {
+            const handler = (down: boolean) => {
+                freeLook[key] = down;
+            };
+            events.on(name, handler);
+            return { name, handler };
+        });
+
+        const moveSpeedMod = () => (fastDown ? 10 : slowDown ? 0.1 : 1);
+
+        const updateFree = (deltaTime: number) => {
+            // clamp dt so a stalled tab doesn't teleport the camera
+            const dt = Math.min(deltaTime, 0.1);
+
+            // rotate about the camera's own axes
+            const rotateMod = fastDown ? FREE_ROTATE_FAST : slowDown ? FREE_ROTATE_SLOW : 1;
+            const angle = camera.freeRotateSpeed * rotateMod * dt;
+            const pitch = ((freeLook.pitchUp ? 1 : 0) - (freeLook.pitchDown ? 1 : 0)) * angle;
+            const yaw = ((freeLook.yawLeft ? 1 : 0) - (freeLook.yawRight ? 1 : 0)) * angle;
+            const roll = ((freeLook.rollCW ? 1 : 0) - (freeLook.rollCCW ? 1 : 0)) * angle;
+            if (pitch !== 0 || yaw !== 0 || roll !== 0) {
+                camera.rotateFree(pitch, yaw, roll);
+            }
+
+            // move along the camera's own axes at the same rate as fly mode,
+            // scaled by the free-mode sensitivity
+            const speed = dt * camera.flySpeed * camera.freeMoveSensitivity * moveSpeedMod();
+            const strafe = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+            const rise = (moveUp ? 1 : 0) - (moveDown ? 1 : 0);
+            const advance = (moveForward ? 1 : 0) - (moveBackward ? 1 : 0);
+            if (strafe !== 0 || rise !== 0 || advance !== 0) {
+                // local axes: +x right, +y up, -z forward
+                camera.translateFree(freeMove.set(strafe, rise, -advance).mulScalar(speed));
+            }
+        };
+
         this.update = (deltaTime: number) => {
+            if (camera.controlMode === 'free') {
+                updateFree(deltaTime);
+                return;
+            }
+
             if (camera.controlMode !== 'fly') return;
 
             // Fly mode: WASD for movement, Q/E for up/down - moves focal point
-            const forward = (flyForward ? 1 : 0) - (flyBackward ? 1 : 0);
-            const strafe = (flyRight ? 1 : 0) - (flyLeft ? 1 : 0);
-            const vertical = (flyUp ? 1 : 0) - (flyDown ? 1 : 0);
+            const forward = (moveForward ? 1 : 0) - (moveBackward ? 1 : 0);
+            const strafe = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+            const vertical = (moveUp ? 1 : 0) - (moveDown ? 1 : 0);
 
             if (forward || strafe || vertical) {
                 // Calculate speed modifier based on current modifier key state
-                const speedMod = fastDown ? 10 : slowDown ? 0.1 : 1;
-                const factor = deltaTime * camera.flySpeed * speedMod;
+                const factor = deltaTime * camera.flySpeed * moveSpeedMod();
                 const worldTransform = camera.worldTransform;
 
                 moveVec.set(0, 0, 0);
@@ -514,12 +629,14 @@ class PointerController {
             destroy?.();
             window.removeEventListener('keydown', keydown, { capture: true });
             window.removeEventListener('keyup', keyup, { capture: true });
-            events.off('camera.fly.forward', onFlyForward);
-            events.off('camera.fly.backward', onFlyBackward);
-            events.off('camera.fly.left', onFlyLeft);
-            events.off('camera.fly.right', onFlyRight);
-            events.off('camera.fly.down', onFlyDown);
-            events.off('camera.fly.up', onFlyUp);
+            events.off('camera.controlMode', onControlMode);
+            events.off('camera.move.forward', onMoveForward);
+            events.off('camera.move.backward', onMoveBackward);
+            events.off('camera.move.left', onMoveLeft);
+            events.off('camera.move.right', onMoveRight);
+            events.off('camera.move.down', onMoveDown);
+            events.off('camera.move.up', onMoveUp);
+            freeLookHandlers.forEach(({ name, handler }) => events.off(name, handler));
             events.off('camera.modifier.fast', onModifierFast);
             events.off('camera.modifier.slow', onModifierSlow);
         };

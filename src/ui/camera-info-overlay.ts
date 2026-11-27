@@ -132,18 +132,20 @@ class CameraInfoOverlay extends Container {
         };
 
         const positionRow = createRow('P', 'camera-info.position', (v) => {
-            const { target } = events.invoke('camera.getPose');
+            const { target, roll } = events.invoke('camera.getPose');
             events.fire('camera.setPose', {
                 position: new Vec3(v[0], v[1], v[2]),
-                target: new Vec3(target.x, target.y, target.z)
+                target: new Vec3(target.x, target.y, target.z),
+                roll
             });
         });
 
         const targetRow = createRow('T', 'camera-info.target', (v) => {
-            const { position } = events.invoke('camera.getPose');
+            const { position, roll } = events.invoke('camera.getPose');
             events.fire('camera.setPose', {
                 position: new Vec3(position.x, position.y, position.z),
-                target: new Vec3(v[0], v[1], v[2])
+                target: new Vec3(v[0], v[1], v[2]),
+                roll
             });
         });
 

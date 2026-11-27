@@ -21,6 +21,8 @@ uniform cacheWidth: u32;
 uniform capacity: u32;
 uniform viewportSize: vec4f;
 uniform clipZParams: vec4f;
+// (near, 1 / (far - near)): the perspective camera's linear depth range
+uniform depthRange: vec2f;
 uniform centersBase: u32;
 uniform centersCount: u32;
 uniform centerSize: f32;
@@ -82,17 +84,22 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     let a = textureLoad(cacheA, uv, 0);
 
     // clip position reconstructed exactly as the gaussian renderer does, so the
-    // centre sits on its gaussian and carries the same depth
+    // centre sits on its gaussian
     let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
     let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniform.viewportSize.xy;
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     let depth = bitcast<f32>(a.y);
-    let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
-    // a per-centre push back of a few ulps keeps exact depth ties (duplicate
-    // points, flat data seen head on) rare, so the faded colour pass's
-    // FUNC_EQUAL matches one centre per pixel. Both passes compute it alike
-    let tie = 1.0 + f32(entry & 255u) * (1.0 / 4194304.0);
-    let clip = vec4f(ndc * w, clamp((uniform.clipZParams.x * depth + uniform.clipZParams.y) * tie, 0.0, w), w);
+    let ortho = uniform.clipZParams.z != 0.0;
+    let w = select(depth, 1.0, ortho);
+    // centres depth test only against each other (their layer clears depth),
+    // so a perspective camera gives them depth linear in view depth rather
+    // than the projection's: with the camera inside the scene near is far /
+    // 16384, and projected depth leaves only a few thousand float steps for
+    // the whole scene, so masses of centres tied and the faded colour pass's
+    // FUNC_EQUAL blended every one of them. Orthographic depth is already linear
+    let linear = clamp((depth - uniform.depthRange.x) * uniform.depthRange.y, 0.0, 1.0) * w;
+    let projected = clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w);
+    let clip = vec4f(ndc * w, select(linear, projected, ortho), w);
     // a centerSize-pixel square
     let clipOffset = vertex_position.xy * (0.5 * uniform.centerSize) * w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);

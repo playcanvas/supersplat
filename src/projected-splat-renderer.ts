@@ -391,11 +391,13 @@ class ProjectedSplatRenderer {
         this.centersMeshInstance.cull = false;
         this.centersMeshInstance.setInstancing(true, false);
 
-        // unselected centres faded below full opacity keep the result order
-        // independent with a depth prepass: centersMaterial stops writing colour
-        // (it stays in the layer's opaque step), so it leaves only the frontmost
+        // unselected centres faded below full opacity stay as cheap as opaque
+        // ones with a depth prepass: centersMaterial stops writing colour (it
+        // stays in the layer's opaque step), so it leaves only the frontmost
         // centre's depth in each pixel, and this transparent-step pass blends
-        // the colour of exactly that centre, once
+        // only the centres at that depth - one per pixel, or the few in an exact
+        // tie - instead of every centre, which stalls on blend contention with
+        // millions of centres zoomed out
         this.centersFadeMaterial = new ShaderMaterial({
             uniqueName: 'ProjectedSplatCentersMaterial',
             attributes: {
@@ -1382,6 +1384,10 @@ class ProjectedSplatRenderer {
                 centers.setParameter('capacity', this.capacity);
                 centers.setParameter('viewportSize', viewportParams);
                 centers.setParameter('clipZParams', clipZParams);
+                centers.setParameter('depthRange', [
+                    cameraComponent.nearClip,
+                    1 / Math.max(cameraComponent.farClip - cameraComponent.nearClip, 1e-6)
+                ]);
                 centers.setParameter('centersBase', ringsBase);
                 centers.setParameter('centersCount', ringsCount);
                 centers.setParameter('centerSize', centerSize * window.devicePixelRatio);

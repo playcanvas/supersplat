@@ -1,5 +1,15 @@
 @use 'colors.scss' as *;
 
+@keyframes record-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.45;
+    }
+}
+
 #timeline-panel {
     flex-direction: column;
     border-top: none;
@@ -43,6 +53,41 @@
                     box-shadow: none;
                     border-color: #ff990088;
                 }
+
+                &.active {
+                    color: $clr-hilight;
+                }
+            }
+
+            > #record {
+                // record control: css-drawn dot that squares into a stop
+                // symbol while recording (the pc-icon font has no glyphs for these).
+                // flex centers the ::before exactly; inline-block + vertical-align
+                // middle sits on the text baseline and lands a pixel low
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                &::before {
+                    content: '';
+                    display: block;
+                    // even size inside the 34x22 content box (36x24 minus the
+                    // 1px border) so the dot lands on whole pixels
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    background-color: $error;
+                    transition: border-radius 0.15s ease;
+                }
+
+                &:hover::before {
+                    background-color: #ff7d7d;
+                }
+
+                &.recording::before {
+                    border-radius: 1px;
+                    animation: record-pulse 1.2s ease-in-out infinite;
+                }
             }
         }
 
@@ -71,35 +116,6 @@
                 > #smoothness {
                     margin: 0;
                     width: 60px;
-                }
-
-                > #loop {
-                    font-family: pc-icon;
-                    font-weight: bold;
-                    font-size: 13px;
-
-                    width: 36px;
-                    height: 24px;
-                    margin: 0;
-                    padding: 0;
-                    flex-grow: 0;
-                    flex-shrink: 0;
-
-                    border-radius: 4px;
-
-                    text-align: center;
-                    line-height: 24px;
-
-                    &:hover {
-                        color: #ff9900;
-                        cursor: pointer;
-                        box-shadow: none;
-                        border-color: #ff990088;
-                    }
-
-                    &.active {
-                        color: $clr-hilight;
-                    }
                 }
             }
         }
@@ -166,6 +182,14 @@
                     cursor: pointer;
                     pointer-events: auto;
 
+                    // samples captured by the running recorder: display-only,
+                    // not editable keys
+                    &.recorded {
+                        background-color: $error;
+                        cursor: default;
+                        pointer-events: none;
+                    }
+
                     // keys stranded beyond the timeline's end: pinned just past
                     // the strip, error-tinted and dimmed - present but not playing
                     &.out-of-range {
@@ -189,5 +213,10 @@
                 }
             }
         }
+    }
+
+    // while the recorder is running the cursor becomes a red time counter
+    &.recording > #ticks > #ticks-area > .time-label.cursor {
+        background-color: $error;
     }
 }

@@ -23,7 +23,10 @@ type KeyInfo = { frame: number; position: Vec3; target: Vec3; fov: number; inRan
 
 // the timeline panel's choices; other rates would leave its select blank
 const FRAME_RATES = [1, 6, 12, 24, 30, 60];
-const MAX_FRAMES = 10000;
+// matches the timeline panel's total-frames input: the recorder grows the
+// timeline as a take runs, so the API must accept long takes too (100000
+// frames is ~55 minutes at 30 fps)
+const MAX_FRAMES = 100000;
 
 const invalid = (message: string): never => {
     throw new EditorError('invalid_input', message);
@@ -263,5 +266,5 @@ const createEditorTimeline = (
     };
 };
 
-export { createEditorTimeline };
+export { createEditorTimeline, MAX_FRAMES };
 export type { TimelineSettings, KeyInput, KeyInfo };

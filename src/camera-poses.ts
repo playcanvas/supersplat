@@ -38,6 +38,10 @@ class CameraAnimTrack implements AnimTrack {
     private events: Events;
     private onTimelineChange: ((frame: number) => void) | null = null;
 
+    // while the path recorder is running the user owns the camera, so
+    // evaluation must not drive it (see camera-recorder.ts)
+    private recording = false;
+
     constructor(events: Events) {
         this.events = events;
 
@@ -61,6 +65,11 @@ class CameraAnimTrack implements AnimTrack {
 
         events.on('timeline.loop', () => {
             this.rebuildSpline();
+        });
+
+        // Suspend evaluation while the path recorder is running
+        events.on('recorder.recording', (recording: boolean) => {
+            this.recording = recording;
         });
 
         // Clear track when scene is cleared
@@ -154,6 +163,7 @@ class CameraAnimTrack implements AnimTrack {
     }
 
     evaluate(frame: number): void {
+        if (this.recording) return;
         this.onTimelineChange?.(frame);
     }
 

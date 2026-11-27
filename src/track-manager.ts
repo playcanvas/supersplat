@@ -47,6 +47,15 @@ const registerTrackManagerEvents = (events: Events) => {
         trackEdit('removeKey', (track) => track.removeKey(keyFrame));
     });
 
+    // Clear all keys from active track in a single undo step
+    events.on('track.clearAll', () => {
+        trackEdit('clearAll', (track) => {
+            if (track.keys.length === 0) return false;
+            track.clear();
+            return true;
+        });
+    });
+
     // Move key in active track
     events.on('track.moveKey', (fromFrame: number, toFrame: number) => {
         trackEdit('moveKey', (track) => track.moveKey(fromFrame, toFrame));

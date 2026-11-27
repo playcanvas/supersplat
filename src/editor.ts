@@ -1017,17 +1017,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // preference application sets the mode and the markers switch explicitly:
-    // the user-facing side effect below (a mode switch showing the markers)
-    // must stay out of its way
-    let prefsSuspended = 0;
-    events.on('preferences.suspend', () => {
-        prefsSuspended++;
-    });
-    events.on('preferences.resume', () => {
-        prefsSuspended = Math.max(0, prefsSuspended - 1);
-    });
-
     // markers switch (tab): while off, unselected gaussians render raw - no
     // centres or rings, no tint, gaussians on - whatever the mode's settings
     // say, so it toggles between the editing view and the plain scene. The
@@ -1115,10 +1104,6 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         viewMode = mode;
         events.fire('view.mode', mode);
         events.fire('selection.footprint', mode === 'rings' ? 1 : 0);
-        // choosing a mode is asking to see its markers
-        if (prefsSuspended === 0) {
-            setEditView(true);
-        }
     };
 
     events.on('view.setMode', (mode: ViewMode) => {

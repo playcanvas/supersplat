@@ -5,7 +5,8 @@ import type { SceneConfig } from './scene-config';
 import { i18n } from './ui/localization';
 
 const storageKey = 'supersplat:preferences';
-const storageVersion = 1;
+// 2: the unselected colour's alpha became the unselected markers' opacity
+const storageVersion = 2;
 
 type PrefValue = boolean | number | string | number[] | string[];
 type EventValue = PrefValue | Color;
@@ -291,7 +292,13 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
     // 3.0-3.7 stored the appearance as flat keys per footprint mode. Derive
     // what the global switches can take from them; the rest is dropped, since
     // keys without a descriptor never survive a load
-    const migrate = (stored: Record<string, unknown>) => {
+    const migrate = (stored: Record<string, unknown>, version: number) => {
+        // version 1 ignored the unselected colour's alpha, so a customised
+        // colour still carries the old 0.5 default; keep its markers opaque
+        const unselected = stored.unselectedClr;
+        if (version < 2 && Array.isArray(unselected) && unselected.length === 4) {
+            unselected[3] = 1;
+        }
         if (stored['view.mode'] === undefined && typeof stored['selection.footprint'] === 'number') {
             stored['view.mode'] = stored['selection.footprint'] > 0 ? 'rings' : 'centers';
         }
@@ -319,8 +326,9 @@ const registerPreferences = (events: Events, config: SceneConfig, urlArgs: objec
             const raw = localStorage.getItem(storageKey);
             if (raw) {
                 const blob = JSON.parse(raw);
-                if (blob?.version === storageVersion && typeof blob.values === 'object' && blob.values) {
-                    migrate(blob.values);
+                const version = blob?.version;
+                if ((version === 1 || version === storageVersion) && typeof blob.values === 'object' && blob.values) {
+                    migrate(blob.values, version);
                     for (const descriptor of descriptors) {
                         const value = blob.values[descriptor.key];
                         if (value !== undefined && descriptor.validate(value)) {

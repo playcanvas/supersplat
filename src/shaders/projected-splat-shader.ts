@@ -255,6 +255,8 @@ uniform ringSize: f32;
 uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
+// the unselected colour's alpha: an unselected ring band's opacity
+uniform ringOpacity: f32;
 uniform pickMode: i32;
 uniform cameraParams: vec4f;
 uniform visibleOnly: u32;
@@ -348,18 +350,26 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             && overlayVisible(gaussianId, gaussianFlags)) {
             let ringBand = radius >= 1.0 - uniform.ringSize;
             if (ringBand) {
-                alpha = 0.6;
+                // unselected bands fade by the unselected colour's alpha;
+                // selected ones always show in full
+                let ringAlpha = 0.6 * select(uniform.ringOpacity, 1.0, selected);
                 // the ring colour arrives fully resolved from the vertex stage:
                 // blended from the splat's own colour so it stays independent
                 // of the gaussian tints, and already the selected variant
-                color = vec3f(packedMid.y, unpack2x16float(packedColor2));
+                let ringColor = vec3f(packedMid.y, unpack2x16float(packedColor2));
+                // the band composites over the gaussian's own fill rather than
+                // replacing it, so a faded ring leaves the gaussian intact
+                let bandAlpha = ringAlpha + alpha * (1.0 - ringAlpha);
+                color = (ringColor * ringAlpha + color * (alpha * (1.0 - ringAlpha))) / max(bandAlpha, 1e-6);
+                alpha = bandAlpha;
             } else {
                 // rings mode shades the whole gaussian: the interior keeps its
                 // fill but never drops below a faint floor, so even invisible
                 // splats read as discs inside their rings. Skipped in stochastic
                 // mode, where a floor would dither every footprint with noise
                 #ifndef STOCHASTIC
-                    alpha = max(0.05, alpha);
+                    // the floor is part of the marker, so it fades with the band
+                    alpha = max(0.05 * select(uniform.ringOpacity, 1.0, selected), alpha);
                 #endif
             }
         }

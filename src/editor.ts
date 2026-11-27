@@ -28,6 +28,10 @@ type ViewSettings = {
     selectedColor: number[];
     unselectedColor: number[];
     lockedColor: number[];
+    // true once the unselected colour's alpha is the unselected markers'
+    // opacity. Before that v3 ignored it, and documents carry the old 0.5
+    // default, so they load it as 1 and keep looking as they did
+    unselectedAlphaOpacity?: boolean;
     shBands: number;
     centersSize: number;
     outlineSelection: boolean;
@@ -1337,6 +1341,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             selectedColor: packC(events.invoke('selectedClr')),
             unselectedColor: packC(events.invoke('unselectedClr')),
             lockedColor: packC(events.invoke('lockedClr')),
+            unselectedAlphaOpacity: true,
             shBands: events.invoke('view.bands'),
             centersSize: events.invoke('view.centerSize'),
             outlineSelection: events.invoke('view.outlineSelection'),
@@ -1355,7 +1360,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.function('docDeserialize.view', (docView: ViewSettings) => {
         events.fire('setBgClr', new Color(docView.bgColor));
         events.fire('setSelectedClr', new Color(docView.selectedColor));
-        events.fire('setUnselectedClr', new Color(docView.unselectedColor));
+        const unselectedClr = new Color(docView.unselectedColor);
+        if (!docView.unselectedAlphaOpacity) {
+            unselectedClr.a = 1;
+        }
+        events.fire('setUnselectedClr', unselectedClr);
         events.fire('setLockedClr', new Color(docView.lockedColor));
         events.fire('view.setBands', docView.shBands);
         events.fire('view.setCenterSize', docView.centersSize);

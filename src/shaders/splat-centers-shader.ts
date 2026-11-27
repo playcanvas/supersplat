@@ -21,6 +21,8 @@ uniform cacheWidth: u32;
 uniform capacity: u32;
 uniform viewportSize: vec4f;
 uniform clipZParams: vec4f;
+// (near, 1 / (far - near)): the perspective camera's linear depth range
+uniform depthRange: vec2f;
 uniform centersBase: u32;
 uniform centersCount: u32;
 uniform centerSize: f32;
@@ -68,34 +70,50 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         return output;
     }
     // selected centres always draw: they show what is selected, not what could be
-    if (uniform.visibleOnly != 0u && (flags & 1u) == 0u && (visible[entry >> 5u] & (1u << (entry & 31u))) == 0u) {
+    let selected = (flags & 1u) != 0u;
+    if (uniform.visibleOnly != 0u && !selected && (visible[entry >> 5u] & (1u << (entry & 31u))) == 0u) {
+        output.position = discardPosition;
+        return output;
+    }
+    // a fully faded unselected centre draws nothing, so it can't take a pixel's
+    // depth from the centres behind it
+    if (!selected && uniform.unselectedClr.a <= 0.0) {
         output.position = discardPosition;
         return output;
     }
     let a = textureLoad(cacheA, uv, 0);
 
     // clip position reconstructed exactly as the gaussian renderer does, so the
-    // centre sits on its gaussian and carries the same depth
+    // centre sits on its gaussian
     let maxRadius = min(1024.0, min(uniform.viewportSize.x, uniform.viewportSize.y));
     let ndcRange = vec2f(1.0) + vec2f(4.0 * maxRadius) / uniform.viewportSize.xy;
     let ndc = unpack2x16snorm(a.x) * ndcRange;
     let depth = bitcast<f32>(a.y);
-    let w = select(depth, 1.0, uniform.clipZParams.z != 0.0);
-    let clip = vec4f(ndc * w, clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w), w);
+    let ortho = uniform.clipZParams.z != 0.0;
+    let w = select(depth, 1.0, ortho);
+    // centres depth test only against each other (their layer clears depth),
+    // so a perspective camera gives them depth linear in view depth rather
+    // than the projection's: with the camera inside the scene near is far /
+    // 16384, and projected depth leaves only a few thousand float steps for
+    // the whole scene, so masses of centres tied and the faded colour pass's
+    // FUNC_EQUAL blended every one of them. Orthographic depth is already linear
+    let linear = clamp((depth - uniform.depthRange.x) * uniform.depthRange.y, 0.0, 1.0) * w;
+    let projected = clamp(uniform.clipZParams.x * depth + uniform.clipZParams.y, 0.0, w);
+    let clip = vec4f(ndc * w, select(linear, projected, ortho), w);
     // a centerSize-pixel square
     let clipOffset = vertex_position.xy * (0.5 * uniform.centerSize) * w * uniform.viewportSize.zw;
     output.position = clip + vec4f(clipOffset, 0.0, 0.0);
 
-    // an unselected centre blends from the gaussian's own colour (as cached,
-    // so graded) toward the flat unselected colour by colorBlend; a selected
-    // one takes the selection colour
+    // an unselected centre is the gaussian's own colour (as cached, so graded)
+    // or the flat unselected colour by colorBlend, at the unselected colour's
+    // alpha as its opacity; a selected one is the selection colour, opaque
     let rgbBits = a.z;
     let color = vec3f(vec3u(rgbBits, rgbBits >> 10u, rgbBits >> 20u) & vec3u(1023u))
         * (f32(1u << (rgbBits >> 30u)) / 1023.0);
-    let selected = (flags & 1u) != 0u;
     let tint = select(uniform.unselectedClr.rgb, uniform.selectedClr.rgb, selected);
     let blend = select(uniform.colorBlend, 1.0, selected);
-    output.overlayColor = vec4f(mix(color, tint, blend), 1.0);
+    let opacity = select(uniform.unselectedClr.a, 1.0, selected);
+    output.overlayColor = vec4f(mix(color, tint, blend), opacity);
     return output;
 }
 `;

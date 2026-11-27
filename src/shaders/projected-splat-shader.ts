@@ -256,6 +256,7 @@ uniform ringMask: u32;
 uniform ringsBase: u32;
 uniform ringsCount: u32;
 uniform pickMode: i32;
+uniform pickBase: u32;
 uniform cameraParams: vec4f;
 uniform visibleOnly: u32;
 
@@ -296,6 +297,18 @@ fn hashU32(x: u32) -> u32 {
     return v;
 }
 
+// the stochastic id passes (centres mode, x-ray off): a fragment survives with
+// probability equal to its alpha, from a fixed hash of pixel and cache entry so
+// a still view always gives the same owners. The nearest survivor owns the
+// pixel, so a gaussian behind faint ones is reached as often as light reaches
+// it there, where the deterministic pass let any footprint block it outright
+fn idSurvives(radius: f32, opacity: f32, entry: u32) -> bool {
+    let pix = vec2u(pcPosition.xy);
+    // WGSL requires parentheses when mixing bitwise (^) with arithmetic (*)
+    let h = hashU32((pix.x * 1973u) ^ (pix.y * 9277u) ^ ((entry + 1u) * 26699u));
+    return f32(h >> 8u) * (1.0 / 16777216.0) < splatAlpha(radius, opacity);
+}
+
 @fragment
 fn fragmentMain(input: FragmentInput) -> FragmentOutput {
     var output: FragmentOutput;
@@ -317,13 +330,24 @@ fn fragmentMain(input: FragmentInput) -> FragmentOutput {
             let weight = min(opacity, 1.0);
             output.color = vec4f(depth * weight, 0.0, 0.0, weight);
         } else {
+            #ifdef ID_STOCHASTIC
+                if (!idSurvives(radius, opacity, gaussianId + uniform.pickBase)) {
+                    discard;
+                }
+            #endif
             let id = gaussianId;
             output.color = vec4f(vec4u(id, id >> 8u, id >> 16u, id >> 24u) & vec4u(255u)) / 255.0;
         }
     #elif defined(ID_PASS)
         // every fragment of the footprint ellipse, however faint, as the pick
-        // counts it (its id branch has no alpha test). Opaque and depth
-        // tested, so the frontmost footprint owns the pixel whatever the order
+        // counts it (its id branch has no alpha test), or with ID_STOCHASTIC
+        // those that survive their alpha. Opaque and depth tested, so the
+        // frontmost footprint owns the pixel whatever the order
+        #ifdef ID_STOCHASTIC
+            if (!idSurvives(radius, opacity, gaussianId)) {
+                discard;
+            }
+        #endif
         output.color = idOutput();
     #else
       #ifdef OVERDRAW

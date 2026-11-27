@@ -1163,6 +1163,27 @@ class Camera extends Element {
         );
     }
 
+    // centres mode with x-ray off: the instances of splat a pick under the
+    // frame can select, the gaussians enough of which show (see
+    // ProjectedSplatRenderer.pickVisibility), op-filtered as pickIds is. Runs
+    // in the caller's command slot
+    pickVisibleCenters(
+        ctx: CommandContext,
+        frame: CameraFrame,
+        splat: Splat,
+        mode: 'add' | 'remove' | 'set' | 'intersect'
+    ) {
+        return this.holdFrames(() =>
+            this.picker.withTargetSize('id', frame.target, async () => {
+                this.withFrame(frame, () => this.picker.prepareId(splat, mode, 0, true));
+                const idTexture = this.picker.idTexture;
+                return idTexture
+                    ? this.scene.projectedSplatRenderer.pickVisibility(splat, idTexture)
+                    : new Set<number>();
+            })
+        );
+    }
+
     // depth-pick from outside the command queue: captures the live frame now
     // and takes a slot, so the pick is ordered with every other command and
     // runs under the camera the caller saw, however long the queue delays it

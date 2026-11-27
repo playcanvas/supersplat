@@ -65,10 +65,13 @@ const rectangleOp = async (
     const x2 = Math.max(rect.start.x, rect.end.x);
     const y2 = Math.max(rect.start.y, rect.end.y);
     let visible: Set<number>;
-    if (depth) {
+    if (depth && footprint > 0) {
         const { ids } = await scene.camera.pickIds(ctx, frame, splat, op, footprint, x1, y1, x2 - x1, y2 - y1);
-        visible = new Set(ids);
-        if (footprint > 0) return new SelectOp(splat, op, new Uint32Array(visible).sort());
+        return new SelectOp(splat, op, new Uint32Array(new Set(ids)).sort());
+    } else if (depth) {
+        // centres: those in the rect whose gaussians show enough, the rule the
+        // centre markers follow
+        visible = await scene.camera.pickVisibleCenters(ctx, frame, splat, op);
     } else if (footprint > 0) {
         const data = await scene.projectedSplatRenderer.footprintIntersect(
             splat,

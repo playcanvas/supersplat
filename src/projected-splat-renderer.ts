@@ -56,7 +56,11 @@ import { projectedSplatDepthReduce } from './shaders/projected-splat-depth-reduc
 import { projectedSplatIndirectArgs } from './shaders/projected-splat-indirect-args-shader';
 import { projectedSplatProjector } from './shaders/projected-splat-projector-shader';
 import { fragmentShader, vertexShader } from './shaders/projected-splat-shader';
-import { projectedSplatVisibility, projectedSplatVisibilityTail } from './shaders/projected-splat-visibility-shader';
+import {
+    projectedSplatVisibility,
+    projectedSplatVisibilitySample,
+    projectedSplatVisibilityTail
+} from './shaders/projected-splat-visibility-shader';
 import {
     fragmentShader as centersFragmentShader,
     vertexShader as centersVertexShader
@@ -73,7 +77,12 @@ const SORT_KEY_BITS = 20;
 
 // the id pass's inputs (see updateIdPass): the view-projection, the target
 // size and the draw settings that decide which footprints it rasterises
-const ID_KEY_SIZE = 28;
+const ID_KEY_SIZE = 29;
+
+// centres mode, x-ray off: the share of a gaussian, weighted by its falloff,
+// that must be unoccluded for its centre to show and be picked (see
+// projectedSplatVisibilitySample)
+const VISIBLE_CUTOFF = 0.15;
 
 // the contribution cull on stochastic frames steps from zero to this floor and
 // never above this ceiling (alpha * area in pixels), at most once per interval:
@@ -249,6 +258,17 @@ class ProjectedSplatRenderer {
     private idPassDepthFunc: number = FUNC_LESS;
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
+    // centres mode: the id pass is stochastic and the bits come from how much
+    // of each gaussian shows (projectedSplatVisibilitySample) rather than from
+    // owning any pixel; rings keep the deterministic pass. With the selected
+    // layer's entry range, staged for scatterVisibility
+    private frameStochasticIds = false;
+    private frameRangeBase = 0;
+    private frameRangeCount = 0;
+    // whether a pick has the material's stochastic id variant set (preparePick)
+    private pickStochastic = false;
+    // a centres pick's bits, apart from the display's (pickVisibility)
+    private pickBits: StorageBuffer | null = null;
     // The id pass runs only when its bits could differ from the last ones
     // it produced (updateIdPass): the view, the target, the drawn set or a
     // layer's gaussians changed. While the camera or a layer keeps moving it
@@ -268,6 +288,9 @@ class ProjectedSplatRenderer {
     private visibilityTailCompute: Compute | null = null;
     private visibilityTailShader: Shader | null = null;
     private visibilityTailBindGroupFormat: BindGroupFormat | null = null;
+    private visibilitySampleCompute: Compute | null = null;
+    private visibilitySampleShader: Shader | null = null;
+    private visibilitySampleBindGroupFormat: BindGroupFormat | null = null;
     private readonly occlusionBlocks = new Vec2();
     private prevValid = false;
     private readonly prevViewProjection = new Mat4();
@@ -442,8 +465,10 @@ class ProjectedSplatRenderer {
     }
 
     // footprint is the gesture's selection footprint, passed in rather than
-    // read live so toggling it can't change a finished stroke
-    preparePick(splat: Splat, pickOp: number, depth: boolean, footprint: number) {
+    // read live so toggling it can't change a finished stroke. stochastic
+    // renders the id pick as the stochastic id pass (pickVisibility)
+    preparePick(splat: Splat, pickOp: number, depth: boolean, footprint: number, stochastic = false) {
+        this.setPickStochastic(stochastic);
         if (this.drawSlot >= 0) {
             this.meshInstance.setIndirect(null, this.drawSlot, 1);
         }
@@ -460,11 +485,21 @@ class ProjectedSplatRenderer {
     }
 
     finishPick() {
+        this.setPickStochastic(false);
         this.material.setParameter('pickBase', 0);
         this.material.setParameter('pickCount', this.capacity);
         this.material.setParameter('pickOp', 2);
         this.material.setParameter('pickMode', 0);
         this.material.setParameter('pickFootprint', 1);
+    }
+
+    // finishPick runs every frame, so the variant only recompiles on a change
+    private setPickStochastic(value: boolean) {
+        if (value !== this.pickStochastic) {
+            this.pickStochastic = value;
+            this.material.setDefine('ID_STOCHASTIC', value ? '' : undefined);
+            this.material.update();
+        }
     }
 
     // Switch between the default sorted premultiplied-alpha renderer and the
@@ -1354,6 +1389,9 @@ class ProjectedSplatRenderer {
         if (!forPick) {
             this.frameFilterVisible = filterVisible && ringsCount > 0;
             this.frameTail = showCenters;
+            this.frameStochasticIds = (centersMask & 1) !== 0 && (ringsMask & 1) === 0;
+            this.frameRangeBase = ringsBase;
+            this.frameRangeCount = ringsCount;
             const key = this.frameIdKey;
             key.set(this.viewProjection.data);
             key[16] = targetSize.width;
@@ -1374,6 +1412,7 @@ class ProjectedSplatRenderer {
             // layer's opacity, and a gaussian previewed to zero drops out (the
             // pick previews it too); the other grade terms leave ownership be
             key[27] = pending && !this.scene.viewOverride ? this.previewTerms.transparency : 1;
+            key[28] = this.frameStochasticIds ? 1 : 0;
             this.updateIdPass();
         }
         this.submissionCpuMs = performance.now() - start;
@@ -1433,12 +1472,14 @@ class ProjectedSplatRenderer {
     }
 
     // the id pass draws the splat material as its opaque, depth-writing id
-    // variant (the splat shader's ID_PASS), restored after the pass. The test
-    // is strict so that of two footprints at equal depth the first drawn, the
-    // nearer in the front-to-back order, keeps the pixel
+    // variant (the splat shader's ID_PASS, stochastic in centres mode),
+    // restored after the pass. The test is strict so that of two footprints at
+    // equal depth the first drawn, the nearer in the front-to-back order,
+    // keeps the pixel
     beginIdPass() {
         this.idPassDepthFunc = this.material.depthFunc;
         this.material.setDefine('ID_PASS', '');
+        this.material.setDefine('ID_STOCHASTIC', this.frameStochasticIds ? '' : undefined);
         this.material.blendType = BLEND_NONE;
         this.material.depthWrite = true;
         this.material.depthFunc = FUNC_LESS;
@@ -1447,6 +1488,7 @@ class ProjectedSplatRenderer {
 
     endIdPass() {
         this.material.setDefine('ID_PASS', undefined);
+        this.material.setDefine('ID_STOCHASTIC', undefined);
         this.material.blendType = this.stochastic ? BLEND_NONE : BLEND_PREMULTIPLIED;
         this.material.depthWrite = this.stochastic;
         this.material.depthFunc = this.idPassDepthFunc;
@@ -1475,15 +1517,27 @@ class ProjectedSplatRenderer {
             return false;
         }
         this.visibleBits.clear();
-        const compute = this.getVisibilityCompute();
-        compute.setParameter('idTexture', idTexture);
-        compute.setParameter('visible', this.visibleBits);
-        compute.setParameter('width', idTexture.width);
-        compute.setParameter('height', idTexture.height);
-        compute.setParameter('capacity', this.capacity);
-        compute.setParameter('pad0', 0);
-        compute.setupDispatch(Math.ceil(idTexture.width / 8), Math.ceil(idTexture.height / 8));
-        device.computeDispatch([compute], 'ProjectedSplatVisibility');
+        if (this.frameStochasticIds) {
+            // the display's id target: entry + 1, zero where none
+            this.dispatchVisibilitySample(
+                idTexture,
+                this.visibleBits,
+                this.frameRangeBase,
+                this.frameRangeCount,
+                0xffffffff,
+                0
+            );
+        } else {
+            const compute = this.getVisibilityCompute();
+            compute.setParameter('idTexture', idTexture);
+            compute.setParameter('visible', this.visibleBits);
+            compute.setParameter('width', idTexture.width);
+            compute.setParameter('height', idTexture.height);
+            compute.setParameter('capacity', this.capacity);
+            compute.setParameter('pad0', 0);
+            compute.setupDispatch(Math.ceil(idTexture.width / 8), Math.ceil(idTexture.height / 8));
+            device.computeDispatch([compute], 'ProjectedSplatVisibility');
+        }
 
         // the size-culled tail, which the splat pass never drew
         if (this.frameTail && this.compactEntries && this.cacheA) {
@@ -1502,6 +1556,127 @@ class ProjectedSplatRenderer {
             device.computeDispatch([tail], 'ProjectedSplatVisibilityTail');
         }
         return true;
+    }
+
+    // set a bit in bits for each gaussian of the entry range that shows enough
+    // in idTexture (see projectedSplatVisibilitySample): entry = id + idOffset
+    // unless id is idNone. Reads the current projection, so it runs on the
+    // frame or pick that drew idTexture
+    private dispatchVisibilitySample(
+        idTexture: Texture,
+        bits: StorageBuffer,
+        rangeBase: number,
+        rangeCount: number,
+        idOffset: number,
+        idNone: number
+    ) {
+        const compute = this.getVisibilitySampleCompute();
+        compute.setParameter('compactEntries', this.compactEntries);
+        compute.setParameter('splatCounter', this.splatCounter);
+        compute.setParameter('cacheA', this.cacheA);
+        compute.setParameter('cacheB', this.cacheB);
+        compute.setParameter('idTexture', idTexture);
+        compute.setParameter('visible', bits);
+        compute.setParameter('width', idTexture.width);
+        compute.setParameter('height', idTexture.height);
+        compute.setParameter('capacity', this.capacity);
+        compute.setParameter('cacheWidth', this.cacheWidth);
+        compute.setParameter('rangeBase', rangeBase);
+        compute.setParameter('rangeCount', rangeCount);
+        compute.setParameter('idOffset', idOffset);
+        compute.setParameter('idNone', idNone);
+        compute.setParameter('cutoff', VISIBLE_CUTOFF);
+        compute.setParameter('pad0', 0);
+        compute.setParameter('pad1', 0);
+        compute.setParameter('pad2', 0);
+        Compute.calcDispatchSize(Math.ceil(this.capacity / WORKGROUP_SIZE), this.dispatchSize);
+        compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
+        this.device.computeDispatch([compute], 'ProjectedSplatVisibilitySample');
+    }
+
+    // Centres mode with x-ray off: the instances of splat a pick can select,
+    // the gaussians that show enough in the stochastic id pick just rendered
+    // into idTexture (Picker.prepareId with stochastic set, which also
+    // projected the gesture's frame). The marker display applies the same
+    // rule to its own id pass, so what is picked is what the centres show
+    async pickVisibility(splat: Splat, idTexture: Texture): Promise<Set<number>> {
+        const visible = new Set<number>();
+        const placement = this.placements.find((item) => item.splat === splat);
+        if (!placement || placement.count === 0 || !this.compactEntries || !this.cacheA || !this.cacheB) {
+            return visible;
+        }
+        const byteSize = Math.max(1, Math.ceil(this.capacity / 32)) * 4;
+        if (!this.pickBits || this.pickBits.byteSize !== byteSize) {
+            this.pickBits?.destroy();
+            this.pickBits = new StorageBuffer(this.device, byteSize, BUFFERUSAGE_COPY_SRC | BUFFERUSAGE_COPY_DST);
+        }
+        this.pickBits.clear();
+        // the pick's id target: the instance index, all ones where none
+        this.dispatchVisibilitySample(
+            idTexture,
+            this.pickBits,
+            placement.entryBase,
+            placement.count,
+            placement.entryBase,
+            0xffffffff
+        );
+
+        // entryBase is ENTRY_ALIGNMENT-aligned, so the layer's bits start on a word
+        const firstWord = placement.entryBase / 32;
+        const words = Math.ceil(placement.count / 32);
+        const bytes = (await this.pickBits.read(firstWord * 4, words * 4, null, true)) as Uint8Array;
+        const bits = new Uint32Array(bytes.buffer, bytes.byteOffset, words);
+        for (let w = 0; w < words; w++) {
+            let word = bits[w];
+            while (word !== 0) {
+                const bit = 31 - Math.clz32(word & -word);
+                visible.add(w * 32 + bit);
+                word &= word - 1;
+            }
+        }
+        return visible;
+    }
+
+    private getVisibilitySampleCompute() {
+        if (!this.visibilitySampleCompute) {
+            const uniformBufferFormat = new UniformBufferFormat(this.device, [
+                new UniformFormat('width', UNIFORMTYPE_UINT),
+                new UniformFormat('height', UNIFORMTYPE_UINT),
+                new UniformFormat('capacity', UNIFORMTYPE_UINT),
+                new UniformFormat('cacheWidth', UNIFORMTYPE_UINT),
+                new UniformFormat('rangeBase', UNIFORMTYPE_UINT),
+                new UniformFormat('rangeCount', UNIFORMTYPE_UINT),
+                new UniformFormat('idOffset', UNIFORMTYPE_UINT),
+                new UniformFormat('idNone', UNIFORMTYPE_UINT),
+                new UniformFormat('cutoff', UNIFORMTYPE_FLOAT),
+                new UniformFormat('pad0', UNIFORMTYPE_UINT),
+                new UniformFormat('pad1', UNIFORMTYPE_UINT),
+                new UniformFormat('pad2', UNIFORMTYPE_UINT)
+            ]);
+            const bindGroupFormat = new BindGroupFormat(this.device, [
+                new BindStorageBufferFormat('compactEntries', SHADERSTAGE_COMPUTE, true),
+                new BindStorageBufferFormat('splatCounter', SHADERSTAGE_COMPUTE, true),
+                new BindTextureFormat('cacheA', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+                new BindTextureFormat('cacheB', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_UINT, false),
+                new BindTextureFormat('idTexture', SHADERSTAGE_COMPUTE, undefined, SAMPLETYPE_FLOAT, false),
+                new BindStorageBufferFormat('visible', SHADERSTAGE_COMPUTE),
+                new BindUniformBufferFormat('uniforms', SHADERSTAGE_COMPUTE)
+            ]);
+            this.visibilitySampleShader = new Shader(this.device, {
+                name: 'ProjectedSplatVisibilitySample',
+                shaderLanguage: SHADERLANGUAGE_WGSL,
+                cshader: projectedSplatVisibilitySample,
+                computeBindGroupFormat: bindGroupFormat,
+                computeUniformBufferFormats: { uniforms: uniformBufferFormat }
+            });
+            this.visibilitySampleBindGroupFormat = bindGroupFormat;
+            this.visibilitySampleCompute = new Compute(
+                this.device,
+                this.visibilitySampleShader,
+                'ProjectedSplatVisibilitySample'
+            );
+        }
+        return this.visibilitySampleCompute;
     }
 
     private getVisibilityCompute() {
@@ -1625,6 +1800,10 @@ class ProjectedSplatRenderer {
         this.visibilityTailCompute?.destroy();
         this.visibilityTailShader?.destroy();
         this.visibilityTailBindGroupFormat?.destroy();
+        this.visibilitySampleCompute?.destroy();
+        this.visibilitySampleShader?.destroy();
+        this.visibilitySampleBindGroupFormat?.destroy();
+        this.pickBits?.destroy();
         this.footprintCompute?.destroy();
         this.footprintShader?.destroy();
         this.footprintBindGroupFormat?.destroy();

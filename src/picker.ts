@@ -146,9 +146,15 @@ class Picker {
         }
     }
 
+    // the target prepareId renders into
+    get idTexture() {
+        return this.idRenderTarget?.colorBuffer ?? null;
+    }
+
     // Prepare for ID picking by rendering the specified splat. footprint is the
-    // gesture's selection footprint, passed in rather than read live
-    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect', footprint: number) {
+    // gesture's selection footprint, passed in rather than read live. stochastic
+    // renders the stochastic id pass (ProjectedSplatRenderer.pickVisibility)
+    prepareId(splat: Splat, mode: 'add' | 'remove' | 'set' | 'intersect', footprint: number, stochastic = false) {
         if (!this.idRenderTarget) {
             return;
         }
@@ -174,7 +180,7 @@ class Picker {
         // Set picker uniforms
         this.device.scope.resolve('pickOp').setValue(pickOpIndex);
         this.device.scope.resolve('pickMode').setValue(0);
-        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false, footprint);
+        this.scene.projectedSplatRenderer.preparePick(splat, pickOpIndex, false, footprint, stochastic);
 
         // Render ID picking pass
         const emptyMap = new Map();

@@ -1004,6 +1004,20 @@ class ProjectedSplatRenderer {
         // Size culling is visual only: selection and depth queries need every footprint.
         const minPixelSize = forPick ? 0 : ((events.invoke('view.minPixelSize') as number) ?? 0);
 
+        // the colour panel's uncommitted grade, previewed on the layer it targets.
+        // Packed once per frame: it is the same for every placement, only the
+        // preview mode differs. While it previews, the outline stands in for
+        // every marker, which would otherwise cover the grade; in outline mode
+        // it stands in for the selected ones. Picks keep the markers: rings
+        // decide what a pick can hit. Stochastic frames draw no outline (their
+        // work buffer stays clear), so outside a preview the selected markers
+        // stay up on them
+        const pending = events.invoke('colorPanel.pending') as GradeParams;
+        const outlineSelection = events.invoke('view.outlineSelection') || !!pending;
+        if (pending) {
+            gradeRows(gradeTerms(pending, this.previewTerms), this.previewRows);
+        }
+
         // the centres overlay draws the selected layer's centres from this
         // frame's projection: the unselected ones while the markers (tab) are
         // up with centres on, the selected ones with selection centres on.
@@ -1011,8 +1025,10 @@ class ProjectedSplatRenderer {
         const editView = events.invoke('view.editView');
         const centerSize = events.invoke('view.centerSize') as number;
         const numSelected = selectedSplat?.instances.numSelected ?? 0;
-        const showUnselectedCenters = events.invoke('view.centers') && editView;
-        const showSelectedCenters = events.invoke('view.selectionCenters') && numSelected > 0;
+        const showMarkers = !pending || forPick;
+        const showSelectedMarkers = (showMarkers && (!outlineSelection || this.scene.movingRender)) || forPick;
+        const showUnselectedCenters = showMarkers && events.invoke('view.centers') && editView;
+        const showSelectedCenters = showSelectedMarkers && events.invoke('view.selectionCenters') && numSelected > 0;
         const centersMask = (showUnselectedCenters ? 1 : 0) | (showSelectedCenters ? 2 : 0);
         // centres draw opaque over the overdraw view's fragment counts, so a
         // selection would blank the heat map under its dots: skip them there
@@ -1024,8 +1040,8 @@ class ProjectedSplatRenderer {
             centersMask !== 0;
         // rings likewise. Decided here because the projector exempts ringed
         // splats from the contribution cull
-        const showUnselectedRings = events.invoke('view.rings') && editView;
-        const showSelectedRings = events.invoke('view.selectionRings') && numSelected > 0;
+        const showUnselectedRings = showMarkers && events.invoke('view.rings') && editView;
+        const showSelectedRings = showSelectedMarkers && events.invoke('view.selectionRings') && numSelected > 0;
         const ringsMask = (showUnselectedRings ? 1 : 0) | (showSelectedRings ? 2 : 0);
         const showRings = ringsMask !== 0;
         // x-ray off: the unselected markers draw only for the gaussians a drag
@@ -1039,15 +1055,6 @@ class ProjectedSplatRenderer {
             !!selectedSplat &&
             camera.visibilityIds &&
             ((centersMask | ringsMask) & 1) !== 0;
-
-        // the colour panel's uncommitted grade, previewed on the layer it targets.
-        // Packed once per frame: it is the same for every placement, only the
-        // preview mode differs.
-        const pending = events.invoke('colorPanel.pending') as GradeParams;
-        const outlineSelection = events.invoke('view.outlineSelection') || !!pending;
-        if (pending) {
-            gradeRows(gradeTerms(pending, this.previewTerms), this.previewRows);
-        }
 
         // motion-adaptive: fast stochastic while interacting, clean sorted &
         // blended when the scene settles (driven by Scene.onUpdate)

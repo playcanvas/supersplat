@@ -16,8 +16,10 @@
 //   .toolbar-switch   an exclusive pair as one control: a dark well with a
 //                     knob that slides to the chosen option, whose glyph is
 //                     white while the other's is dim (toolbar-switch.ts),
-//                     horizontal or vertical. No orange, so a chosen mode
-//                     reads apart from an active tool and an on toggle
+//                     horizontal or vertical. Hovering the other option
+//                     shows a ghost knob there and dims the chosen one. No
+//                     orange, so a chosen mode reads apart from an active
+//                     tool and an on toggle
 //   .toolbar-separator
 //   .toolbar-flyout   press-and-hold reveals more: a corner triangle
 //
@@ -27,6 +29,8 @@
 
 $toolbar-size: 38px;
 $switch-radius: 8px;
+// the knob's padding box: its radius less its 2px rim
+$ghost-radius: $switch-radius - 2px;
 $well-radius: 8px;
 $fade: 0.1s ease-out;
 $fade-out: 0.06s ease-out;
@@ -36,6 +40,8 @@ $bcg-tool-well: #232323;
 $bcg-tool-hover: rgba($clr-hilight, 0.3);
 $bcg-bare-hover: rgba(0, 0, 0, 0.15);
 $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
+$bcg-switch-ghost: #1f1f1f;
+$bcg-switch-dimmed: #242424;
 
 // PCUI's button lights hover and focus with an orange glow; the controls
 // replace it. A state applies to a live control only. Hover and press snap
@@ -304,6 +310,7 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
         box-sizing: border-box;
         background-clip: padding-box;
         pointer-events: none;
+        transition: background-color $fade-out;
 
         // the first placement is instant; later ones slide
         &.toolbar-switch-animated {
@@ -312,7 +319,8 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
                 top 0.15s ease-out,
                 width 0.15s ease-out,
                 height 0.15s ease-out,
-                border-radius 0.15s ease-out;
+                border-radius 0.15s ease-out,
+                background-color $fade-out;
         }
     }
 
@@ -323,19 +331,50 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
         border-radius: 0px;
         background-color: transparent !important;
 
+        // the ghost knob: where the knob would go, inset like the knob
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background-color: $bcg-switch-ghost;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity $fade-out;
+        }
+
         svg {
+            position: relative;
             color: $clr-disabled;
             transition:
                 color 0.15s ease-out,
                 transform $fade;
         }
 
-        &.pcui-button:not(.pcui-disabled, .pcui-readonly):not(.active):hover:not(:active) svg {
-            color: $clr-default;
+        &.pcui-button:not(.pcui-disabled, .pcui-readonly):not(.active):hover:not(:active) {
+            &::before {
+                opacity: 1;
+                transition: none;
+            }
+
+            svg {
+                color: $clr-active;
+            }
         }
 
         &.active svg {
             color: $clr-active;
+        }
+    }
+
+    // previewing the other option dims the chosen one
+    &:has(.toolbar-switch-option.pcui-button:not(.pcui-disabled, .pcui-readonly, .active):hover:not(:active)) {
+        .toolbar-switch-thumb {
+            background-color: $bcg-switch-dimmed;
+            transition: none;
+        }
+
+        .toolbar-switch-option.active svg {
+            color: $clr-default;
         }
     }
 }
@@ -350,6 +389,15 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
     &.toolbar-switch-second .toolbar-switch-thumb {
         border-radius: 0px $switch-radius $switch-radius 0px;
     }
+
+    // the ghost sits on the option the knob is not on
+    &.toolbar-switch-first .toolbar-switch-option::before {
+        border-radius: 0px $ghost-radius $ghost-radius 0px;
+    }
+
+    &.toolbar-switch-second .toolbar-switch-option::before {
+        border-radius: $ghost-radius 0px 0px $ghost-radius;
+    }
 }
 
 .toolbar-switch-vertical {
@@ -361,6 +409,14 @@ $bcg-bare-pressed: rgba(0, 0, 0, 0.4);
 
     &.toolbar-switch-second .toolbar-switch-thumb {
         border-radius: 0px 0px $switch-radius $switch-radius;
+    }
+
+    &.toolbar-switch-first .toolbar-switch-option::before {
+        border-radius: 0px 0px $ghost-radius $ghost-radius;
+    }
+
+    &.toolbar-switch-second .toolbar-switch-option::before {
+        border-radius: $ghost-radius $ghost-radius 0px 0px;
     }
 }
 

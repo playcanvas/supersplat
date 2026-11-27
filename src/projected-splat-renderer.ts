@@ -266,6 +266,8 @@ class ProjectedSplatRenderer {
     private idPassDepthFunc: number = FUNC_LESS;
     // whether the compact list carries the size-culled tail (the centres draw it)
     private frameTail = false;
+    // the current projection's idDepthParams (see render)
+    private readonly idDepthParams = [0, 0, 0, 0];
     // centres mode: the id pass is stochastic and the bits come from how much
     // of each gaussian shows (projectedSplatVisibilitySample) rather than from
     // owning any pixel; rings keep the deterministic pass. With the selected
@@ -1134,13 +1136,14 @@ class ProjectedSplatRenderer {
             sortKeyScale = bitsRange > 0 ? ((1 << SORT_KEY_BITS) - 1) / bitsRange : 0;
         }
 
-        // a radial sort's order for the id pass's depth (see the splat shader)
-        this.material.setParameter('idDepthParams', [
-            radialSort ? 1 : 0,
-            projection[0],
-            projection[5],
-            radialSort ? 1 / (sortFar * sortFar) : 0
-        ]);
+        // a radial sort's order for the id pass's depth (see the splat shader),
+        // which the visibility sample kernel compares by too
+        const idDepthParams = this.idDepthParams;
+        idDepthParams[0] = radialSort ? 1 : 0;
+        idDepthParams[1] = projection[0];
+        idDepthParams[2] = projection[5];
+        idDepthParams[3] = radialSort ? 1 / (sortFar * sortFar) : 0;
+        this.material.setParameter('idDepthParams', idDepthParams);
 
         let ringsBase = 0;
         let ringsCount = 0;
@@ -1600,8 +1603,9 @@ class ProjectedSplatRenderer {
             device.computeDispatch([compute], 'ProjectedSplatVisibility');
         }
 
-        // the size-culled tail, which the splat pass never drew
-        if (this.frameTail && this.compactEntries && this.cacheA) {
+        // the size-culled tail, which the splat pass never drew (the sample
+        // kernel covers it in stochastic mode)
+        if (this.frameTail && !this.frameStochasticIds && this.compactEntries && this.cacheA) {
             const tail = this.getVisibilityTailCompute();
             tail.setParameter('compactEntries', this.compactEntries);
             tail.setParameter('splatCounter', this.splatCounter);
@@ -1647,9 +1651,9 @@ class ProjectedSplatRenderer {
         compute.setParameter('idOffset', idOffset);
         compute.setParameter('idNone', idNone);
         compute.setParameter('cutoff', VISIBLE_CUTOFF);
-        compute.setParameter('pad0', 0);
-        compute.setParameter('pad1', 0);
-        compute.setParameter('pad2', 0);
+        compute.setParameter('radial', this.idDepthParams[0]);
+        compute.setParameter('projX', this.idDepthParams[1]);
+        compute.setParameter('projY', this.idDepthParams[2]);
         Compute.calcDispatchSize(Math.ceil(this.capacity / WORKGROUP_SIZE), this.dispatchSize);
         compute.setupDispatch(this.dispatchSize.x, this.dispatchSize.y);
         this.device.computeDispatch([compute], 'ProjectedSplatVisibilitySample');
@@ -1710,9 +1714,9 @@ class ProjectedSplatRenderer {
                 new UniformFormat('idOffset', UNIFORMTYPE_UINT),
                 new UniformFormat('idNone', UNIFORMTYPE_UINT),
                 new UniformFormat('cutoff', UNIFORMTYPE_FLOAT),
-                new UniformFormat('pad0', UNIFORMTYPE_UINT),
-                new UniformFormat('pad1', UNIFORMTYPE_UINT),
-                new UniformFormat('pad2', UNIFORMTYPE_UINT)
+                new UniformFormat('radial', UNIFORMTYPE_UINT),
+                new UniformFormat('projX', UNIFORMTYPE_FLOAT),
+                new UniformFormat('projY', UNIFORMTYPE_FLOAT)
             ]);
             const bindGroupFormat = new BindGroupFormat(this.device, [
                 new BindStorageBufferFormat('compactEntries', SHADERSTAGE_COMPUTE, true),

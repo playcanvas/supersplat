@@ -1271,7 +1271,12 @@ class ProjectedSplatRenderer {
         this.material.setParameter(
             'selectedColor',
             events.invoke('view.selectionColor') && !pending
-                ? [selectedColor.r, selectedColor.g, selectedColor.b, selectedSplat?.selectionAlpha ?? 1]
+                ? [
+                      selectedColor.r,
+                      selectedColor.g,
+                      selectedColor.b,
+                      selectedColor.a * (selectedSplat?.selectionAlpha ?? 1)
+                  ]
                 : [0, 0, 0, 0]
         );
         // the unselected markers take the flat colour or the gaussians' own,

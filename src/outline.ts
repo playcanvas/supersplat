@@ -42,7 +42,8 @@ class Outline extends Element {
 
             this.renderPass.execute({
                 srcTexture: camera.workTarget.colorBuffer,
-                alphaCutoff: 0.8,
+                // rings mode outlines the whole footprints, centers mode their cores
+                alphaCutoff: events.invoke('view.rings') ? 0.0 : 0.8,
                 clr
             });
         });

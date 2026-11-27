@@ -1007,8 +1007,9 @@ class ProjectedSplatRenderer {
         // the colour panel's uncommitted grade, previewed on the layer it targets.
         // Packed once per frame: it is the same for every placement, only the
         // preview mode differs. While it previews, the outline stands in for
-        // every marker, which would otherwise cover the grade. Picks keep the
-        // markers: rings decide what a pick can hit
+        // every marker, which would otherwise cover the grade; in outline mode
+        // it stands in for the selected ones. Picks keep the markers: rings
+        // decide what a pick can hit
         const pending = events.invoke('colorPanel.pending') as GradeParams;
         const outlineSelection = events.invoke('view.outlineSelection') || !!pending;
         if (pending) {
@@ -1023,8 +1024,9 @@ class ProjectedSplatRenderer {
         const centerSize = events.invoke('view.centerSize') as number;
         const numSelected = selectedSplat?.instances.numSelected ?? 0;
         const showMarkers = !pending || forPick;
+        const showSelectedMarkers = !outlineSelection || forPick;
         const showUnselectedCenters = showMarkers && events.invoke('view.centers') && editView;
-        const showSelectedCenters = showMarkers && events.invoke('view.selectionCenters') && numSelected > 0;
+        const showSelectedCenters = showSelectedMarkers && events.invoke('view.selectionCenters') && numSelected > 0;
         const centersMask = (showUnselectedCenters ? 1 : 0) | (showSelectedCenters ? 2 : 0);
         // centres draw opaque over the overdraw view's fragment counts, so a
         // selection would blank the heat map under its dots: skip them there
@@ -1037,7 +1039,7 @@ class ProjectedSplatRenderer {
         // rings likewise. Decided here because the projector exempts ringed
         // splats from the contribution cull
         const showUnselectedRings = showMarkers && events.invoke('view.rings') && editView;
-        const showSelectedRings = showMarkers && events.invoke('view.selectionRings') && numSelected > 0;
+        const showSelectedRings = showSelectedMarkers && events.invoke('view.selectionRings') && numSelected > 0;
         const ringsMask = (showUnselectedRings ? 1 : 0) | (showSelectedRings ? 2 : 0);
         const showRings = ringsMask !== 0;
         // x-ray off: the unselected markers draw only for the gaussians a drag

@@ -105,6 +105,7 @@
     "panel.settings.fov.tooltip": "카메라 시야각(도)입니다.",
     "panel.settings.fov-dolly.tooltip": "FOV를 바꾸면 줌 대신 카메라가 이동하여 구도를 유지합니다.",
     "panel.settings.reset": "기본값으로 재설정",
+    "panel.close": "닫기",
     "mode-toolbar.centers": "중심",
     "mode-toolbar.centers.tooltip": "각 가우시안 중심에 점을 표시합니다. 중심점 기준으로 선택합니다.",
     "mode-toolbar.rings": "링",

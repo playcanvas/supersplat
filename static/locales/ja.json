@@ -105,6 +105,7 @@
     "panel.settings.fov.tooltip": "カメラの視野角（度）。",
     "panel.settings.fov-dolly.tooltip": "FOV変更時にズームせず、カメラを移動して構図を保ちます。",
     "panel.settings.reset": "デフォルトに戻す",
+    "panel.close": "閉じる",
     "mode-toolbar.centers": "中心",
     "mode-toolbar.centers.tooltip": "各ガウシアンの中心に点を表示。中心点で選択します。",
     "mode-toolbar.rings": "リング",
